@@ -10,6 +10,11 @@ import {
 import { gameState } from '../simulation/GameState';
 import { getTileCenter } from '../grid/GridCoords';
 import type { Building, BuildingType } from '../types';
+import { 
+  PIPE_VISUAL_CONFIG, 
+  MAX_PIPE_DISTANCE, 
+  BUILDING_REQUIREMENTS 
+} from '../config/ConnectionRules';
 
 interface PipeData {
   mesh: Mesh;
@@ -21,23 +26,15 @@ interface PreviewPipe {
   type: 'water' | 'heat';
 }
 
-const PIPE_CONNECTIONS: Record<BuildingType, { targets: BuildingType[]; color: string; type: 'water' | 'heat' }[]> = {
-  pump: [
-    { targets: ['distiller', 'water_tank'], color: '#2F8D8D', type: 'water' }
-  ],
-  reactor: [
-    { targets: ['distiller'], color: '#FF6B35', type: 'heat' }
-  ],
-  distiller: [
-    { targets: ['microrayon', 'water_tank'], color: '#4A90A4', type: 'water' }
-  ],
-  microrayon: [],
-  water_tank: [
-    { targets: ['microrayon'], color: '#5599CC', type: 'water' }
-  ]
-};
+const PIPE_CONNECTIONS = PIPE_VISUAL_CONFIG;
 
-const MAX_PIPE_DISTANCE = 5;
+export interface BuildingConnection {
+  building: Building;
+  type: 'water' | 'heat';
+  direction: 'outgoing' | 'incoming';
+}
+
+export { PIPE_CONNECTIONS, MAX_PIPE_DISTANCE };
 
 export class PipeManager {
   private scene: Scene;
@@ -293,6 +290,97 @@ export class PipeManager {
     pipe.material = this.materials.get(type) ?? null;
 
     this.pipes.set(pipeId, { mesh: pipe, type });
+  }
+
+  public getConnectionsForBuilding(building: Building): BuildingConnection[] {
+    const connections: BuildingConnection[] = [];
+    const buildings = gameState.getBuildings();
+
+    const outgoingRules = PIPE_CONNECTIONS[building.type];
+    if (outgoingRules) {
+      for (const rule of outgoingRules) {
+        const targets = buildings.filter(b => {
+          if (!rule.targets.includes(b.type)) return false;
+          const dist = this.getDistance(building, b);
+          return dist > 0 && dist <= MAX_PIPE_DISTANCE;
+        });
+        if (targets.length > 0) {
+          const nearest = targets.reduce((a, b) =>
+            this.getDistance(building, a) < this.getDistance(building, b) ? a : b
+          );
+          connections.push({ building: nearest, type: rule.type, direction: 'outgoing' });
+        }
+      }
+    }
+
+    for (const [sourceType, rules] of Object.entries(PIPE_CONNECTIONS)) {
+      for (const rule of rules) {
+        if (!rule.targets.includes(building.type)) continue;
+
+        const sources = buildings.filter(b => {
+          if (b.type !== sourceType) return false;
+          const dist = this.getDistance(building, b);
+          return dist > 0 && dist <= MAX_PIPE_DISTANCE;
+        });
+
+        if (sources.length > 0) {
+          const nearest = sources.reduce((a, b) =>
+            this.getDistance(building, a) < this.getDistance(building, b) ? a : b
+          );
+          connections.push({ building: nearest, type: rule.type, direction: 'incoming' });
+        }
+      }
+    }
+
+    return connections;
+  }
+
+  public isConnectedToReactor(building: Building): boolean {
+    const connections = this.getConnectionsForBuilding(building);
+    return connections.some(c => c.building.type === 'reactor' && c.direction === 'incoming');
+  }
+
+  public isFullyOperational(building: Building): boolean {
+    const requirements = BUILDING_REQUIREMENTS[building.type];
+    if (!requirements || requirements.requiredInputs.length === 0) {
+      return true;
+    }
+
+    const connections = this.getConnectionsForBuilding(building);
+    const incomingConnections = connections.filter(c => c.direction === 'incoming');
+
+    for (const req of requirements.requiredInputs) {
+      const hasConnection = incomingConnections.some(
+        c => c.building.type === req.type && c.type === req.resourceType
+      );
+      if (!hasConnection) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  public getMissingConnections(building: Building): { type: BuildingType; resourceType: 'water' | 'heat' }[] {
+    const requirements = BUILDING_REQUIREMENTS[building.type];
+    if (!requirements || requirements.requiredInputs.length === 0) {
+      return [];
+    }
+
+    const connections = this.getConnectionsForBuilding(building);
+    const incomingConnections = connections.filter(c => c.direction === 'incoming');
+    const missing: { type: BuildingType; resourceType: 'water' | 'heat' }[] = [];
+
+    for (const req of requirements.requiredInputs) {
+      const hasConnection = incomingConnections.some(
+        c => c.building.type === req.type && c.type === req.resourceType
+      );
+      if (!hasConnection) {
+        missing.push({ type: req.type, resourceType: req.resourceType });
+      }
+    }
+
+    return missing;
   }
 
   public dispose(): void {

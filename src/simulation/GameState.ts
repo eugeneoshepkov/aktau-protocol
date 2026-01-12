@@ -51,6 +51,8 @@ export interface ResourceTrend {
   happiness: number;
 }
 
+export type ConnectionChecker = (building: Building) => { isFullyOperational: boolean };
+
 export class GameState {
   private resources: Resources;
   private previousResources: Resources;
@@ -61,6 +63,7 @@ export class GameState {
   private gameOver: boolean = false;
   private gameOverReason?: GameOverReason;
   private buildingIdCounter: number = 0;
+  private connectionChecker: ConnectionChecker | null = null;
 
   private listeners: Map<GameEventType, Set<GameEventCallback>> = new Map();
 
@@ -92,6 +95,10 @@ export class GameState {
 
   private emit(event: GameEventType, data: unknown = null): void {
     this.listeners.get(event)?.forEach(cb => cb(data));
+  }
+
+  public setConnectionChecker(checker: ConnectionChecker): void {
+    this.connectionChecker = checker;
   }
 
   // ============================================
@@ -284,7 +291,14 @@ export class GameState {
     };
 
     for (const building of this.buildings) {
-      buildingCounts[building.type]++;
+      // Distillers only produce when fully connected (pump + reactor)
+      if (building.type === 'distiller') {
+        if (this.connectionChecker && this.connectionChecker(building).isFullyOperational) {
+          buildingCounts[building.type]++;
+        }
+      } else {
+        buildingCounts[building.type]++;
+      }
     }
 
     const seasonMultiplier = this.getSeasonMultiplier();
@@ -324,16 +338,22 @@ export class GameState {
 
   private processReactor(): void {
     const reactorCount = this.buildings.filter(b => b.type === 'reactor').length;
-    const distillerCount = this.buildings.filter(b => b.type === 'distiller').length;
+    const distillers = this.buildings.filter(b => b.type === 'distiller');
+    
+    let connectedDistillerCount = 0;
+    if (this.connectionChecker) {
+      connectedDistillerCount = distillers.filter(d => 
+        this.connectionChecker!(d).isFullyOperational
+      ).length;
+    }
 
     if (reactorCount > 0) {
-      // Each reactor adds +1°C/tick, each distiller cools -0.8°C/tick
       const heatGenerated = reactorCount * 1;
-      const coolingCapacity = distillerCount * 0.8;
+      const coolingCapacity = connectedDistillerCount * 0.8;
 
       const netHeatIncrease = Math.max(0, heatGenerated - coolingCapacity);
       this.reactor.temperature += netHeatIncrease;
-      this.reactor.coolingActive = distillerCount > 0;
+      this.reactor.coolingActive = connectedDistillerCount > 0;
 
       if (this.reactor.temperature >= 80 && this.reactor.temperature < 100) {
         this.emit('reactorWarning', this.reactor.temperature);

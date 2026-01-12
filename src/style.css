@@ -332,6 +332,26 @@ html, body {
   color: #ffa500;
 }
 
+.tooltip-connections {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.85em;
+}
+
+.tooltip-conn-in {
+  color: #88ddff;
+  margin-bottom: 2px;
+}
+
+.tooltip-conn-out {
+  color: #88ff88;
+}
+
+.tooltip-disconnected {
+  color: #ff8844;
+}
+
 .hud-events {
   position: absolute;
   top: 50px;

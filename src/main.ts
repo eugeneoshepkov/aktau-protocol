@@ -82,6 +82,11 @@ async function initGame(): Promise<void> {
   const pipeManager = new PipeManager(scene);
   const particleManager = new ParticleManager(scene);
 
+  // Wire up connection checker for reactor cooling logic
+  gameState.setConnectionChecker((building) => ({
+    isFullyOperational: pipeManager.isFullyOperational(building)
+  }));
+
   buildingManager.setParticleManager(particleManager);
   buildingManager.onSelectionChange(() => {
     pipeManager.hideConnectionPreview();
@@ -104,6 +109,7 @@ async function initGame(): Promise<void> {
   });
 
   const tooltip = new Tooltip();
+  tooltip.setPipeManager(pipeManager);
 
   inputManager.setTileHoverCallback((x, z) => {
     tooltip.show(x, z);
@@ -186,4 +192,4 @@ document.addEventListener('mouseup', (e) => {
   }
 });
 
-document.addEventListener('DOMContentLoaded', initGame);
+document.addEventListener("DOMContentLoaded", initGame);

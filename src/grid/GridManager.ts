@@ -5,11 +5,26 @@ import {
   StandardMaterial,
   Color3,
   Matrix,
-  Vector3
-} from '@babylonjs/core';
-import { GRID_SIZE, TILE_SIZE } from '../types';
-import type { TileType } from '../types';
-import { getTileTypeAt, getTileColor } from './TileTypes';
+  Vector3,
+  Texture,
+} from "@babylonjs/core";
+import { GRID_SIZE, TILE_SIZE } from "../types";
+import type { TileType } from "../types";
+import { getTileTypeAt } from "./TileTypes";
+
+// Atlas dimensions
+const ATLAS_WIDTH = 968;
+const ATLAS_HEIGHT = 526;
+const TILE_PITCH = 17; // 16px tile + 1px margin
+
+// Single sand tile for uniform desert look
+const SAND_TILE = { col: 8, row: 0 }; // Tan sand (bottom section)
+
+// Rock tile position
+const ROCK_TILE = { col: 7, row: 0 }; // Gray stone
+
+// Sea uses flat color, no texture
+const SEA_COLOR = "#2F8D8D";
 
 export class GridManager {
   private scene: Scene;
@@ -19,6 +34,7 @@ export class GridManager {
   private highlightMaterial: StandardMaterial | null = null;
   private validColor = new Color3(1, 1, 0);
   private invalidColor = new Color3(1, 0.3, 0.3);
+  private atlasTexture: Texture | null = null;
 
   constructor(scene: Scene) {
     this.scene = scene;
@@ -31,13 +47,20 @@ export class GridManager {
     // Generate tile type map
     this.generateTileMap();
 
+    // Load the terrain atlas texture
+    this.atlasTexture = new Texture(
+      "/models/2d-terrain/Spritesheet/roguelikeSheet_transparent.png",
+      this.scene,
+    );
+    this.atlasTexture.hasAlpha = true;
+
     // Count tiles of each type
     const tileCounts = this.countTileTypes();
 
     // Create instanced meshes for each tile type
-    this.createInstancedTiles('sea', tileCounts.sea);
-    this.createInstancedTiles('sand', tileCounts.sand);
-    this.createInstancedTiles('rock', tileCounts.rock);
+    this.createInstancedTiles("sea", tileCounts.sea);
+    this.createInstancedTiles("sand", tileCounts.sand);
+    this.createInstancedTiles("rock", tileCounts.rock);
 
     // Create highlight cursor
     this.createHighlightMesh();
@@ -67,43 +90,26 @@ export class GridManager {
   private createInstancedTiles(tileType: TileType, count: number): void {
     if (count === 0) return;
 
-    // Create base tile mesh
-    const baseTile = MeshBuilder.CreateBox(
-      `tile_${tileType}`,
-      { width: TILE_SIZE * 0.95, height: 0.1, depth: TILE_SIZE * 0.95 },
-      this.scene
-    );
-
-    // Create material with tile color
-    const material = new StandardMaterial(`mat_${tileType}`, this.scene);
-    const color = getTileColor(tileType);
-    material.diffuseColor = new Color3(color.r, color.g, color.b);
-    material.specularColor = new Color3(0.1, 0.1, 0.1);
-    baseTile.material = material;
-
-    // Make base tile invisible (we only use instances)
-    baseTile.isVisible = false;
-
-    // Create transformation matrices for all tiles of this type
-    const matrices: Matrix[] = [];
+    // Collect all tile positions for this type
+    const positions: { x: number; z: number }[] = [];
     for (let z = 0; z < GRID_SIZE; z++) {
       for (let x = 0; x < GRID_SIZE; x++) {
         if (this.tileMap[z][x] === tileType) {
-          const matrix = Matrix.Translation(
-            x * TILE_SIZE + TILE_SIZE / 2,
-            0,
-            z * TILE_SIZE + TILE_SIZE / 2
-          );
-          matrices.push(matrix);
+          positions.push({ x, z });
         }
       }
     }
 
-    // Apply instances
-    baseTile.thinInstanceSetBuffer('matrix', this.matricesToFloat32Array(matrices), 16);
-    baseTile.isVisible = true;
-
-    this.tileMeshes.set(tileType, baseTile);
+    if (tileType === "sea") {
+      // Sea: flat color, no texture
+      this.createFlatColorTiles("sea", positions, SEA_COLOR);
+    } else if (tileType === "rock") {
+      // Rock: single textured tile
+      this.createTexturedTiles("rock", positions, ROCK_TILE);
+    } else if (tileType === "sand") {
+      // Sand: single textured tile for uniform look
+      this.createTexturedTiles("sand", positions, SAND_TILE);
+    }
   }
 
   private matricesToFloat32Array(matrices: Matrix[]): Float32Array {
@@ -114,14 +120,94 @@ export class GridManager {
     return array;
   }
 
-  private createHighlightMesh(): void {
-    this.highlightMesh = MeshBuilder.CreateBox(
-      'highlight',
-      { width: TILE_SIZE, height: 0.15, depth: TILE_SIZE },
-      this.scene
+  private createFlatColorTiles(
+    name: string,
+    positions: { x: number; z: number }[],
+    colorHex: string,
+  ): void {
+    const baseTile = MeshBuilder.CreateBox(
+      `tile_${name}`,
+      { width: TILE_SIZE * 0.95, height: 0.1, depth: TILE_SIZE * 0.95 },
+      this.scene,
     );
 
-    this.highlightMaterial = new StandardMaterial('highlightMat', this.scene);
+    const material = new StandardMaterial(`mat_${name}`, this.scene);
+    const hex = colorHex.replace("#", "");
+    material.diffuseColor = new Color3(
+      parseInt(hex.substring(0, 2), 16) / 255,
+      parseInt(hex.substring(2, 4), 16) / 255,
+      parseInt(hex.substring(4, 6), 16) / 255,
+    );
+    material.specularColor = new Color3(0.1, 0.1, 0.1);
+    baseTile.material = material;
+    baseTile.isVisible = false;
+
+    const matrices = positions.map((pos) =>
+      Matrix.Translation(
+        pos.x * TILE_SIZE + TILE_SIZE / 2,
+        0,
+        pos.z * TILE_SIZE + TILE_SIZE / 2,
+      ),
+    );
+
+    baseTile.thinInstanceSetBuffer(
+      "matrix",
+      this.matricesToFloat32Array(matrices),
+      16,
+    );
+    baseTile.isVisible = true;
+    this.tileMeshes.set(name as TileType, baseTile);
+  }
+
+  private createTexturedTiles(
+    name: string,
+    positions: { x: number; z: number }[],
+    tile: { col: number; row: number },
+  ): void {
+    if (!this.atlasTexture) return;
+
+    const baseTile = MeshBuilder.CreateBox(
+      `tile_${name}`,
+      { width: TILE_SIZE * 0.95, height: 0.1, depth: TILE_SIZE * 0.95 },
+      this.scene,
+    );
+
+    const material = new StandardMaterial(`mat_${name}`, this.scene);
+    const tileTexture = this.atlasTexture.clone();
+    tileTexture.uOffset = (tile.col * TILE_PITCH) / ATLAS_WIDTH;
+    tileTexture.vOffset = 1 - ((tile.row + 1) * TILE_PITCH) / ATLAS_HEIGHT;
+    tileTexture.uScale = TILE_PITCH / ATLAS_WIDTH;
+    tileTexture.vScale = TILE_PITCH / ATLAS_HEIGHT;
+    material.diffuseTexture = tileTexture;
+    material.specularColor = Color3.Black();
+    baseTile.material = material;
+    baseTile.isVisible = false;
+
+    const matrices = positions.map((pos) =>
+      Matrix.Translation(
+        pos.x * TILE_SIZE + TILE_SIZE / 2,
+        0,
+        pos.z * TILE_SIZE + TILE_SIZE / 2,
+      ),
+    );
+
+    baseTile.thinInstanceSetBuffer(
+      "matrix",
+      this.matricesToFloat32Array(matrices),
+      16,
+    );
+    baseTile.isVisible = true;
+    this.tileMeshes.set(name as TileType, baseTile);
+  }
+
+  private createHighlightMesh(): void {
+    this.highlightMesh = MeshBuilder.CreateBox(
+      "highlight",
+      { width: TILE_SIZE, height: 0.15, depth: TILE_SIZE },
+      this.scene,
+    );
+
+    this.highlightMaterial = new StandardMaterial("highlightMat", this.scene);
     this.highlightMaterial.diffuseColor = this.validColor;
     this.highlightMaterial.alpha = 0.5;
     this.highlightMaterial.emissiveColor = this.validColor.scale(0.5);
@@ -139,7 +225,7 @@ export class GridManager {
     this.highlightMesh.position = new Vector3(
       gridX * TILE_SIZE + TILE_SIZE / 2,
       0.05,
-      gridZ * TILE_SIZE + TILE_SIZE / 2
+      gridZ * TILE_SIZE + TILE_SIZE / 2,
     );
 
     const color = valid ? this.validColor : this.invalidColor;
@@ -176,7 +262,7 @@ export class GridManager {
   }
 
   public dispose(): void {
-    this.tileMeshes.forEach(mesh => mesh.dispose());
+    this.tileMeshes.forEach((mesh) => mesh.dispose());
     this.highlightMesh?.dispose();
   }
 }

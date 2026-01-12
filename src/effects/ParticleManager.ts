@@ -7,6 +7,7 @@ import {
   AbstractMesh
 } from '@babylonjs/core';
 import { gameState } from '../simulation/GameState';
+import { TILE_SIZE } from '../types';
 import type { Building, BuildingType } from '../types';
 
 interface BuildingParticles {
@@ -63,10 +64,11 @@ export class ParticleManager {
     system.particleTexture = this.smokeTexture;
 
     const height = 3.2;
+    // Convert grid coordinates to world position
     system.emitter = new Vector3(
-      building.gridX + 0.5,
+      building.gridX * TILE_SIZE + TILE_SIZE / 2,
       height,
-      building.gridZ + 0.5
+      building.gridZ * TILE_SIZE + TILE_SIZE / 2
     );
 
     system.minEmitBox = new Vector3(-0.3, 0, -0.3);
@@ -115,10 +117,11 @@ export class ParticleManager {
 
     system.particleTexture = this.smokeTexture;
 
+    // Convert grid coordinates to world position
     system.emitter = new Vector3(
-      building.gridX + 0.5,
+      building.gridX * TILE_SIZE + TILE_SIZE / 2,
       1.5,
-      building.gridZ + 0.5
+      building.gridZ * TILE_SIZE + TILE_SIZE / 2
     );
 
     system.minEmitBox = new Vector3(-0.2, 0, -0.2);
