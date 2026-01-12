@@ -290,10 +290,23 @@ export class GameState {
       water_tank: 0
     };
 
+    let connectedMicrorayons = 0;
+    let disconnectedMicrorayons = 0;
+
     for (const building of this.buildings) {
       // Distillers only produce when fully connected (pump + reactor)
       if (building.type === 'distiller') {
         if (this.connectionChecker && this.connectionChecker(building).isFullyOperational) {
+          buildingCounts[building.type]++;
+        }
+      } else if (building.type === 'microrayon') {
+        // Microrayons need connection to distiller for happiness
+        if (this.connectionChecker && this.connectionChecker(building).isFullyOperational) {
+          connectedMicrorayons++;
+          buildingCounts[building.type]++;
+        } else {
+          disconnectedMicrorayons++;
+          // Still count for consumption (they use resources even when unhappy)
           buildingCounts[building.type]++;
         }
       } else {
@@ -330,10 +343,21 @@ export class GameState {
         }
 
         for (const [resource, amount] of Object.entries(production.produces)) {
+          // Skip happiness for microrayons - handled separately below
+          if (type === 'microrayon' && resource === 'happiness') continue;
           this.resources[resource as keyof Resources] += (amount ?? 0) * count;
         }
       }
     }
+
+    // Handle microrayon happiness separately based on connection status
+    // Connected microrayons produce happiness, disconnected ones deduct it
+    const happinessGain = connectedMicrorayons * 1;
+    const happinessLoss = disconnectedMicrorayons * 2;
+    this.resources.happiness += happinessGain - happinessLoss;
+
+    // Clamp happiness to 0-100 range
+    this.resources.happiness = Math.max(0, Math.min(100, this.resources.happiness));
   }
 
   private processReactor(): void {

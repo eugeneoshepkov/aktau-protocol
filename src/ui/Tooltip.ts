@@ -70,7 +70,19 @@ export class Tooltip {
     }
 
     for (const [key, val] of Object.entries(prod.produces)) {
+      // Skip happiness for microrayon - handled specially below
+      if (building.type === 'microrayon' && key === 'happiness') continue;
       if (val) producesHtml += `<span>${icons[key] || ''} +${val}</span>`;
+    }
+
+    // Show actual happiness effect for microrayon based on connection
+    if (building.type === 'microrayon') {
+      const isConnected = this.pipeManager?.isFullyOperational(building);
+      if (isConnected) {
+        producesHtml += `<span>${icons.happiness} +1</span>`;
+      } else {
+        producesHtml += `<span style="color:#ff6666">${icons.happiness} -2</span>`;
+      }
     }
 
     let specialHtml = '';
@@ -93,6 +105,12 @@ export class Tooltip {
         if (missingNames) {
           specialHtml = `<div class="tooltip-special" style="color: #ff8844">⚠️ Needs: ${missingNames}</div>`;
         }
+      }
+    }
+
+    if (building.type === 'microrayon') {
+      if (!this.pipeManager?.isFullyOperational(building)) {
+        specialHtml = `<div class="tooltip-special" style="color: #ff8844">⚠️ No water supply - residents unhappy!</div>`;
       }
     }
 
