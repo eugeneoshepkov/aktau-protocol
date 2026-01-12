@@ -8,6 +8,8 @@ A browser-based isometric city-builder/survival game set in Aktau, Kazakhstan (S
 
 **Goal:** Survive as long as possible by managing the delicate balance of resources without causing a nuclear meltdown, drought, or freezing the population.
 
+**Live:** https://aktau.eone.work/
+
 ## Tech Stack
 
 - **Runtime:** Bun
@@ -47,7 +49,7 @@ bun run build  # Production build
 | **Water Pump** | Sea tiles | ⚡20 | ⚡5 | 🌊10 seawater | Extracts from Caspian |
 | **BN-350 Reactor** | Rock tiles | ⚡50 | — | 🔥50 heat, ⚡20 | +1°C/tick to reactor temp |
 | **Desalination Plant** | Sand/Rock | ⚡30 | 🌊10, 🔥10 | 💧10 freshwater | Cools reactor by 0.8°C/tick |
-| **Microrayon Housing** | Sand tiles | 💧20, 🔥10 | 💧5, 🔥5× season | 😊1 happiness | Soviet housing blocks |
+| **Microrayon Housing** | Sand tiles | 💧20, 🔥10 | 💧5, 🔥5× season | 😊±1-2 happiness | Soviet housing blocks |
 | **Water Tank** | Sand/Rock | ⚡15 | — | — | Stores up to 50 freshwater |
 
 ### Tile Types
@@ -99,9 +101,20 @@ Population grows/declines based on conditions (requires at least one Microrayon)
 
 Buildings auto-connect with visual pipes when within 5 tiles:
 - **Pump → Distiller/Water Tank:** Blue water pipe
-- **Reactor → Distiller:** Orange heat pipe  
+- **Reactor → Distiller:** Orange heat pipe
 - **Distiller → Microrayon/Water Tank:** Blue water pipe
 - **Water Tank → Microrayon:** Blue water pipe
+
+### Connection Requirements
+
+Buildings must be connected to function properly:
+
+| Building | Required Connections | Effect if Disconnected |
+|----------|---------------------|------------------------|
+| **Distiller** | Pump (water) + Reactor (heat) | No freshwater production, no reactor cooling |
+| **Microrayon** | Distiller or Water Tank (water) | -2 happiness/tick instead of +1 |
+
+**Important:** Happiness is clamped to 0-100. Disconnected housing actively hurts your city!
 
 ### Building Placement Preview
 
@@ -168,6 +181,7 @@ Assets configured in `public/assets/manifest.json`:
 - **Suburban:** Kenney City Kit (Suburban) - housing, trees, decorations
 - **Industrial:** Kenney Retro Urban Kit - pumps, reactors, tanks
 - **Roads:** Kenney Roads Kit - procedural road decorations
+- **2D Terrain:** Kenney Roguelike spritesheet - sand/rock tile textures
 
 ### Decorations
 Randomly placed on sand tiles at game start:
@@ -205,10 +219,16 @@ src/
 │   ├── GridManager.ts      # 50×50 instanced tile grid
 │   ├── TileTypes.ts        # Tile generation (sea/sand/rock)
 │   └── GridCoords.ts       # World ↔ Grid coordinate conversion
+├── config/
+│   └── ConnectionRules.ts  # Pipe connections, building requirements
 ├── simulation/
 │   ├── GameState.ts        # Core game logic, events, seasons
 │   ├── TickSystem.ts       # Day progression (3s/tick)
 │   ├── EventSystem.ts      # Random events (sandstorms, etc.)
+│   ├── ambient/            # Ambient creatures
+│   │   ├── AmbientManager.ts
+│   │   ├── Camel.ts        # Roaming camels
+│   │   └── Tumbleweed.ts   # Rolling tumbleweeds
 │   └── buildings/
 │       └── Building.ts     # Building metadata
 ├── managers/
@@ -240,8 +260,9 @@ src/
 
 | Task | File(s) |
 |------|---------|
-| Add new building type | `types/GameTypes.ts`, `simulation/buildings/Building.ts`, `manifest.json` |
+| Add new building type | `types/GameTypes.ts`, `simulation/buildings/Building.ts`, `config/ConnectionRules.ts`, `manifest.json` |
 | Change game balance | `types/GameTypes.ts` (costs, production) |
+| Modify connection rules | `config/ConnectionRules.ts` (pipe connections, building requirements) |
 | Add new resource | `types/GameTypes.ts`, `simulation/GameState.ts`, `ui/HUD.ts` |
 | New visual effect | `engine/PostProcess.ts`, `effects/ParticleManager.ts` |
 | New sound effect | `managers/SoundManager.ts` |
@@ -282,6 +303,9 @@ src/
 - [x] Ambient dust particles
 - [x] Reactor smoke particles
 - [x] Distiller steam particles
+- [x] Roaming camels (avoid buildings)
+- [x] Rolling tumbleweeds (avoid buildings)
+- [x] Textured terrain (Kenney roguelike spritesheet)
 - [x] Building placement dust burst
 - [x] Animated building placement (squash-stretch)
 - [x] Pulsing pipe glow animation
