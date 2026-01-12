@@ -1,10 +1,10 @@
-# Caspian Atom: The Aktau Protocol
+# 🏜️ Caspian Atom: The Aktau Protocol 
 
-A browser-based isometric city-builder game where you manage a Soviet-era nuclear-powered desalination city in the Kazakh desert.
+A browser-based isometric city-builder game where you manage a Soviet-era nuclear-powered desalination city 🏭💧⚡ in the Kazakh desert.
 
 ## 🎮 About
 
-Set in 1958-1991 on the Mangyshlak Peninsula, you control the legendary city of Aktau—where the BN-350 fast breeder reactor sustained 150,000 people by converting Caspian seawater into drinking water.
+Set in 1958–1991 on the Mangyshlak Peninsula, you control the legendary city of Aktau—where the [BN-350 fast breeder reactor](https://en.wikipedia.org/wiki/BN-350_reactor) sustained 150,000 people by converting Caspian seawater into drinking water.
 
 **Your Mission:** Survive as long as possible by balancing nuclear power, water extraction, and district heating without causing a meltdown, drought, or freezing your population.
 
