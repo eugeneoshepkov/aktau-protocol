@@ -1,0 +1,152 @@
+{
+  "version": "2.1.0",
+  "useModels": true,
+  "basePaths": {
+    "suburban": "/models/suburban/Models/GLB format/",
+    "industrial": "/models/industrial/Models/GLB format/",
+    "roads": "/models/roads/Models/GLB format/"
+  },
+  "buildings": {
+    "pump": {
+      "primitive": {
+        "type": "cylinder",
+        "height": 1.5,
+        "diameter": 0.8,
+        "color": "#2F8D8D"
+      },
+      "model": {
+        "basePath": "industrial",
+        "file": "building-c.glb",
+        "scale": 0.8,
+        "rotation": 0,
+        "yOffset": 0
+      }
+    },
+    "reactor": {
+      "primitive": {
+        "type": "cylinder",
+        "height": 3,
+        "diameter": 2,
+        "color": "#FF6B35"
+      },
+      "models": [
+        {
+          "basePath": "industrial",
+          "file": "detail-tank.glb",
+          "scale": 1.2,
+          "rotation": 0,
+          "yOffset": 0,
+          "offset": { "x": 0, "y": 0, "z": 0 }
+        },
+        {
+          "basePath": "industrial",
+          "file": "chimney-large.glb",
+          "scale": 1.0,
+          "rotation": 0,
+          "yOffset": 0,
+          "offset": { "x": 0.8, "y": 0, "z": 0.5 }
+        }
+      ]
+    },
+    "distiller": {
+      "primitive": {
+        "type": "box",
+        "height": 1,
+        "width": 1.2,
+        "depth": 1.2,
+        "color": "#4A90A4"
+      },
+      "model": {
+        "basePath": "suburban",
+        "file": "building-type-i.glb",
+        "scale": 1.0,
+        "rotation": 0,
+        "yOffset": 0
+      }
+    },
+    "microrayon": {
+      "primitive": {
+        "type": "box",
+        "height": 2,
+        "width": 0.9,
+        "depth": 0.9,
+        "color": "#D4C5A9"
+      },
+      "variants": [
+        { "basePath": "suburban", "file": "building-type-a.glb", "scale": 1.0, "rotation": 0, "yOffset": 0 },
+        { "basePath": "suburban", "file": "building-type-b.glb", "scale": 1.0, "rotation": 0, "yOffset": 0 },
+        { "basePath": "suburban", "file": "building-type-c.glb", "scale": 1.0, "rotation": 0, "yOffset": 0 },
+        { "basePath": "suburban", "file": "building-type-d.glb", "scale": 1.0, "rotation": 0, "yOffset": 0 },
+        { "basePath": "suburban", "file": "building-type-e.glb", "scale": 1.0, "rotation": 0, "yOffset": 0 },
+        { "basePath": "suburban", "file": "building-type-f.glb", "scale": 1.0, "rotation": 0, "yOffset": 0 },
+        { "basePath": "suburban", "file": "building-type-g.glb", "scale": 1.0, "rotation": 0, "yOffset": 0 },
+        { "basePath": "suburban", "file": "building-type-j.glb", "scale": 1.0, "rotation": 0, "yOffset": 0 },
+        { "basePath": "suburban", "file": "building-type-k.glb", "scale": 1.0, "rotation": 0, "yOffset": 0 },
+        { "basePath": "suburban", "file": "building-type-l.glb", "scale": 1.0, "rotation": 0, "yOffset": 0 },
+        { "basePath": "suburban", "file": "building-type-m.glb", "scale": 1.0, "rotation": 0, "yOffset": 0 },
+        { "basePath": "suburban", "file": "building-type-n.glb", "scale": 1.0, "rotation": 0, "yOffset": 0 },
+        { "basePath": "suburban", "file": "building-type-o.glb", "scale": 1.0, "rotation": 0, "yOffset": 0 },
+        { "basePath": "suburban", "file": "building-type-p.glb", "scale": 1.0, "rotation": 0, "yOffset": 0 },
+        { "basePath": "suburban", "file": "building-type-q.glb", "scale": 1.0, "rotation": 0, "yOffset": 0 },
+        { "basePath": "suburban", "file": "building-type-r.glb", "scale": 1.0, "rotation": 0, "yOffset": 0 },
+        { "basePath": "suburban", "file": "building-type-s.glb", "scale": 1.0, "rotation": 0, "yOffset": 0 },
+        { "basePath": "suburban", "file": "building-type-t.glb", "scale": 1.0, "rotation": 0, "yOffset": 0 },
+        { "basePath": "suburban", "file": "building-type-u.glb", "scale": 1.0, "rotation": 0, "yOffset": 0 }
+      ]
+    },
+    "water_tank": {
+      "primitive": {
+        "type": "cylinder",
+        "height": 1.2,
+        "diameter": 1.4,
+        "color": "#5599CC"
+      },
+      "model": {
+        "basePath": "industrial",
+        "file": "detail-tank.glb",
+        "scale": 1.0,
+        "rotation": 0,
+        "yOffset": 0
+      }
+    }
+  },
+  "decorations": {
+    "basePath": "suburban",
+    "items": [
+      { "file": "tree-large.glb", "scale": 0.8, "frequency": 0.06 },
+      { "file": "tree-small.glb", "scale": 0.6, "frequency": 0.08 },
+      { "file": "fence.glb", "scale": 0.5, "frequency": 0.02 },
+      { "file": "fence-low.glb", "scale": 0.5, "frequency": 0.025 },
+      { "file": "planter.glb", "scale": 0.6, "frequency": 0.03 }
+    ]
+  },
+  "roads": {
+    "basePath": "roads",
+    "straight": "road-straight.glb",
+    "bend": "road-bend.glb",
+    "crossroad": "road-crossroad.glb",
+    "intersection": "road-intersection.glb",
+    "end": "road-end.glb",
+    "scale": 1.0
+  },
+  "tiles": {
+    "sand": {
+      "primitive": {
+        "color": "#E6D5AC"
+      },
+      "model": null
+    },
+    "sea": {
+      "primitive": {
+        "color": "#2F8D8D"
+      },
+      "model": null
+    },
+    "rock": {
+      "primitive": {
+        "color": "#555555"
+      },
+      "model": null
+    }
+  }
+}

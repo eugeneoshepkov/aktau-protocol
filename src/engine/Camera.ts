@@ -1,0 +1,221 @@
+import { ArcRotateCamera, Vector3, Scene } from '@babylonjs/core';
+import {
+  ISOMETRIC_ALPHA,
+  ISOMETRIC_BETA,
+  MIN_ZOOM,
+  MAX_ZOOM,
+  DEFAULT_ZOOM,
+  GRID_SIZE,
+  TILE_SIZE
+} from '../types';
+
+let cameraInstance: IsometricCamera | null = null;
+
+export class IsometricCamera {
+  private camera: ArcRotateCamera;
+  private scene: Scene;
+  private keysPressed: Set<string> = new Set();
+  private readonly PAN_SPEED = 0.4;
+  private readonly ROTATION_SPEED = 0.03;
+  private shakeIntensity = 0;
+  private shakeDuration = 0;
+  private shakeTime = 0;
+  private originalTarget: Vector3 | null = null;
+
+  constructor(scene: Scene, canvas: HTMLCanvasElement) {
+    this.scene = scene;
+    cameraInstance = this;
+
+    const gridCenter = new Vector3(
+      (GRID_SIZE * TILE_SIZE) / 2,
+      0,
+      (GRID_SIZE * TILE_SIZE) / 2
+    );
+
+    this.camera = new ArcRotateCamera(
+      'isometricCamera',
+      ISOMETRIC_ALPHA,
+      ISOMETRIC_BETA,
+      DEFAULT_ZOOM,
+      gridCenter,
+      scene
+    );
+
+    this.camera.attachControl(canvas, true);
+
+    this.camera.lowerRadiusLimit = MIN_ZOOM;
+    this.camera.upperRadiusLimit = MAX_ZOOM;
+
+    this.camera.lowerBetaLimit = ISOMETRIC_BETA;
+    this.camera.upperBetaLimit = ISOMETRIC_BETA;
+
+    this.camera.wheelPrecision = 3;
+
+    this.camera.panningAxis = new Vector3(1, 0, 1);
+    this.camera.panningSensibility = 50;
+    this.camera._useCtrlForPanning = false;
+
+    const shouldIgnoreKeyboard = () => {
+      const active = document.activeElement;
+      return active instanceof HTMLInputElement || 
+             active instanceof HTMLTextAreaElement ||
+             active instanceof HTMLSelectElement;
+    };
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (shouldIgnoreKeyboard()) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) {
+        this.keysPressed.clear();
+        return;
+      }
+      
+      const key = e.key.toLowerCase();
+      this.keysPressed.add(key);
+
+      if (e.key === 'Shift') {
+        this.camera.panningSensibility = 50;
+        this.camera.angularSensibilityX = Infinity;
+        this.camera.angularSensibilityY = Infinity;
+      }
+    };
+
+    const onKeyUp = (e: KeyboardEvent) => {
+      const key = e.key.toLowerCase();
+      this.keysPressed.delete(key);
+
+      if (e.key === 'Shift') {
+        this.camera.panningSensibility = Infinity;
+        this.camera.angularSensibilityX = 500;
+        this.camera.angularSensibilityY = 500;
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    
+    window.addEventListener('blur', () => {
+      this.keysPressed.clear();
+    });
+    
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        this.keysPressed.clear();
+      }
+    });
+    
+    canvas.addEventListener('click', () => {
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+    });
+
+    this.camera.panningSensibility = Infinity;
+    this.camera.angularSensibilityX = 500;
+    this.camera.angularSensibilityY = 500;
+
+    scene.onBeforeRenderObservable.add(() => {
+      this.processKeyboardInput();
+      this.updateShake();
+    });
+  }
+
+  private processKeyboardInput(): void {
+    const target = this.camera.target.clone();
+
+    let moved = false;
+
+    if (this.keysPressed.has('w')) {
+      target.z -= this.PAN_SPEED;
+      target.x -= this.PAN_SPEED;
+      moved = true;
+    }
+    if (this.keysPressed.has('s')) {
+      target.z += this.PAN_SPEED;
+      target.x += this.PAN_SPEED;
+      moved = true;
+    }
+    if (this.keysPressed.has('a')) {
+      target.x -= this.PAN_SPEED;
+      target.z += this.PAN_SPEED;
+      moved = true;
+    }
+    if (this.keysPressed.has('d')) {
+      target.x += this.PAN_SPEED;
+      target.z -= this.PAN_SPEED;
+      moved = true;
+    }
+
+    if (moved) {
+      this.camera.setTarget(target);
+    }
+
+    if (this.keysPressed.has('q')) {
+      this.camera.alpha -= this.ROTATION_SPEED;
+    }
+    if (this.keysPressed.has('e')) {
+      this.camera.alpha += this.ROTATION_SPEED;
+    }
+  }
+
+  private updateShake(): void {
+    if (this.shakeDuration <= 0) return;
+
+    const deltaTime = this.scene.getEngine().getDeltaTime() / 1000;
+    this.shakeTime += deltaTime;
+
+    if (this.shakeTime >= this.shakeDuration) {
+      this.shakeDuration = 0;
+      this.shakeTime = 0;
+      if (this.originalTarget) {
+        this.camera.setTarget(this.originalTarget);
+        this.originalTarget = null;
+      }
+      return;
+    }
+
+    const progress = this.shakeTime / this.shakeDuration;
+    const decay = 1 - progress;
+    const intensity = this.shakeIntensity * decay;
+
+    const offsetX = (Math.random() * 2 - 1) * intensity;
+    const offsetZ = (Math.random() * 2 - 1) * intensity;
+
+    if (this.originalTarget) {
+      const shakeTarget = this.originalTarget.clone();
+      shakeTarget.x += offsetX;
+      shakeTarget.z += offsetZ;
+      this.camera.setTarget(shakeTarget);
+    }
+  }
+
+  public shake(intensity: number = 0.3, duration: number = 0.2): void {
+    this.shakeIntensity = intensity;
+    this.shakeDuration = duration;
+    this.shakeTime = 0;
+    this.originalTarget = this.camera.target.clone();
+  }
+
+  public getCamera(): ArcRotateCamera {
+    return this.camera;
+  }
+
+  public setTarget(target: Vector3): void {
+    this.camera.setTarget(target);
+  }
+
+  public resetView(): void {
+    const gridCenter = new Vector3(
+      (GRID_SIZE * TILE_SIZE) / 2,
+      0,
+      (GRID_SIZE * TILE_SIZE) / 2
+    );
+    this.camera.setTarget(gridCenter);
+    this.camera.alpha = ISOMETRIC_ALPHA;
+    this.camera.beta = ISOMETRIC_BETA;
+    this.camera.radius = DEFAULT_ZOOM;
+  }
+}
+
+export function getCameraInstance(): IsometricCamera | null {
+  return cameraInstance;
+}
