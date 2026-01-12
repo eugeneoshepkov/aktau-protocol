@@ -1,0 +1,6 @@
+name = "aktau-protocol"
+compatibility_date = "2025-01-10"
+
+[assets]
+directory = "./dist"
+not_found_handling = "single-page-application"

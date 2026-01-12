@@ -53,6 +53,24 @@ export class Camel {
       return;
     }
 
+    // Check if a building was placed at current position or target
+    const currentGridX = Math.floor(this.mesh.position.x / TILE_SIZE);
+    const currentGridZ = Math.floor(this.mesh.position.z / TILE_SIZE);
+    const targetGridX = Math.floor(this.target.x / TILE_SIZE);
+    const targetGridZ = Math.floor(this.target.z / TILE_SIZE);
+
+    if (this.gameState.getBuildingAt(currentGridX, currentGridZ) ||
+        this.gameState.getBuildingAt(targetGridX, targetGridZ)) {
+      // Building placed in path, find a new safe spot and idle
+      const safeSpot = this.findNearestSafeTile();
+      if (safeSpot) {
+        this.mesh.position.x = safeSpot.x;
+        this.mesh.position.z = safeSpot.z;
+      }
+      this.startIdle();
+      return;
+    }
+
     const direction = this.target.subtract(this.mesh.position);
     direction.y = 0;
     const distance = direction.length();
@@ -68,6 +86,31 @@ export class Camel {
 
     const lookTarget = this.mesh.position.add(direction);
     this.mesh.lookAt(lookTarget);
+  }
+
+  private findNearestSafeTile(): { x: number; z: number } | null {
+    const currentGridX = Math.floor(this.mesh.position.x / TILE_SIZE);
+    const currentGridZ = Math.floor(this.mesh.position.z / TILE_SIZE);
+
+    // Search in expanding rings around current position
+    for (let radius = 1; radius <= 5; radius++) {
+      for (let dx = -radius; dx <= radius; dx++) {
+        for (let dz = -radius; dz <= radius; dz++) {
+          if (Math.abs(dx) !== radius && Math.abs(dz) !== radius) continue;
+
+          const testX = currentGridX + dx;
+          const testZ = currentGridZ + dz;
+
+          if (this.isValidTile(testX, testZ)) {
+            return {
+              x: testX * TILE_SIZE + TILE_SIZE / 2,
+              z: testZ * TILE_SIZE + TILE_SIZE / 2
+            };
+          }
+        }
+      }
+    }
+    return null;
   }
 
   private startIdle(): void {

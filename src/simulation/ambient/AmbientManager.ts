@@ -121,7 +121,7 @@ class AmbientManagerClass {
 
     const z = (SEA_ROWS + Math.random() * (GRID_SIZE - SEA_ROWS - 5)) * TILE_SIZE;
 
-    const tumbleweed = new Tumbleweed(clone);
+    const tumbleweed = new Tumbleweed(clone, gameState);
     tumbleweed.setPosition(SPAWN_X, 0.2, z);
 
     this.tumbleweeds.push(tumbleweed);
