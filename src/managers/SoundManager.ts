@@ -40,8 +40,11 @@ const SOUNDS: Record<string, ZzFXParams> = {
   // Warning alarm
   warning: [0.6, 0, 300, 0, 0.15, 0.1, 2, 0, 0, 0, 100, 0.1, 0.2, 0, 0, 0, 0, 0.5, 0.1],
 
-  // Game over - ominous
-  gameover: [0.7, 0, 150, 0.15, 0.6, 0.5, 1, 0.5, -30, 0, 0, 0, 0, 0.4, 0, 0, 0.1, 0.3, 0.25]
+  // Game over - terrifying descending doom
+  gameover: [1, 0, 80, 0.3, 1.2, 0.8, 1, 0.8, -50, -5, 0, 0, 0, 0.6, 0, 0.2, 0.15, 0.2, 0.4],
+
+  // Meltdown siren - alarming nuclear warning
+  meltdown: [0.9, 0, 400, 0.1, 0.4, 0.2, 2, 0, 200, 0, -200, 0.15, 0.3, 0.3, 0, 0, 0.05, 0.6, 0.1]
 };
 
 class SoundManagerClass {

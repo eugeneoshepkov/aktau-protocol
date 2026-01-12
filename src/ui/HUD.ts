@@ -297,13 +297,8 @@ export class HUD {
     document.body.appendChild(overlay);
 
     overlay.querySelector('#restart-btn')?.addEventListener('click', () => {
-      overlay.remove();
-      gameState.reset();
-      tickSystem.start();
-      this.updateResources();
-      this.updateDay();
-      tickSystem.setTickRate(this.speeds[0]);
-      this.speedButtons.forEach((btn, i) => btn.classList.toggle('active', i === 0));
+      gameState.deleteSave();
+      window.location.reload();
     });
   }
 

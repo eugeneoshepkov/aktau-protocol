@@ -4,7 +4,8 @@
   "basePaths": {
     "suburban": "/models/suburban/Models/GLB format/",
     "industrial": "/models/industrial/Models/GLB format/",
-    "roads": "/models/roads/Models/GLB format/"
+    "roads": "/models/roads/Models/GLB format/",
+    "misc": "/models/misc/"
   },
   "buildings": {
     "pump": {
@@ -57,8 +58,8 @@
         "color": "#4A90A4"
       },
       "model": {
-        "basePath": "suburban",
-        "file": "building-type-i.glb",
+        "basePath": "industrial",
+        "file": "building-m.glb",
         "scale": 1.0,
         "rotation": 0,
         "yOffset": 0
@@ -73,25 +74,139 @@
         "color": "#D4C5A9"
       },
       "variants": [
-        { "basePath": "suburban", "file": "building-type-a.glb", "scale": 1.0, "rotation": 0, "yOffset": 0 },
-        { "basePath": "suburban", "file": "building-type-b.glb", "scale": 1.0, "rotation": 0, "yOffset": 0 },
-        { "basePath": "suburban", "file": "building-type-c.glb", "scale": 1.0, "rotation": 0, "yOffset": 0 },
-        { "basePath": "suburban", "file": "building-type-d.glb", "scale": 1.0, "rotation": 0, "yOffset": 0 },
-        { "basePath": "suburban", "file": "building-type-e.glb", "scale": 1.0, "rotation": 0, "yOffset": 0 },
-        { "basePath": "suburban", "file": "building-type-f.glb", "scale": 1.0, "rotation": 0, "yOffset": 0 },
-        { "basePath": "suburban", "file": "building-type-g.glb", "scale": 1.0, "rotation": 0, "yOffset": 0 },
-        { "basePath": "suburban", "file": "building-type-j.glb", "scale": 1.0, "rotation": 0, "yOffset": 0 },
-        { "basePath": "suburban", "file": "building-type-k.glb", "scale": 1.0, "rotation": 0, "yOffset": 0 },
-        { "basePath": "suburban", "file": "building-type-l.glb", "scale": 1.0, "rotation": 0, "yOffset": 0 },
-        { "basePath": "suburban", "file": "building-type-m.glb", "scale": 1.0, "rotation": 0, "yOffset": 0 },
-        { "basePath": "suburban", "file": "building-type-n.glb", "scale": 1.0, "rotation": 0, "yOffset": 0 },
-        { "basePath": "suburban", "file": "building-type-o.glb", "scale": 1.0, "rotation": 0, "yOffset": 0 },
-        { "basePath": "suburban", "file": "building-type-p.glb", "scale": 1.0, "rotation": 0, "yOffset": 0 },
-        { "basePath": "suburban", "file": "building-type-q.glb", "scale": 1.0, "rotation": 0, "yOffset": 0 },
-        { "basePath": "suburban", "file": "building-type-r.glb", "scale": 1.0, "rotation": 0, "yOffset": 0 },
-        { "basePath": "suburban", "file": "building-type-s.glb", "scale": 1.0, "rotation": 0, "yOffset": 0 },
-        { "basePath": "suburban", "file": "building-type-t.glb", "scale": 1.0, "rotation": 0, "yOffset": 0 },
-        { "basePath": "suburban", "file": "building-type-u.glb", "scale": 1.0, "rotation": 0, "yOffset": 0 }
+        {
+          "basePath": "suburban",
+          "file": "building-type-a.glb",
+          "scale": 1.0,
+          "rotation": 0,
+          "yOffset": 0
+        },
+        {
+          "basePath": "suburban",
+          "file": "building-type-b.glb",
+          "scale": 1.0,
+          "rotation": 0,
+          "yOffset": 0
+        },
+        {
+          "basePath": "suburban",
+          "file": "building-type-c.glb",
+          "scale": 1.0,
+          "rotation": 0,
+          "yOffset": 0
+        },
+        {
+          "basePath": "suburban",
+          "file": "building-type-d.glb",
+          "scale": 1.0,
+          "rotation": 0,
+          "yOffset": 0
+        },
+        {
+          "basePath": "suburban",
+          "file": "building-type-e.glb",
+          "scale": 1.0,
+          "rotation": 0,
+          "yOffset": 0
+        },
+        {
+          "basePath": "suburban",
+          "file": "building-type-f.glb",
+          "scale": 1.0,
+          "rotation": 0,
+          "yOffset": 0
+        },
+        {
+          "basePath": "suburban",
+          "file": "building-type-g.glb",
+          "scale": 1.0,
+          "rotation": 0,
+          "yOffset": 0
+        },
+        {
+          "basePath": "suburban",
+          "file": "building-type-j.glb",
+          "scale": 1.0,
+          "rotation": 0,
+          "yOffset": 0
+        },
+        {
+          "basePath": "suburban",
+          "file": "building-type-k.glb",
+          "scale": 1.0,
+          "rotation": 0,
+          "yOffset": 0
+        },
+        {
+          "basePath": "suburban",
+          "file": "building-type-l.glb",
+          "scale": 1.0,
+          "rotation": 0,
+          "yOffset": 0
+        },
+        {
+          "basePath": "suburban",
+          "file": "building-type-m.glb",
+          "scale": 1.0,
+          "rotation": 0,
+          "yOffset": 0
+        },
+        {
+          "basePath": "suburban",
+          "file": "building-type-n.glb",
+          "scale": 1.0,
+          "rotation": 0,
+          "yOffset": 0
+        },
+        {
+          "basePath": "suburban",
+          "file": "building-type-o.glb",
+          "scale": 1.0,
+          "rotation": 0,
+          "yOffset": 0
+        },
+        {
+          "basePath": "suburban",
+          "file": "building-type-p.glb",
+          "scale": 1.0,
+          "rotation": 0,
+          "yOffset": 0
+        },
+        {
+          "basePath": "suburban",
+          "file": "building-type-q.glb",
+          "scale": 1.0,
+          "rotation": 0,
+          "yOffset": 0
+        },
+        {
+          "basePath": "suburban",
+          "file": "building-type-r.glb",
+          "scale": 1.0,
+          "rotation": 0,
+          "yOffset": 0
+        },
+        {
+          "basePath": "suburban",
+          "file": "building-type-s.glb",
+          "scale": 1.0,
+          "rotation": 0,
+          "yOffset": 0
+        },
+        {
+          "basePath": "suburban",
+          "file": "building-type-t.glb",
+          "scale": 1.0,
+          "rotation": 0,
+          "yOffset": 0
+        },
+        {
+          "basePath": "suburban",
+          "file": "building-type-u.glb",
+          "scale": 1.0,
+          "rotation": 0,
+          "yOffset": 0
+        }
       ]
     },
     "water_tank": {
@@ -148,5 +263,9 @@
       },
       "model": null
     }
+  },
+  "misc": {
+    "camel": "camel.glb",
+    "tumbleweed": "tumbleweed.glb"
   }
 }

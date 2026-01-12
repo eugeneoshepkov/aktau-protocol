@@ -20,6 +20,7 @@ import { eventSystem } from './simulation/EventSystem';
 import { FilmGrainEffect, HeatHazeEffect } from './engine/PostProcess';
 import { ParticleManager } from './effects/ParticleManager';
 import { ICONS } from './ui/Icons';
+import { ambientManager } from './simulation/ambient';
 
 let gameLoopStarted = false;
 
@@ -69,6 +70,13 @@ async function initGame(): Promise<void> {
   }
 
   await decorManager.initialize(scene, (x, z) => gridManager.getTileAt(x, z));
+
+  await ambientManager.initialize(scene, gridManager);
+
+  scene.registerBeforeRender(() => {
+    const deltaTime = scene.getEngine().getDeltaTime() / 1000;
+    ambientManager.update(deltaTime);
+  });
 
   const buildingManager = new BuildingManager(scene, gridManager);
   const pipeManager = new PipeManager(scene);
@@ -127,7 +135,9 @@ async function initGame(): Promise<void> {
   });
 
   gameState.on('gameOver', () => {
-    soundManager.play('gameover');
+    musicManager.stop();
+    soundManager.play('meltdown');
+    setTimeout(() => soundManager.play('gameover'), 300);
   });
 
   gameState.on('dayAdvance', (day) => {
