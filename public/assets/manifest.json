@@ -5,7 +5,8 @@
     "suburban": "/models/suburban/Models/GLB format/",
     "industrial": "/models/industrial/Models/GLB format/",
     "roads": "/models/roads/Models/GLB format/",
-    "misc": "/models/misc/"
+    "misc": "/models/misc/",
+    "soviet": "/models/soviet/"
   },
   "buildings": {
     "pump": {

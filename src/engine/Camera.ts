@@ -157,26 +157,20 @@ export class IsometricCamera {
       moved = true;
     }
 
-    // Arrow keys: Screen-space panning (like dragging)
+    // Arrow keys: Use Babylon's panning system (identical to Shift+drag)
+    const ARROW_PAN_SPEED = 0.15;
+
     if (this.keysPressed.has('arrowup')) {
-      target.x += upX * this.PAN_SPEED;
-      target.z += upZ * this.PAN_SPEED;
-      moved = true;
+      this.camera.inertialPanningY += ARROW_PAN_SPEED;
     }
     if (this.keysPressed.has('arrowdown')) {
-      target.x -= upX * this.PAN_SPEED;
-      target.z -= upZ * this.PAN_SPEED;
-      moved = true;
+      this.camera.inertialPanningY -= ARROW_PAN_SPEED;
     }
     if (this.keysPressed.has('arrowleft')) {
-      target.x -= rightX * this.PAN_SPEED;
-      target.z -= rightZ * this.PAN_SPEED;
-      moved = true;
+      this.camera.inertialPanningX -= ARROW_PAN_SPEED;
     }
     if (this.keysPressed.has('arrowright')) {
-      target.x += rightX * this.PAN_SPEED;
-      target.z += rightZ * this.PAN_SPEED;
-      moved = true;
+      this.camera.inertialPanningX += ARROW_PAN_SPEED;
     }
 
     if (moved) {
