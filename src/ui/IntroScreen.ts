@@ -9,7 +9,7 @@ export class IntroScreen {
   constructor(onStart: () => void) {
     this.onStart = onStart;
     
-    const savedMuted = localStorage.getItem('aktau-intro-muted');
+    const savedMuted = localStorage.getItem('aktau-muted');
     this.muted = savedMuted === 'true';
     
     this.overlay = this.createOverlay();
@@ -97,7 +97,7 @@ export class IntroScreen {
 
   private toggleMute(): void {
     this.muted = !this.muted;
-    localStorage.setItem('aktau-intro-muted', String(this.muted));
+    localStorage.setItem('aktau-muted', String(this.muted));
     if (this.audio) {
       this.audio.muted = this.muted;
     }
