@@ -14,7 +14,7 @@ A browser-based isometric city-builder/survival game set in Aktau, Kazakhstan (S
 
 - **Runtime:** Bun
 - **Build:** Vite + TypeScript
-- **Rendering:** Babylon.js (WebGPU/WebGL)
+- **Rendering:** Babylon.js (WebGPU/WebGL) + @babylonjs/materials (WaterMaterial)
 - **Audio:** ZzFX (procedural SFX) + HTML5 Audio (background music)
 - **State:** Custom event-driven GameState singleton
 - **Assets:** 3D models from Kenney asset packs (Suburban, Industrial, Roads)
@@ -216,7 +216,7 @@ src/
 │   ├── InputManager.ts     # Raycast hover/click detection
 │   └── PostProcess.ts      # Film grain + heat haze shaders
 ├── grid/
-│   ├── GridManager.ts      # 50×50 instanced tile grid
+│   ├── GridManager.ts      # Organic diorama terrain (vertex-colored mesh)
 │   ├── TileTypes.ts        # Tile generation (sea/sand/rock)
 │   └── GridCoords.ts       # World ↔ Grid coordinate conversion
 ├── config/
@@ -271,6 +271,9 @@ src/
 | Add new 3D model | `public/models/`, `manifest.json` |
 | Change tick speed | `simulation/TickSystem.ts` |
 | Modify seasons | `simulation/GameState.ts` (SEASON_* constants) |
+| Modify terrain visuals | `grid/GridManager.ts` (createLandMesh, createWaterMesh) |
+| Camera constraints | `engine/Camera.ts` (clampCameraTarget) |
+| Scene effects (fog) | `engine/Engine.ts` |
 
 ---
 
@@ -305,7 +308,12 @@ src/
 - [x] Distiller steam particles
 - [x] Roaming camels (avoid buildings)
 - [x] Rolling tumbleweeds (avoid buildings)
-- [x] Textured terrain (Kenney roguelike spritesheet)
+- [x] Organic diorama terrain (vertex-colored, non-indexed geometry)
+- [x] Sand color variation (per-tile brightness randomization)
+- [x] Water plane with animated WaterMaterial
+- [x] Diorama base pedestal
+- [x] Scene fog (hides map edges)
+- [x] Camera pan constraints (clamped to grid bounds)
 - [x] Building placement dust burst
 - [x] Animated building placement (squash-stretch)
 - [x] Pulsing pipe glow animation

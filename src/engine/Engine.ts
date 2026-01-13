@@ -38,6 +38,12 @@ export class GameEngine {
     this.scene = new Scene(this.engine);
     this.scene.clearColor = new Color4(0.4, 0.6, 0.85, 1);
 
+    // Add fog to hide map edges (matches sky color)
+    this.scene.fogMode = Scene.FOGMODE_LINEAR;
+    this.scene.fogStart = 45;
+    this.scene.fogEnd = 85;
+    this.scene.fogColor = new Color3(0.4, 0.6, 0.85);
+
     this.setupLighting();
     this.setupSky();
     this.setupAmbientDust();

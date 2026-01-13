@@ -173,15 +173,54 @@ export class IsometricCamera {
       this.camera.inertialPanningX += ARROW_PAN_SPEED;
     }
 
+    // Clamp target to grid bounds (allow slight overrun for better feel)
+    const PADDING = 5;
+    const worldSize = GRID_SIZE * TILE_SIZE;
+    target.x = Math.max(-PADDING, Math.min(worldSize + PADDING, target.x));
+    target.z = Math.max(-PADDING, Math.min(worldSize + PADDING, target.z));
+
     if (moved) {
       this.camera.setTarget(target);
     }
+
+    // Also clamp after Babylon's internal panning (Shift+drag, arrow keys)
+    this.clampCameraTarget();
 
     if (this.keysPressed.has('q')) {
       this.camera.alpha -= this.ROTATION_SPEED;
     }
     if (this.keysPressed.has('e')) {
       this.camera.alpha += this.ROTATION_SPEED;
+    }
+  }
+
+  private clampCameraTarget(): void {
+    const PADDING = 5;
+    const worldSize = GRID_SIZE * TILE_SIZE;
+    const target = this.camera.target;
+
+    let needsClamp = false;
+    let clampedX = target.x;
+    let clampedZ = target.z;
+
+    if (target.x < -PADDING) {
+      clampedX = -PADDING;
+      needsClamp = true;
+    } else if (target.x > worldSize + PADDING) {
+      clampedX = worldSize + PADDING;
+      needsClamp = true;
+    }
+
+    if (target.z < -PADDING) {
+      clampedZ = -PADDING;
+      needsClamp = true;
+    } else if (target.z > worldSize + PADDING) {
+      clampedZ = worldSize + PADDING;
+      needsClamp = true;
+    }
+
+    if (needsClamp) {
+      this.camera.setTarget(new Vector3(clampedX, target.y, clampedZ));
     }
   }
 

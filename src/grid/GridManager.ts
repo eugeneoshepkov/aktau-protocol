@@ -134,28 +134,40 @@ export class GridManager {
         // Get tile color (same for all 4 vertices - crisp flat color)
         const rgb = getTileColor(tileType);
 
+        // Add color variation for sand tiles (simulates dunes/texture)
+        let r = rgb.r,
+          g = rgb.g,
+          b = rgb.b;
+        if (tileType === "sand") {
+          // Deterministic variation per tile: ±10% brightness
+          const variation = (this.seededRandom(x + 5000, z + 5000) - 0.5) * 0.2;
+          r = Math.max(0, Math.min(1, rgb.r + variation));
+          g = Math.max(0, Math.min(1, rgb.g + variation));
+          b = Math.max(0, Math.min(1, rgb.b + variation));
+        }
+
         // Height: rocks slightly elevated above sand
         const tileY = tileType === "rock" ? 0.15 : 0.05;
 
         // Create 4 unique vertices for this tile
         // Vertex 0: top-left corner (x, z)
         positions.push(x0, tileY, z0);
-        colors.push(rgb.r, rgb.g, rgb.b, 1.0);
+        colors.push(r, g, b, 1.0);
         normals.push(0, 1, 0);
 
         // Vertex 1: top-right corner (x+1, z)
         positions.push(x1, tileY, z1_topRight);
-        colors.push(rgb.r, rgb.g, rgb.b, 1.0);
+        colors.push(r, g, b, 1.0);
         normals.push(0, 1, 0);
 
         // Vertex 2: bottom-left corner (x, z+1)
         positions.push(x2, tileY, z2_bottomLeft);
-        colors.push(rgb.r, rgb.g, rgb.b, 1.0);
+        colors.push(r, g, b, 1.0);
         normals.push(0, 1, 0);
 
         // Vertex 3: bottom-right corner (x+1, z+1)
         positions.push(x3, tileY, z3);
-        colors.push(rgb.r, rgb.g, rgb.b, 1.0);
+        colors.push(r, g, b, 1.0);
         normals.push(0, 1, 0);
 
         // Two triangles: 0-2-1 and 1-2-3 (counter-clockwise winding)
