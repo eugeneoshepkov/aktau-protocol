@@ -20,6 +20,9 @@ import { soundManager } from './SoundManager';
 import type { Building, BuildingType } from '../types';
 import type { ParticleManager } from '../effects/ParticleManager';
 
+// Ground level offset - buildings sit on top of terrain
+const GROUND_LEVEL = 0.15;
+
 interface AnimatedBuilding {
   mesh: Mesh | TransformNode;
   type: BuildingType;
@@ -198,7 +201,7 @@ export class BuildingManager {
     const position = getTileCenter(building.gridX, building.gridZ);
 
     if (this.particleManager) {
-      this.particleManager.createDust(new Vector3(position.x, 0, position.z));
+      this.particleManager.createDust(new Vector3(position.x, GROUND_LEVEL, position.z));
     }
 
     const buildingSounds: Record<BuildingType, keyof typeof import('./SoundManager')['soundManager'] extends never ? string : string> = {
@@ -246,7 +249,7 @@ export class BuildingManager {
       );
     }
 
-    const baseY = primitive.height / 2;
+    const baseY = primitive.height / 2 + GROUND_LEVEL;
     mesh.position = new Vector3(position.x, baseY, position.z);
 
     if (building.type === 'reactor') {
@@ -299,7 +302,7 @@ export class BuildingManager {
       }
 
       const parent = new TransformNode(`building_${building.id}`, this.scene);
-      parent.position = new Vector3(position.x, modelConfig.yOffset, position.z);
+      parent.position = new Vector3(position.x, modelConfig.yOffset + GROUND_LEVEL, position.z);
       parent.scaling = new Vector3(modelConfig.scale, modelConfig.scale, modelConfig.scale);
       
       let rotation = modelConfig.rotation;
@@ -340,7 +343,7 @@ export class BuildingManager {
     }
 
     const parent = new TransformNode(`building_${building.id}`, this.scene);
-    parent.position = new Vector3(position.x, 0, position.z);
+    parent.position = new Vector3(position.x, GROUND_LEVEL, position.z);
 
     try {
       for (const config of modelConfigs) {

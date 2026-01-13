@@ -6,8 +6,8 @@ import {
   Color3,
   Vector3,
   VertexData,
+  VertexBuffer,
 } from "@babylonjs/core";
-import { WaterMaterial } from "@babylonjs/materials";
 import { GRID_SIZE, TILE_SIZE } from "../types";
 import type { TileType } from "../types";
 import { getTileTypeAt, getTileColor } from "./TileTypes";
@@ -186,8 +186,8 @@ export class GridManager {
           b = Math.max(0, Math.min(1, rgb.b + variation - roughnessDarken));
         }
 
-        // Height: rocks slightly elevated above sand
-        const tileY = tileType === "rock" ? 0.15 : 0.05;
+        // Height: rocks elevated above sand, all corners same height (no gaps)
+        const tileY = tileType === "rock" ? 0.25 : 0.15;
 
         // Create 4 unique vertices for this tile
         // Vertex 0: top-left corner (x, z)
@@ -248,35 +248,72 @@ export class GridManager {
    * Create animated water plane
    */
   private createWaterMesh(): void {
+    // Create ground with enough subdivisions for wave vertices
+    const subdivisions = Math.floor(GRID_SIZE / 2); // ~25 segments
     this.seaMesh = MeshBuilder.CreateGround(
       "seaMesh",
       {
         width: GRID_SIZE,
         height: GRID_SIZE,
-        subdivisions: 32,
+        subdivisions: subdivisions,
+        updatable: true, // Required for vertex animation
       },
       this.scene,
     );
 
-    // Position below land level and offset to grid origin
+    // Position below land level
+    // Water base at -0.55 ensures waves (max +0.6 amplitude) stay below land (min 0.1)
     this.seaMesh.position.x = GRID_SIZE / 2;
     this.seaMesh.position.z = GRID_SIZE / 2;
-    this.seaMesh.position.y = -0.3;
+    this.seaMesh.position.y = -0.55;
 
-    // Create water material
-    const waterMaterial = new WaterMaterial("waterMat", this.scene);
-
-    // Configure water appearance
-    waterMaterial.windForce = -5;
-    waterMaterial.waveHeight = 0.05;
-    waterMaterial.waveLength = 0.3;
-    waterMaterial.bumpHeight = 0.05;
-    waterMaterial.waterColor = new Color3(0.18, 0.55, 0.55); // #2F8D8D tint
-    waterMaterial.waterColor2 = new Color3(0.1, 0.4, 0.4);
-    waterMaterial.colorBlendFactor = 0.5;
-    waterMaterial.alpha = 0.9;
+    // Create unlit water material (fully opaque to hide base underneath)
+    const waterMaterial = new StandardMaterial("waterMat", this.scene);
+    waterMaterial.emissiveColor = new Color3(0.18, 0.45, 0.52); // Teal
+    waterMaterial.diffuseColor = Color3.Black();
+    waterMaterial.specularColor = Color3.Black();
+    waterMaterial.alpha = 1.0; // Fully opaque - no dark base showing through
+    waterMaterial.backFaceCulling = false;
+    waterMaterial.disableLighting = true;
 
     this.seaMesh.material = waterMaterial;
+    this.seaMesh.receiveShadows = false;
+
+    // Register animation callback
+    this.scene.registerBeforeRender(() => {
+      this.animateWater(performance.now() / 1000);
+    });
+  }
+
+  /**
+   * Animate water vertices with sine waves for low-poly effect
+   */
+  private animateWater(time: number): void {
+    if (!this.seaMesh) return;
+
+    const positions = this.seaMesh.getVerticesData(VertexBuffer.PositionKind);
+    if (!positions) return;
+
+    // Get mesh world position offset
+    const offsetX = this.seaMesh.position.x;
+    const offsetZ = this.seaMesh.position.z;
+
+    for (let i = 0; i < positions.length; i += 3) {
+      const x = positions[i] + offsetX;
+      const z = positions[i + 2] + offsetZ;
+
+      // Enhanced wave formula with increased amplitude
+      const primaryWave = Math.sin(x * 0.5 + time) * 0.3;
+      const secondaryWave = Math.cos(z * 0.3 + time) * 0.3;
+      const height = primaryWave + secondaryWave;
+
+      positions[i + 1] = height; // Y coordinate
+    }
+
+    // Update mesh with new positions
+    this.seaMesh.updateVerticesData(VertexBuffer.PositionKind, positions);
+
+    // Skip normal recalculation - keeps smooth lighting without dark spots
   }
 
   /**
@@ -293,10 +330,10 @@ export class GridManager {
       this.scene,
     );
 
-    // Position: top surface at y=-1 (below water at y=-0.1)
+    // Position: top surface below lowest wave valley (water can dip to -1.15)
     this.baseMesh.position.x = GRID_SIZE / 2;
     this.baseMesh.position.z = GRID_SIZE / 2;
-    this.baseMesh.position.y = -6; // Center of 10-height box at -6 means top at -1
+    this.baseMesh.position.y = -6.5; // Center of 10-height box at -6.5 means top at -1.5
 
     // Dark rock material
     const baseMaterial = new StandardMaterial("baseMat", this.scene);
@@ -328,9 +365,13 @@ export class GridManager {
   public showHighlight(gridX: number, gridZ: number, valid = true): void {
     if (!this.highlightMesh || !this.highlightMaterial) return;
 
+    // Position highlight above ground level (sand=0.15, rock=0.25)
+    const tileType = this.getTileAt(gridX, gridZ);
+    const groundY = tileType === 'rock' ? 0.25 : 0.15;
+
     this.highlightMesh.position = new Vector3(
       gridX * TILE_SIZE + TILE_SIZE / 2,
-      0.05,
+      groundY + 0.01, // Slightly above ground to prevent z-fighting
       gridZ * TILE_SIZE + TILE_SIZE / 2,
     );
 

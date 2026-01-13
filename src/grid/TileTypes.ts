@@ -2,21 +2,37 @@ import { TILE_COLORS, GRID_SIZE, SEA_ROWS } from '../types';
 import type { TileType } from '../types';
 
 /**
+ * Calculate the coastline Z position at a given X coordinate.
+ * Creates a natural fractal shoreline using layered frequencies.
+ * @param x - The x coordinate (0 to GRID_SIZE-1)
+ * @returns The Z position of the coastline at this X
+ */
+export function getCoastlineZ(x: number): number {
+  // Mix of frequencies creates a natural, jagged "fractal" shoreline
+  const primaryWave = Math.sin(x * 0.1) * 4;      // Large bays/peninsulas
+  const secondaryWave = Math.sin(x * 0.4) * 1.5;  // Medium variation
+  const tertiaryWave = Math.cos(x * 1.3) * 0.5;   // Fine detail/jaggedness
+  return SEA_ROWS + primaryWave + secondaryWave + tertiaryWave;
+}
+
+/**
  * Determine tile type based on grid position
- * - First SEA_ROWS rows (z < SEA_ROWS) are sea
+ * - Sea tiles based on organic coastline
  * - Random rock patches in sand areas
  * - Rest is sand
  */
 export function getTileTypeAt(x: number, z: number): TileType {
-  // First rows are sea
-  if (z < SEA_ROWS) {
+  const coastlineZ = getCoastlineZ(x);
+
+  // Sea tiles based on organic coastline
+  if (z < coastlineZ) {
     return 'sea';
   }
 
   // Deterministic rock placement using simple hash
   // Creates scattered rock formations in the sand
   const hash = simpleHash(x, z);
-  if (hash % 17 === 0 && z > SEA_ROWS + 2) {
+  if (hash % 17 === 0 && z > coastlineZ + 2) {
     return 'rock';
   }
 
