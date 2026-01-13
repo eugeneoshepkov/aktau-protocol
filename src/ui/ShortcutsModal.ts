@@ -1,5 +1,6 @@
 import { ICONS } from './Icons';
 import { soundManager } from '../managers/SoundManager';
+import { tickSystem } from '../simulation/TickSystem';
 
 export class ShortcutsModal {
   private overlay: HTMLDivElement;
@@ -89,6 +90,7 @@ export class ShortcutsModal {
     this.isOpen = true;
     this.overlay.classList.add('open');
     soundManager.play('click');
+    tickSystem.onModalOpen();
   }
 
   public close(): void {
@@ -96,6 +98,7 @@ export class ShortcutsModal {
     this.isOpen = false;
     this.overlay.classList.remove('open');
     soundManager.play('click');
+    tickSystem.onModalClose();
   }
 
   public toggle(): void {

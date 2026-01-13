@@ -5,6 +5,7 @@ import {
 } from "../simulation/buildings/Building";
 import { ICONS } from "./Icons";
 import { soundManager } from "../managers/SoundManager";
+import { gameState } from "../simulation/GameState";
 import type { BuildingType } from "../types";
 
 const BUILDING_HOTKEYS: Record<string, BuildingType> = {
@@ -34,6 +35,14 @@ export class BuildPanel {
     this.container = this.createPanel();
     document.body.appendChild(this.container);
     this.setupKeyboardShortcuts();
+
+    // Update reactor button cost when first reactor is placed
+    gameState.on('buildingPlaced', (data) => {
+      const building = data as { type: BuildingType };
+      if (building.type === 'reactor') {
+        this.updateReactorButtonCost();
+      }
+    });
   }
 
   private setupKeyboardShortcuts(): void {
@@ -78,7 +87,7 @@ export class BuildPanel {
 
       const icon = this.getBuildingIcon(type);
       const color = BUILDING_COLORS[type];
-      const costText = this.formatCost(meta.costs);
+      const costText = this.formatCost(this.getDisplayCost(type));
       const hotkey = index + 1;
 
       button.innerHTML = `
@@ -146,6 +155,20 @@ export class BuildPanel {
       }
     }
     return parts.join("") || "Free";
+  }
+
+  private getDisplayCost(type: BuildingType): Partial<Record<string, number>> {
+    return gameState.getEffectiveCost(type) as Partial<Record<string, number>>;
+  }
+
+  private updateReactorButtonCost(): void {
+    const button = this.buttons.get('reactor');
+    if (button) {
+      const costEl = button.querySelector('.build-cost');
+      if (costEl) {
+        costEl.innerHTML = this.formatCost(this.getDisplayCost('reactor'));
+      }
+    }
   }
 
   private getResourceIcon(resource: string): string {

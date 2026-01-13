@@ -157,6 +157,21 @@ export class GameState {
   // Building Management
   // ============================================
 
+
+  /**
+   * Returns the effective cost for placing a building.
+   * First reactor is free to prevent energy deadlock.
+   */
+  public getEffectiveCost(type: BuildingType): Partial<Resources> {
+    if (type === 'reactor') {
+      const reactorCount = this.buildings.filter(b => b.type === 'reactor').length;
+      if (reactorCount === 0) {
+        return {}; // First reactor is free
+      }
+    }
+    return BUILDING_COSTS[type];
+  }
+
   public canPlaceBuilding(type: BuildingType, gridX: number, gridZ: number, tileType: TileType): { canPlace: boolean; reason?: string } {
     // Check if game is over
     if (this.gameOver) {
@@ -176,7 +191,7 @@ export class GameState {
     }
 
     // Check if we have enough resources
-    const cost = BUILDING_COSTS[type];
+    const cost = this.getEffectiveCost(type);
     for (const [resource, amount] of Object.entries(cost)) {
       if (this.resources[resource as keyof Resources] < (amount ?? 0)) {
         return { canPlace: false, reason: `Not enough ${resource}` };
@@ -188,7 +203,7 @@ export class GameState {
 
   public placeBuilding(type: BuildingType, gridX: number, gridZ: number): Building | null {
     // Deduct costs
-    const cost = BUILDING_COSTS[type];
+    const cost = this.getEffectiveCost(type);
     for (const [resource, amount] of Object.entries(cost)) {
       this.resources[resource as keyof Resources] -= amount ?? 0;
     }

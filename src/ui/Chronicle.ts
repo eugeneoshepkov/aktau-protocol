@@ -1,6 +1,7 @@
 import { ICONS } from './Icons';
 import { soundManager } from '../managers/SoundManager';
 import { gameState } from '../simulation/GameState';
+import { tickSystem } from '../simulation/TickSystem';
 import {
   HISTORICAL_FACTS,
   getFactByTrigger,
@@ -328,19 +329,23 @@ export class Chronicle {
     }
 
     this.modalEl.classList.add('open');
+    tickSystem.onModalOpen();
   }
 
   private hideModal(): void {
     this.modalEl.classList.remove('open');
+    tickSystem.onModalClose();
   }
 
   private showArchive(): void {
     this.updateArchiveContent();
     this.archiveEl.classList.add('open');
+    tickSystem.onModalOpen();
   }
 
   private hideArchive(): void {
     this.archiveEl.classList.remove('open');
+    tickSystem.onModalClose();
   }
 
   private updateArchiveContent(): void {

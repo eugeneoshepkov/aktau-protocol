@@ -5,6 +5,8 @@ export class TickSystem {
   private tickRate: number; // milliseconds per tick (1 tick = 1 day)
   private isPaused: boolean = false;
   private onTickCallbacks: Array<() => void> = [];
+  private openModalCount: number = 0;
+  private wasPausedBeforeModal: boolean = false;
 
   constructor(tickRate: number = 3000) {
     this.tickRate = tickRate;
@@ -61,6 +63,29 @@ export class TickSystem {
 
   public isPausedState(): boolean {
     return this.isPaused;
+  }
+
+  /**
+   * Called when a modal opens. Pauses the game if not already paused by modal.
+   */
+  public onModalOpen(): void {
+    if (this.openModalCount === 0) {
+      this.wasPausedBeforeModal = this.isPaused;
+      if (!this.isPaused) {
+        this.pause();
+      }
+    }
+    this.openModalCount++;
+  }
+
+  /**
+   * Called when a modal closes. Resumes only if game wasn't paused before modals opened.
+   */
+  public onModalClose(): void {
+    this.openModalCount = Math.max(0, this.openModalCount - 1);
+    if (this.openModalCount === 0 && !this.wasPausedBeforeModal) {
+      this.resume();
+    }
   }
 
   /**
