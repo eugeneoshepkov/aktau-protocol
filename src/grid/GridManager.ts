@@ -70,15 +70,45 @@ export class GridManager {
   }
 
   /**
+   * Returns a roughness value (0-1) for terrain patches.
+   * Uses low-frequency sine waves to create large clustered patches
+   * of flat plains (0) and rough dunes/hills (1).
+   */
+  private getRoughness(x: number, z: number): number {
+    const scale1 = 0.1; // ~10-15 tile wide patches
+    const scale2 = 0.07; // Secondary frequency to break up repetition
+
+    // Combine two wave patterns
+    const noise =
+      Math.sin(x * scale1) +
+      Math.cos(z * scale1) +
+      Math.sin(z * scale2 + x * 0.5);
+
+    // noise ranges roughly from -3 to +3, normalize to 0..1
+    const normalized = (noise + 3) / 6;
+
+    // Apply smoothstep for sharper transitions between flat and rough
+    const t = Math.max(0, Math.min(1, normalized));
+    const smoothed = t * t * (3 - 2 * t);
+
+    // Hard floor: below 0.3 threshold becomes exactly 0 (perfect flat)
+    return smoothed < 0.3 ? 0 : smoothed;
+  }
+
+  /**
    * Get jitter for a corner point (deterministic, shared between adjacent tiles)
    */
   private getCornerJitter(
     cornerX: number,
     cornerZ: number,
   ): { jx: number; jz: number } {
+    const roughness = this.getRoughness(cornerX, cornerZ);
+    const jitterAmount = 0.6 * roughness; // Scale base jitter by roughness
+
     return {
-      jx: (this.seededRandom(cornerX, cornerZ) - 0.5) * 0.6, // -0.3 to +0.3
-      jz: (this.seededRandom(cornerX + 1000, cornerZ + 1000) - 0.5) * 0.6,
+      jx: (this.seededRandom(cornerX, cornerZ) - 0.5) * jitterAmount,
+      jz:
+        (this.seededRandom(cornerX + 1000, cornerZ + 1000) - 0.5) * jitterAmount,
     };
   }
 
@@ -139,11 +169,21 @@ export class GridManager {
           g = rgb.g,
           b = rgb.b;
         if (tileType === "sand") {
-          // Deterministic variation per tile: ±10% brightness
-          const variation = (this.seededRandom(x + 5000, z + 5000) - 0.5) * 0.2;
-          r = Math.max(0, Math.min(1, rgb.r + variation));
-          g = Math.max(0, Math.min(1, rgb.g + variation));
-          b = Math.max(0, Math.min(1, rgb.b + variation));
+          // Get roughness at tile center for consistent per-tile appearance
+          const tileRoughness = this.getRoughness(x + 0.5, z + 0.5);
+
+          // Scale variation by roughness: flat=±1%, rough=±10%
+          const baseVariation =
+            (this.seededRandom(x + 5000, z + 5000) - 0.5) * 0.2;
+          const variation =
+            tileRoughness > 0 ? baseVariation : baseVariation * 0.1;
+
+          // Rough areas are slightly darker (up to 10% darker at max roughness)
+          const roughnessDarken = tileRoughness * 0.1;
+
+          r = Math.max(0, Math.min(1, rgb.r + variation - roughnessDarken));
+          g = Math.max(0, Math.min(1, rgb.g + variation - roughnessDarken));
+          b = Math.max(0, Math.min(1, rgb.b + variation - roughnessDarken));
         }
 
         // Height: rocks slightly elevated above sand
