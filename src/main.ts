@@ -13,6 +13,7 @@ import { HUD } from './ui/HUD';
 import { BuildPanel } from './ui/BuildPanel';
 import { Tooltip } from './ui/Tooltip';
 import { IntroScreen } from './ui/IntroScreen';
+import { ShortcutsModal } from './ui/ShortcutsModal';
 import { feedbackManager } from './ui/FeedbackManager';
 import { tickSystem } from './simulation/TickSystem';
 import { gameState } from './simulation/GameState';
@@ -39,19 +40,41 @@ async function initGame(): Promise<void> {
   const resetBtn = document.createElement('button');
   resetBtn.id = 'reset-view-btn';
   resetBtn.innerHTML = `<span class="icon-wrap">${ICONS.center}</span>`;
-  resetBtn.title = 'Reset view (Home)';
+  resetBtn.title = 'Reset view (C)';
   resetBtn.addEventListener('click', () => {
     camera.resetView();
     soundManager.play('click');
   });
   document.body.appendChild(resetBtn);
 
-  // Keyboard shortcut for reset view (Home key)
+  // Create shortcuts modal
+  const shortcutsModal = new ShortcutsModal();
+
+  // Create shortcuts button
+  const shortcutsBtn = document.createElement('button');
+  shortcutsBtn.id = 'shortcuts-btn';
+  shortcutsBtn.innerHTML = `<span class="icon-wrap">${ICONS.keyboard}</span>`;
+  shortcutsBtn.title = 'Keyboard shortcuts (?)';
+  shortcutsBtn.addEventListener('click', () => {
+    shortcutsModal.toggle();
+  });
+  document.body.appendChild(shortcutsBtn);
+
+  // Global keyboard shortcuts
   window.addEventListener('keydown', (e) => {
-    if (e.key === 'Home') {
-      const active = document.activeElement;
-      if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) return;
+    const active = document.activeElement;
+    if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) return;
+
+    // Center map (C or Home)
+    if (e.key === 'c' || e.key === 'C' || e.key === 'Home') {
       camera.resetView();
+      soundManager.play('click');
+    }
+
+    // Pause/Resume (Space)
+    if (e.key === ' ') {
+      e.preventDefault();
+      tickSystem.togglePause();
       soundManager.play('click');
     }
   });
