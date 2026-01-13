@@ -173,8 +173,8 @@ export class IsometricCamera {
       this.camera.inertialPanningX += ARROW_PAN_SPEED;
     }
 
-    // Clamp target to grid bounds (allow slight overrun for better feel)
-    const PADDING = 5;
+    // Clamp target to grid bounds
+    const PADDING = 0;
     const worldSize = GRID_SIZE * TILE_SIZE;
     target.x = Math.max(-PADDING, Math.min(worldSize + PADDING, target.x));
     target.z = Math.max(-PADDING, Math.min(worldSize + PADDING, target.z));
@@ -195,7 +195,7 @@ export class IsometricCamera {
   }
 
   private clampCameraTarget(): void {
-    const PADDING = 5;
+    const PADDING = 0;
     const worldSize = GRID_SIZE * TILE_SIZE;
     const target = this.camera.target;
 

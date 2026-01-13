@@ -6,7 +6,7 @@ import { GRID_SIZE, TILE_SIZE, SEA_ROWS } from '../../types';
 type CamelState = 'idle' | 'roam';
 
 const CAMEL_SPEED = 0.8;
-const CAMEL_SCALE = 0.15;
+const CAMEL_SCALE = 0.10;  // Smaller for better scale with tiles
 const IDLE_MIN_TIME = 5;
 const IDLE_MAX_TIME = 10;
 const ROAM_RADIUS = 15;

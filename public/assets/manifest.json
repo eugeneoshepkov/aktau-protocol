@@ -229,11 +229,11 @@
   "decorations": {
     "basePath": "suburban",
     "items": [
-      { "file": "tree-large.glb", "scale": 0.8, "frequency": 0.06 },
-      { "file": "tree-small.glb", "scale": 0.6, "frequency": 0.08 },
+      { "file": "tree-large.glb", "scale": 1.4, "frequency": 0.06 },
+      { "file": "tree-small.glb", "scale": 1.0, "frequency": 0.08 },
       { "file": "fence.glb", "scale": 0.5, "frequency": 0.02 },
       { "file": "fence-low.glb", "scale": 0.5, "frequency": 0.025 },
-      { "file": "planter.glb", "scale": 0.6, "frequency": 0.03 }
+      { "file": "planter.glb", "scale": 0.8, "frequency": 0.04 }
     ]
   },
   "roads": {
