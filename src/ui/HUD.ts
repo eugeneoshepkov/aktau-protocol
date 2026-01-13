@@ -54,7 +54,7 @@ export class HUD {
           <span id="hud-trend-population" class="hud-trend"></span>
         </div>
         <div class="hud-section">
-          <span class="hud-label"><span class="icon-wrap icon-water">${ICONS.water}</span> H2O</span>
+          <span class="hud-label"><span class="icon-wrap icon-water">${ICONS.water}</span> H<sup>2</sup>O</span>
           <span id="hud-freshWater" class="hud-value">0</span>
           <span id="hud-trend-freshWater" class="hud-trend"></span>
         </div>

@@ -7,6 +7,7 @@
       "dependencies": {
         "@babylonjs/core": "^8.45.3",
         "@babylonjs/loaders": "^8.45.3",
+        "@babylonjs/materials": "^8.45.3",
         "zzfx": "^1.3.2",
       },
       "devDependencies": {
@@ -19,6 +20,8 @@
     "@babylonjs/core": ["@babylonjs/core@8.45.3", "", {}, "sha512-mDjnilmK9OMo1eEia1xhWuPX1smnWCdVhL8MpzXKry+IrX8eyWaoPeyguXVrmJwlex84d+qKmegFVeADWKzbKQ=="],
 
     "@babylonjs/loaders": ["@babylonjs/loaders@8.45.3", "", { "peerDependencies": { "@babylonjs/core": "^8.0.0", "babylonjs-gltf2interface": "^8.0.0" } }, "sha512-hR9YWtpRzzM1NQdbr+qedfR8On/5wDbEQjdCEZKE2Wgs7W2s9U5UVoT+rSzaMLky4Nkb1umCv/as+vsqh0x0mA=="],
+
+    "@babylonjs/materials": ["@babylonjs/materials@8.45.3", "", { "peerDependencies": { "@babylonjs/core": "^8.6.0" } }, "sha512-/+FTxiGN3of+rtkLzV5hRohkyyrmLoe40EmLde4TPoGky1f7gTn8We/kBjkaSoD2btg/RuzsU9VAdnIzb/QIFQ=="],
 
     "@esbuild/aix-ppc64": ["@esbuild/aix-ppc64@0.27.2", "", { "os": "aix", "cpu": "ppc64" }, "sha512-GZMB+a0mOMZs4MpDbj8RJp4cw+w1WV5NYD6xzgvzUJ5Ek2jerwfO2eADyI6ExDSUED+1X8aMbegahsJi+8mgpw=="],
 

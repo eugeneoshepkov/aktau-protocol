@@ -4,63 +4,44 @@ import {
   MeshBuilder,
   StandardMaterial,
   Color3,
-  Matrix,
   Vector3,
-  Texture,
+  VertexData,
 } from "@babylonjs/core";
+import { WaterMaterial } from "@babylonjs/materials";
 import { GRID_SIZE, TILE_SIZE } from "../types";
 import type { TileType } from "../types";
-import { getTileTypeAt } from "./TileTypes";
-
-// Atlas dimensions
-const ATLAS_WIDTH = 968;
-const ATLAS_HEIGHT = 526;
-const TILE_PITCH = 17; // 16px tile + 1px margin
-
-// Single sand tile for uniform desert look
-const SAND_TILE = { col: 8, row: 0 }; // Tan sand (bottom section)
-
-// Rock tile position
-const ROCK_TILE = { col: 7, row: 0 }; // Gray stone
-
-// Sea uses flat color, no texture
-const SEA_COLOR = "#2F8D8D";
+import { getTileTypeAt, getTileColor } from "./TileTypes";
 
 export class GridManager {
   private scene: Scene;
   private tileMap: TileType[][] = [];
-  private tileMeshes: Map<TileType, Mesh> = new Map();
+
+  // Diorama meshes
+  private landMesh: Mesh | null = null;
+  private seaMesh: Mesh | null = null;
+  private baseMesh: Mesh | null = null;
+
+  // Highlight cursor
   private highlightMesh: Mesh | null = null;
   private highlightMaterial: StandardMaterial | null = null;
   private validColor = new Color3(1, 1, 0);
   private invalidColor = new Color3(1, 0.3, 0.3);
-  private atlasTexture: Texture | null = null;
 
   constructor(scene: Scene) {
     this.scene = scene;
   }
 
   /**
-   * Generate the entire grid using instanced meshes for performance
+   * Generate the organic diorama terrain
    */
   public generateGrid(): void {
     // Generate tile type map
     this.generateTileMap();
 
-    // Load the terrain atlas texture
-    this.atlasTexture = new Texture(
-      "/models/2d-terrain/Spritesheet/roguelikeSheet_transparent.png",
-      this.scene,
-    );
-    this.atlasTexture.hasAlpha = true;
-
-    // Count tiles of each type
-    const tileCounts = this.countTileTypes();
-
-    // Create instanced meshes for each tile type
-    this.createInstancedTiles("sea", tileCounts.sea);
-    this.createInstancedTiles("sand", tileCounts.sand);
-    this.createInstancedTiles("rock", tileCounts.rock);
+    // Create diorama meshes
+    this.createLandMesh();
+    this.createWaterMesh();
+    this.createDioramaBase();
 
     // Create highlight cursor
     this.createHighlightMesh();
@@ -77,127 +58,200 @@ export class GridManager {
     }
   }
 
-  private countTileTypes(): Record<TileType, number> {
-    const counts: Record<TileType, number> = { sea: 0, sand: 0, rock: 0 };
-    for (let z = 0; z < GRID_SIZE; z++) {
-      for (let x = 0; x < GRID_SIZE; x++) {
-        counts[this.tileMap[z][x]]++;
-      }
-    }
-    return counts;
+  /**
+   * Deterministic seeded random based on position
+   * Returns value between 0 and 1
+   */
+  private seededRandom(vx: number, vz: number): number {
+    let hash = vx * 374761393 + vz * 668265263;
+    hash = (hash ^ (hash >> 13)) * 1274126177;
+    hash = hash ^ (hash >> 16);
+    return (Math.abs(hash) % 10000) / 10000;
   }
 
-  private createInstancedTiles(tileType: TileType, count: number): void {
-    if (count === 0) return;
+  /**
+   * Get jitter for a corner point (deterministic, shared between adjacent tiles)
+   */
+  private getCornerJitter(
+    cornerX: number,
+    cornerZ: number,
+  ): { jx: number; jz: number } {
+    return {
+      jx: (this.seededRandom(cornerX, cornerZ) - 0.5) * 0.6, // -0.3 to +0.3
+      jz: (this.seededRandom(cornerX + 1000, cornerZ + 1000) - 0.5) * 0.6,
+    };
+  }
 
-    // Collect all tile positions for this type
-    const positions: { x: number; z: number }[] = [];
+  /**
+   * Create the main land mesh with non-indexed geometry for crisp tile edges.
+   * Sea tiles are skipped entirely, leaving holes for water to show through.
+   */
+  private createLandMesh(): void {
+    // Count land tiles (non-sea) to allocate arrays
+    let landTileCount = 0;
     for (let z = 0; z < GRID_SIZE; z++) {
       for (let x = 0; x < GRID_SIZE; x++) {
-        if (this.tileMap[z][x] === tileType) {
-          positions.push({ x, z });
+        if (this.tileMap[z][x] !== "sea") {
+          landTileCount++;
         }
       }
     }
 
-    if (tileType === "sea") {
-      // Sea: flat color, no texture
-      this.createFlatColorTiles("sea", positions, SEA_COLOR);
-    } else if (tileType === "rock") {
-      // Rock: single textured tile
-      this.createTexturedTiles("rock", positions, ROCK_TILE);
-    } else if (tileType === "sand") {
-      // Sand: single textured tile for uniform look
-      this.createTexturedTiles("sand", positions, SAND_TILE);
+    if (landTileCount === 0) return;
+
+    // Each land tile = 4 unique vertices (non-shared for flat shading)
+    // Each land tile = 2 triangles = 6 indices
+    const positions: number[] = [];
+    const colors: number[] = [];
+    const indices: number[] = [];
+    const normals: number[] = [];
+
+    let vertexIndex = 0;
+
+    for (let z = 0; z < GRID_SIZE; z++) {
+      for (let x = 0; x < GRID_SIZE; x++) {
+        const tileType = this.tileMap[z][x];
+
+        // Skip sea tiles - leave holes for water mesh to show through
+        if (tileType === "sea") continue;
+
+        // Get jitter for each corner (consistent across adjacent tiles)
+        const j00 = this.getCornerJitter(x, z); // top-left
+        const j10 = this.getCornerJitter(x + 1, z); // top-right
+        const j01 = this.getCornerJitter(x, z + 1); // bottom-left
+        const j11 = this.getCornerJitter(x + 1, z + 1); // bottom-right
+
+        // World positions for corners with jitter applied
+        const x0 = x * TILE_SIZE + j00.jx;
+        const x1 = (x + 1) * TILE_SIZE + j10.jx;
+        const z0 = z * TILE_SIZE + j00.jz;
+        const z1_topRight = z * TILE_SIZE + j10.jz;
+        const z2_bottomLeft = (z + 1) * TILE_SIZE + j01.jz;
+        const z3 = (z + 1) * TILE_SIZE + j11.jz;
+        const x2 = x * TILE_SIZE + j01.jx;
+        const x3 = (x + 1) * TILE_SIZE + j11.jx;
+
+        // Get tile color (same for all 4 vertices - crisp flat color)
+        const rgb = getTileColor(tileType);
+
+        // Height: rocks slightly elevated above sand
+        const tileY = tileType === "rock" ? 0.15 : 0.05;
+
+        // Create 4 unique vertices for this tile
+        // Vertex 0: top-left corner (x, z)
+        positions.push(x0, tileY, z0);
+        colors.push(rgb.r, rgb.g, rgb.b, 1.0);
+        normals.push(0, 1, 0);
+
+        // Vertex 1: top-right corner (x+1, z)
+        positions.push(x1, tileY, z1_topRight);
+        colors.push(rgb.r, rgb.g, rgb.b, 1.0);
+        normals.push(0, 1, 0);
+
+        // Vertex 2: bottom-left corner (x, z+1)
+        positions.push(x2, tileY, z2_bottomLeft);
+        colors.push(rgb.r, rgb.g, rgb.b, 1.0);
+        normals.push(0, 1, 0);
+
+        // Vertex 3: bottom-right corner (x+1, z+1)
+        positions.push(x3, tileY, z3);
+        colors.push(rgb.r, rgb.g, rgb.b, 1.0);
+        normals.push(0, 1, 0);
+
+        // Two triangles: 0-2-1 and 1-2-3 (counter-clockwise winding)
+        indices.push(
+          vertexIndex,
+          vertexIndex + 2,
+          vertexIndex + 1,
+          vertexIndex + 1,
+          vertexIndex + 2,
+          vertexIndex + 3,
+        );
+
+        vertexIndex += 4;
+      }
     }
-  }
 
-  private matricesToFloat32Array(matrices: Matrix[]): Float32Array {
-    const array = new Float32Array(matrices.length * 16);
-    for (let i = 0; i < matrices.length; i++) {
-      matrices[i].copyToArray(array, i * 16);
-    }
-    return array;
-  }
+    // Create mesh from vertex data
+    this.landMesh = new Mesh("landMesh", this.scene);
 
-  private createFlatColorTiles(
-    name: string,
-    positions: { x: number; z: number }[],
-    colorHex: string,
-  ): void {
-    const baseTile = MeshBuilder.CreateBox(
-      `tile_${name}`,
-      { width: TILE_SIZE * 0.95, height: 0.1, depth: TILE_SIZE * 0.95 },
-      this.scene,
-    );
+    const vertexData = new VertexData();
+    vertexData.positions = positions;
+    vertexData.indices = indices;
+    vertexData.colors = colors;
+    vertexData.normals = normals;
 
-    const material = new StandardMaterial(`mat_${name}`, this.scene);
-    const hex = colorHex.replace("#", "");
-    material.diffuseColor = new Color3(
-      parseInt(hex.substring(0, 2), 16) / 255,
-      parseInt(hex.substring(2, 4), 16) / 255,
-      parseInt(hex.substring(4, 6), 16) / 255,
-    );
-    material.specularColor = new Color3(0.1, 0.1, 0.1);
-    baseTile.material = material;
-    baseTile.isVisible = false;
+    vertexData.applyToMesh(this.landMesh);
 
-    const matrices = positions.map((pos) =>
-      Matrix.Translation(
-        pos.x * TILE_SIZE + TILE_SIZE / 2,
-        0,
-        pos.z * TILE_SIZE + TILE_SIZE / 2,
-      ),
-    );
-
-    baseTile.thinInstanceSetBuffer(
-      "matrix",
-      this.matricesToFloat32Array(matrices),
-      16,
-    );
-    baseTile.isVisible = true;
-    this.tileMeshes.set(name as TileType, baseTile);
-  }
-
-  private createTexturedTiles(
-    name: string,
-    positions: { x: number; z: number }[],
-    tile: { col: number; row: number },
-  ): void {
-    if (!this.atlasTexture) return;
-
-    const baseTile = MeshBuilder.CreateBox(
-      `tile_${name}`,
-      { width: TILE_SIZE * 0.95, height: 0.1, depth: TILE_SIZE * 0.95 },
-      this.scene,
-    );
-
-    const material = new StandardMaterial(`mat_${name}`, this.scene);
-    const tileTexture = this.atlasTexture.clone();
-    tileTexture.uOffset = (tile.col * TILE_PITCH) / ATLAS_WIDTH;
-    tileTexture.vOffset = 1 - ((tile.row + 1) * TILE_PITCH) / ATLAS_HEIGHT;
-    tileTexture.uScale = TILE_PITCH / ATLAS_WIDTH;
-    tileTexture.vScale = TILE_PITCH / ATLAS_HEIGHT;
-    material.diffuseTexture = tileTexture;
+    // Create matte material that uses vertex colors
+    const material = new StandardMaterial("landMat", this.scene);
     material.specularColor = Color3.Black();
-    baseTile.material = material;
-    baseTile.isVisible = false;
+    material.diffuseColor = Color3.White(); // Let vertex colors show through
+    material.backFaceCulling = false; // Show both sides
 
-    const matrices = positions.map((pos) =>
-      Matrix.Translation(
-        pos.x * TILE_SIZE + TILE_SIZE / 2,
-        0,
-        pos.z * TILE_SIZE + TILE_SIZE / 2,
-      ),
+    this.landMesh.material = material;
+  }
+
+  /**
+   * Create animated water plane
+   */
+  private createWaterMesh(): void {
+    this.seaMesh = MeshBuilder.CreateGround(
+      "seaMesh",
+      {
+        width: GRID_SIZE,
+        height: GRID_SIZE,
+        subdivisions: 32,
+      },
+      this.scene,
     );
 
-    baseTile.thinInstanceSetBuffer(
-      "matrix",
-      this.matricesToFloat32Array(matrices),
-      16,
+    // Position below land level and offset to grid origin
+    this.seaMesh.position.x = GRID_SIZE / 2;
+    this.seaMesh.position.z = GRID_SIZE / 2;
+    this.seaMesh.position.y = -0.3;
+
+    // Create water material
+    const waterMaterial = new WaterMaterial("waterMat", this.scene);
+
+    // Configure water appearance
+    waterMaterial.windForce = -5;
+    waterMaterial.waveHeight = 0.05;
+    waterMaterial.waveLength = 0.3;
+    waterMaterial.bumpHeight = 0.05;
+    waterMaterial.waterColor = new Color3(0.18, 0.55, 0.55); // #2F8D8D tint
+    waterMaterial.waterColor2 = new Color3(0.1, 0.4, 0.4);
+    waterMaterial.colorBlendFactor = 0.5;
+    waterMaterial.alpha = 0.9;
+
+    this.seaMesh.material = waterMaterial;
+  }
+
+  /**
+   * Create diorama base (pedestal)
+   */
+  private createDioramaBase(): void {
+    this.baseMesh = MeshBuilder.CreateBox(
+      "baseMesh",
+      {
+        width: GRID_SIZE + 2, // Slightly larger than land
+        depth: GRID_SIZE + 2,
+        height: 10,
+      },
+      this.scene,
     );
-    baseTile.isVisible = true;
-    this.tileMeshes.set(name as TileType, baseTile);
+
+    // Position: top surface at y=-1 (below water at y=-0.1)
+    this.baseMesh.position.x = GRID_SIZE / 2;
+    this.baseMesh.position.z = GRID_SIZE / 2;
+    this.baseMesh.position.y = -6; // Center of 10-height box at -6 means top at -1
+
+    // Dark rock material
+    const baseMaterial = new StandardMaterial("baseMat", this.scene);
+    baseMaterial.diffuseColor = new Color3(0.15, 0.12, 0.1); // Dark brown/black
+    baseMaterial.specularColor = Color3.Black();
+
+    this.baseMesh.material = baseMaterial;
   }
 
   private createHighlightMesh(): void {
@@ -262,7 +316,9 @@ export class GridManager {
   }
 
   public dispose(): void {
-    this.tileMeshes.forEach((mesh) => mesh.dispose());
+    this.landMesh?.dispose();
+    this.seaMesh?.dispose();
+    this.baseMesh?.dispose();
     this.highlightMesh?.dispose();
   }
 }
