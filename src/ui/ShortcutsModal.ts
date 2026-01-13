@@ -72,6 +72,7 @@ export class ShortcutsModal {
           <div class="shortcuts-section">
             <h3>General</h3>
             <div class="shortcut-row"><kbd>?</kbd> / <kbd>F1</kbd><span>Show shortcuts</span></div>
+            <div class="shortcut-row"><kbd>J</kbd><span>Historical Chronicle</span></div>
             <div class="shortcut-row"><kbd>Space</kbd><span>Pause/Resume</span></div>
           </div>
         </div>

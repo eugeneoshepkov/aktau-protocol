@@ -14,6 +14,7 @@ import { BuildPanel } from './ui/BuildPanel';
 import { Tooltip } from './ui/Tooltip';
 import { IntroScreen } from './ui/IntroScreen';
 import { ShortcutsModal } from './ui/ShortcutsModal';
+import { Chronicle } from './ui/Chronicle';
 import { feedbackManager } from './ui/FeedbackManager';
 import { tickSystem } from './simulation/TickSystem';
 import { gameState } from './simulation/GameState';
@@ -183,6 +184,7 @@ async function initGame(): Promise<void> {
 
   const hud = new HUD();
   new BuildPanel(buildingManager);
+  new Chronicle();
 
   feedbackManager.initialize();
 
