@@ -124,24 +124,58 @@ export class IsometricCamera {
 
     let moved = false;
 
+    // Screen-space directions based on camera rotation (for 2D-style panning)
+    const alpha = this.camera.alpha;
+
+    // Right vector on screen projected to XZ plane
+    const rightX = Math.sin(alpha);
+    const rightZ = -Math.cos(alpha);
+
+    // Up vector on screen projected to XZ plane (perpendicular to right)
+    const upX = -Math.cos(alpha);
+    const upZ = -Math.sin(alpha);
+
+    // WASD: Screen-space panning (like dragging)
     if (this.keysPressed.has('w')) {
-      target.z -= this.PAN_SPEED;
-      target.x -= this.PAN_SPEED;
+      target.x += upX * this.PAN_SPEED;
+      target.z += upZ * this.PAN_SPEED;
       moved = true;
     }
     if (this.keysPressed.has('s')) {
-      target.z += this.PAN_SPEED;
-      target.x += this.PAN_SPEED;
+      target.x -= upX * this.PAN_SPEED;
+      target.z -= upZ * this.PAN_SPEED;
       moved = true;
     }
     if (this.keysPressed.has('a')) {
-      target.x -= this.PAN_SPEED;
-      target.z += this.PAN_SPEED;
+      target.x -= rightX * this.PAN_SPEED;
+      target.z -= rightZ * this.PAN_SPEED;
       moved = true;
     }
     if (this.keysPressed.has('d')) {
-      target.x += this.PAN_SPEED;
-      target.z -= this.PAN_SPEED;
+      target.x += rightX * this.PAN_SPEED;
+      target.z += rightZ * this.PAN_SPEED;
+      moved = true;
+    }
+
+    // Arrow keys: Screen-space panning (like dragging)
+    if (this.keysPressed.has('arrowup')) {
+      target.x += upX * this.PAN_SPEED;
+      target.z += upZ * this.PAN_SPEED;
+      moved = true;
+    }
+    if (this.keysPressed.has('arrowdown')) {
+      target.x -= upX * this.PAN_SPEED;
+      target.z -= upZ * this.PAN_SPEED;
+      moved = true;
+    }
+    if (this.keysPressed.has('arrowleft')) {
+      target.x -= rightX * this.PAN_SPEED;
+      target.z -= rightZ * this.PAN_SPEED;
+      moved = true;
+    }
+    if (this.keysPressed.has('arrowright')) {
+      target.x += rightX * this.PAN_SPEED;
+      target.z += rightZ * this.PAN_SPEED;
       moved = true;
     }
 
