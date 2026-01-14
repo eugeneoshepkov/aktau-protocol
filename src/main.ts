@@ -129,7 +129,7 @@ async function initGame(): Promise<void> {
   console.log('Grid generated: 50x50 tiles');
 
   if (assetManager.shouldUseModels()) {
-    assetManager.preloadAllModels().catch(err => {
+    assetManager.preloadAllModels().catch((err) => {
       console.warn('Failed to preload some models:', err);
     });
   }
@@ -277,4 +277,4 @@ document.addEventListener('mouseup', (e) => {
   }
 });
 
-document.addEventListener("DOMContentLoaded", initGame);
+document.addEventListener('DOMContentLoaded', initGame);

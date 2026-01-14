@@ -27,11 +27,7 @@ export class IsometricCamera {
     this.scene = scene;
     cameraInstance = this;
 
-    const gridCenter = new Vector3(
-      (GRID_SIZE * TILE_SIZE) / 2,
-      0,
-      (GRID_SIZE * TILE_SIZE) / 2
-    );
+    const gridCenter = new Vector3((GRID_SIZE * TILE_SIZE) / 2, 0, (GRID_SIZE * TILE_SIZE) / 2);
 
     this.camera = new ArcRotateCamera(
       'isometricCamera',
@@ -58,9 +54,11 @@ export class IsometricCamera {
 
     const shouldIgnoreKeyboard = () => {
       const active = document.activeElement;
-      return active instanceof HTMLInputElement || 
-             active instanceof HTMLTextAreaElement ||
-             active instanceof HTMLSelectElement;
+      return (
+        active instanceof HTMLInputElement ||
+        active instanceof HTMLTextAreaElement ||
+        active instanceof HTMLSelectElement
+      );
     };
 
     const onKeyDown = (e: KeyboardEvent) => {
@@ -93,17 +91,17 @@ export class IsometricCamera {
 
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
-    
+
     window.addEventListener('blur', () => {
       this.keysPressed.clear();
     });
-    
+
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
         this.keysPressed.clear();
       }
     });
-    
+
     canvas.addEventListener('click', () => {
       if (document.activeElement instanceof HTMLElement) {
         document.activeElement.blur();
@@ -272,11 +270,7 @@ export class IsometricCamera {
   }
 
   public resetView(): void {
-    const gridCenter = new Vector3(
-      (GRID_SIZE * TILE_SIZE) / 2,
-      0,
-      (GRID_SIZE * TILE_SIZE) / 2
-    );
+    const gridCenter = new Vector3((GRID_SIZE * TILE_SIZE) / 2, 0, (GRID_SIZE * TILE_SIZE) / 2);
     this.camera.setTarget(gridCenter);
     this.camera.alpha = ISOMETRIC_ALPHA;
     this.camera.beta = ISOMETRIC_BETA;

@@ -6,7 +6,7 @@ import { GRID_SIZE, TILE_SIZE, SEA_ROWS } from '../../types';
 type CamelState = 'idle' | 'roam';
 
 const CAMEL_SPEED = 0.8;
-const CAMEL_SCALE = 0.10;  // Smaller for better scale with tiles
+const CAMEL_SCALE = 0.1; // Smaller for better scale with tiles
 const IDLE_MIN_TIME = 5;
 const IDLE_MAX_TIME = 10;
 const ROAM_RADIUS = 15;
@@ -59,8 +59,10 @@ export class Camel {
     const targetGridX = Math.floor(this.target.x / TILE_SIZE);
     const targetGridZ = Math.floor(this.target.z / TILE_SIZE);
 
-    if (this.gameState.getBuildingAt(currentGridX, currentGridZ) ||
-        this.gameState.getBuildingAt(targetGridX, targetGridZ)) {
+    if (
+      this.gameState.getBuildingAt(currentGridX, currentGridZ) ||
+      this.gameState.getBuildingAt(targetGridX, targetGridZ)
+    ) {
       // Building placed in path, find a new safe spot and idle
       const safeSpot = this.findNearestSafeTile();
       if (safeSpot) {

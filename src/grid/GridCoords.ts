@@ -10,11 +10,7 @@ export interface GridPosition {
  * Convert grid coordinates to world position
  */
 export function gridToWorld(gridX: number, gridZ: number): Vector3 {
-  return new Vector3(
-    gridX * TILE_SIZE + TILE_SIZE / 2,
-    0,
-    gridZ * TILE_SIZE + TILE_SIZE / 2
-  );
+  return new Vector3(gridX * TILE_SIZE + TILE_SIZE / 2, 0, gridZ * TILE_SIZE + TILE_SIZE / 2);
 }
 
 /**
@@ -38,9 +34,5 @@ export function isValidGridPosition(x: number, z: number): boolean {
  * Get world position for tile center
  */
 export function getTileCenter(gridX: number, gridZ: number): Vector3 {
-  return new Vector3(
-    gridX * TILE_SIZE + TILE_SIZE / 2,
-    0,
-    gridZ * TILE_SIZE + TILE_SIZE / 2
-  );
+  return new Vector3(gridX * TILE_SIZE + TILE_SIZE / 2, 0, gridZ * TILE_SIZE + TILE_SIZE / 2);
 }

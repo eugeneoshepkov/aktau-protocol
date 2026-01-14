@@ -9,10 +9,10 @@ export class IntroScreen {
 
   constructor(onStart: () => void) {
     this.onStart = onStart;
-    
+
     const savedMuted = localStorage.getItem('aktau-muted');
     this.muted = savedMuted === 'true';
-    
+
     this.overlay = this.createOverlay();
     document.body.appendChild(this.overlay);
 
@@ -24,7 +24,7 @@ export class IntroScreen {
     this.audio.loop = false;
     this.audio.volume = 0.55;
     this.audio.muted = this.muted;
-    
+
     const playPromise = this.audio.play();
     if (playPromise) {
       playPromise.catch(() => {

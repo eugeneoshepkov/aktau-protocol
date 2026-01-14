@@ -29,9 +29,9 @@ Yet this desolate landscape held something valuable—vast oil and uranium depos
 What made Aktau possible wasn't just Soviet determination—it was nuclear power. The city would become the world's first to depend entirely on a nuclear reactor for both electricity AND drinking water.`,
     wikiUrls: {
       en: 'https://en.wikipedia.org/wiki/Aktau',
-      ru: 'https://ru.wikipedia.org/wiki/Актау',
+      ru: 'https://ru.wikipedia.org/wiki/Актау'
     },
-    trigger: { type: 'day', value: 1 },
+    trigger: { type: 'day', value: 1 }
   },
   {
     id: 'mangyshlak-peninsula',
@@ -46,9 +46,9 @@ The peninsula sits on the Ustyurt Plateau, a vast limestone tableland that exten
 Before Aktau, the only inhabitants were nomadic Kazakh herders who knew the few precious springs and wells. Soviet geologists arriving in the 1950s faced the same challenge as these ancient nomads: how to find water in a waterless land.`,
     wikiUrls: {
       en: 'https://en.wikipedia.org/wiki/Mangystau_Region',
-      ru: 'https://ru.wikipedia.org/wiki/Мангистауская_область',
+      ru: 'https://ru.wikipedia.org/wiki/Мангистауская_область'
     },
-    trigger: { type: 'day', value: 5 },
+    trigger: { type: 'day', value: 5 }
   },
   {
     id: 'bn350-intro',
@@ -63,9 +63,9 @@ Before Aktau, the only inhabitants were nomadic Kazakh herders who knew the few 
 But the BN-350 had another unique mission: desalination. Half its 1,000 MW thermal output went to generating electricity, while the other half powered the world's largest nuclear desalination plant, producing 120,000 cubic meters of fresh water daily.`,
     wikiUrls: {
       en: 'https://en.wikipedia.org/wiki/BN-350_reactor',
-      ru: 'https://ru.wikipedia.org/wiki/БН-350',
+      ru: 'https://ru.wikipedia.org/wiki/БН-350'
     },
-    trigger: { type: 'day', value: 10 },
+    trigger: { type: 'day', value: 10 }
   },
   {
     id: 'desalination-tech',
@@ -80,9 +80,9 @@ The steam is captured and condensed into pure fresh water, while concentrated br
 At peak operation, Aktau's desalination complex produced 120,000 cubic meters of fresh water per day—enough to fill 48 Olympic swimming pools. This made it the largest nuclear desalination facility ever built, a record it held until the plant's closure in 1999.`,
     wikiUrls: {
       en: 'https://en.wikipedia.org/wiki/Multi-stage_flash_distillation',
-      ru: 'https://ru.wikipedia.org/wiki/Опреснение_воды',
+      ru: 'https://ru.wikipedia.org/wiki/Опреснение_воды'
     },
-    trigger: { type: 'day', value: 20 },
+    trigger: { type: 'day', value: 20 }
   },
   {
     id: 'closed-city',
@@ -97,9 +97,9 @@ The city was known only by its code name: Shevchenko, after the Ukrainian poet T
 The secrecy wasn't just about the nuclear reactor. Aktau was also home to uranium enrichment facilities and a fast breeder research program that had military implications. Only after the Soviet collapse in 1991 was the city opened and renamed Aktau.`,
     wikiUrls: {
       en: 'https://en.wikipedia.org/wiki/Closed_city',
-      ru: 'https://ru.wikipedia.org/wiki/Закрытое_административно-территориальное_образование',
+      ru: 'https://ru.wikipedia.org/wiki/Закрытое_административно-территориальное_образование'
     },
-    trigger: { type: 'day', value: 30 },
+    trigger: { type: 'day', value: 30 }
   },
   {
     id: 'peak-population',
@@ -114,9 +114,9 @@ The city became a showcase of Soviet urban planning. Wide boulevards, extensive 
 Workers came from across the Soviet Union, attracted by high salaries, good housing, and the prestige of working on cutting-edge nuclear technology. Many stayed for generations, creating a unique community bonded by their shared dependence on the reactor that made their city possible.`,
     wikiUrls: {
       en: 'https://en.wikipedia.org/wiki/Aktau#Demographics',
-      ru: 'https://ru.wikipedia.org/wiki/Актау#Население',
+      ru: 'https://ru.wikipedia.org/wiki/Актау#Население'
     },
-    trigger: { type: 'day', value: 50 },
+    trigger: { type: 'day', value: 50 }
   },
   {
     id: 'caspian-sea',
@@ -131,9 +131,9 @@ The Caspian's salinity averages about 1.2%—roughly one-third that of ocean wat
 The sea's level has fluctuated dramatically over centuries, sometimes by several meters. Soviet engineers had to account for these changes when designing Aktau's seawater intake systems, building them to handle both rising and falling water levels.`,
     wikiUrls: {
       en: 'https://en.wikipedia.org/wiki/Caspian_Sea',
-      ru: 'https://ru.wikipedia.org/wiki/Каспийское_море',
+      ru: 'https://ru.wikipedia.org/wiki/Каспийское_море'
     },
-    trigger: { type: 'day', value: 75 },
+    trigger: { type: 'day', value: 75 }
   },
   {
     id: 'shutdown',
@@ -148,9 +148,9 @@ The shutdown posed an unprecedented challenge: how to decommission a fast breede
 Today, the BN-350's legacy lives on. Its operational data helped design newer fast breeder reactors worldwide, and its unique dual-purpose design proved that nuclear desalination could work at industrial scale. The reactor building still stands, gradually being decommissioned—a monument to one of history's boldest experiments in nuclear-powered urban survival.`,
     wikiUrls: {
       en: 'https://en.wikipedia.org/wiki/BN-350_reactor#Decommissioning',
-      ru: 'https://ru.wikipedia.org/wiki/БН-350#История',
+      ru: 'https://ru.wikipedia.org/wiki/БН-350#История'
     },
-    trigger: { type: 'day', value: 100 },
+    trigger: { type: 'day', value: 100 }
   },
 
   // === BUILDING-BASED TRIGGERS ===
@@ -167,9 +167,9 @@ The intake design had to solve several challenges: preventing marine life from e
 At peak operation, these pumps delivered over 400,000 cubic meters of seawater daily to the desalination plants. The brine discharge—concentrated salt water left after desalination—was carefully dispersed to minimize impact on local marine ecosystems.`,
     wikiUrls: {
       en: 'https://en.wikipedia.org/wiki/Desalination#Cogeneration',
-      ru: 'https://ru.wikipedia.org/wiki/Мангистауский_атомно-энергетический_комбинат',
+      ru: 'https://ru.wikipedia.org/wiki/Мангистауский_атомно-энергетический_комбинат'
     },
-    trigger: { type: 'building', value: 'pump' },
+    trigger: { type: 'building', value: 'pump' }
   },
   {
     id: 'first-reactor',
@@ -184,9 +184,9 @@ Why sodium? Unlike water, it doesn't slow neutrons, allowing the "fast" breeding
 The reactor's thermal output of 1,000 MW was split between two purposes: half drove turbines generating 150 MW of electricity, while the other half provided steam for the desalination plants. This dual-purpose design made the BN-350 unique in nuclear history.`,
     wikiUrls: {
       en: 'https://en.wikipedia.org/wiki/Liquid_metal_cooled_reactor',
-      ru: 'https://ru.wikipedia.org/wiki/Реактор_на_быстрых_нейтронах',
+      ru: 'https://ru.wikipedia.org/wiki/Реактор_на_быстрых_нейтронах'
     },
-    trigger: { type: 'building', value: 'reactor' },
+    trigger: { type: 'building', value: 'reactor' }
   },
   {
     id: 'first-distiller',
@@ -201,9 +201,9 @@ This multi-stage flash (MSF) process was remarkably efficient. By using 40 or mo
 The plants ran continuously for decades, producing water that met strict Soviet drinking standards. Operators monitored hundreds of valves, pumps, and sensors to keep the delicate balance of temperature and pressure across all stages.`,
     wikiUrls: {
       en: 'https://en.wikipedia.org/wiki/Multi-stage_flash_distillation',
-      ru: 'https://ru.wikipedia.org/wiki/Многоступенчатая_флеш-дистилляция',
+      ru: 'https://ru.wikipedia.org/wiki/Многоступенчатая_флеш-дистилляция'
     },
-    trigger: { type: 'building', value: 'distiller' },
+    trigger: { type: 'building', value: 'distiller' }
   },
   {
     id: 'first-housing',
@@ -218,9 +218,9 @@ These prefabricated concrete buildings could be assembled quickly using standard
 In Aktau, these buildings had special significance: their central heating came directly from the reactor's steam system, and their water from nuclear-powered desalination. Residents lived intimately connected to the technology that made their desert home possible.`,
     wikiUrls: {
       en: 'https://en.wikipedia.org/wiki/Microdistrict',
-      ru: 'https://ru.wikipedia.org/wiki/Микрорайон',
+      ru: 'https://ru.wikipedia.org/wiki/Микрорайон'
     },
-    trigger: { type: 'building', value: 'microrayon' },
+    trigger: { type: 'building', value: 'microrayon' }
   },
   {
     id: 'first-tank',
@@ -235,9 +235,9 @@ The tanks also helped manage daily demand fluctuations. Water consumption peaked
 In the extreme desert climate, these tanks required special design. Insulation prevented freezing in winter (temperatures could drop to -30°C) and limited evaporation in summer. Underground tanks stayed cooler but required pumps; elevated tanks used gravity but needed more maintenance.`,
     wikiUrls: {
       en: 'https://en.wikipedia.org/wiki/Water_storage',
-      ru: 'https://ru.wikipedia.org/wiki/Водонапорная_башня',
+      ru: 'https://ru.wikipedia.org/wiki/Водонапорная_башня'
     },
-    trigger: { type: 'building', value: 'water_tank' },
+    trigger: { type: 'building', value: 'water_tank' }
   },
   {
     id: 'five-buildings',
@@ -252,9 +252,9 @@ The city layout clustered residential areas near the coast where temperatures we
 Buildings were oriented to minimize sun exposure on their longest walls. Light-colored facades reflected heat, and deep balconies provided shade. These passive cooling strategies reduced the enormous energy demand that would otherwise be needed for air conditioning.`,
     wikiUrls: {
       en: 'https://en.wikipedia.org/wiki/Urban_planning_in_the_Soviet_Union',
-      ru: 'https://ru.wikipedia.org/wiki/Градостроительство_СССР',
+      ru: 'https://ru.wikipedia.org/wiki/Градостроительство_СССР'
     },
-    trigger: { type: 'building', value: 5 },
+    trigger: { type: 'building', value: 5 }
   },
   {
     id: 'ten-buildings',
@@ -269,9 +269,9 @@ This success required constant vigilance. Soviet nuclear workers were highly tra
 The reactor's design included multiple safety systems: neutron-absorbing control rods that could shut down the chain reaction in seconds, backup cooling systems, and containment structures designed to survive any credible accident. These features informed the design of later fast breeder reactors worldwide.`,
     wikiUrls: {
       en: 'https://en.wikipedia.org/wiki/Soviet_nuclear_power',
-      ru: 'https://ru.wikipedia.org/wiki/Ядерная_энергетика_СССР',
+      ru: 'https://ru.wikipedia.org/wiki/Ядерная_энергетика_СССР'
     },
-    trigger: { type: 'building', value: 10 },
+    trigger: { type: 'building', value: 10 }
   },
 
   // === MILESTONE TRIGGERS ===
@@ -288,9 +288,9 @@ New arrivals found a surprisingly cosmopolitan community. Russians, Kazakhs, Ukr
 The city offered amenities rare in Soviet Central Asia: reliable electricity and water, good schools, a university, theaters, and sports facilities. For many, Aktau represented the Soviet promise of modernity—a future built on science and technology.`,
     wikiUrls: {
       en: 'https://en.wikipedia.org/wiki/Aktau#History',
-      ru: 'https://ru.wikipedia.org/wiki/Актау#История',
+      ru: 'https://ru.wikipedia.org/wiki/Актау#История'
     },
-    trigger: { type: 'milestone', value: 'population_200' },
+    trigger: { type: 'milestone', value: 'population_200' }
   },
   {
     id: 'population-500',
@@ -305,9 +305,9 @@ The city boasted amenities that were rare even in Soviet capitals: reliable hot 
 This achievement came at enormous cost. The reactor, desalination plants, and city infrastructure represented billions of rubles of investment. Only the Soviet state's ability to mobilize resources without regard for economic return could have built such a city. It was a triumph of central planning—and perhaps its most ambitious monument.`,
     wikiUrls: {
       en: 'https://en.wikipedia.org/wiki/Aktau',
-      ru: 'https://ru.wikipedia.org/wiki/Актау',
+      ru: 'https://ru.wikipedia.org/wiki/Актау'
     },
-    trigger: { type: 'milestone', value: 'population_500' },
+    trigger: { type: 'milestone', value: 'population_500' }
   },
   {
     id: 'survive-winter',
@@ -322,9 +322,9 @@ Surviving winter required massive amounts of heat. The BN-350's steam system did
 If the reactor shut down in winter, the city would freeze within hours. This single point of failure drove engineers to build redundancy into every system. Backup boilers, stored fuel, and emergency procedures were constantly maintained against the day they might be needed.`,
     wikiUrls: {
       en: 'https://en.wikipedia.org/wiki/District_heating',
-      ru: 'https://ru.wikipedia.org/wiki/Центральное_теплоснабжение',
+      ru: 'https://ru.wikipedia.org/wiki/Центральное_теплоснабжение'
     },
-    trigger: { type: 'milestone', value: 'survive_winter' },
+    trigger: { type: 'milestone', value: 'survive_winter' }
   },
   {
     id: 'reactor-warning',
@@ -339,22 +339,22 @@ When sensors detected abnormal conditions, automatic systems could insert contro
 The operators' control room displayed thousands of parameters on massive panels. Alarms would sound at the first sign of trouble, and strict procedures dictated exactly how to respond to each scenario. This discipline was essential—in a fast breeder, there's no time for improvisation.`,
     wikiUrls: {
       en: 'https://en.wikipedia.org/wiki/BN-350_reactor#Design',
-      ru: 'https://ru.wikipedia.org/wiki/БН-350#Устройство',
+      ru: 'https://ru.wikipedia.org/wiki/БН-350#Устройство'
     },
-    trigger: { type: 'milestone', value: 'reactor_warning' },
-  },
+    trigger: { type: 'milestone', value: 'reactor_warning' }
+  }
 ];
 
 export function getFactByTrigger(type: string, value: number | string): HistoricalFact | undefined {
   return HISTORICAL_FACTS.find(
-    fact => fact.trigger.type === type && fact.trigger.value === value
+    (fact) => fact.trigger.type === type && fact.trigger.value === value
   );
 }
 
 export function getFactById(id: string): HistoricalFact | undefined {
-  return HISTORICAL_FACTS.find(fact => fact.id === id);
+  return HISTORICAL_FACTS.find((fact) => fact.id === id);
 }
 
 export function getFactsByCategory(category: HistoricalFact['category']): HistoricalFact[] {
-  return HISTORICAL_FACTS.filter(fact => fact.category === category);
+  return HISTORICAL_FACTS.filter((fact) => fact.category === category);
 }

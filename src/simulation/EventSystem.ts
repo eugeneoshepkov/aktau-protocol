@@ -87,7 +87,7 @@ class EventSystemClass {
 
   private tryTriggerNewEvent(): void {
     for (const event of EVENTS) {
-      if (this.activeEvents.some(a => a.event.id === event.id)) continue;
+      if (this.activeEvents.some((a) => a.event.id === event.id)) continue;
 
       if (Math.random() < event.chance) {
         this.activeEvents.push({

@@ -6,11 +6,11 @@ import {
   Color3,
   Vector3,
   VertexData,
-  VertexBuffer,
-} from "@babylonjs/core";
-import { GRID_SIZE, TILE_SIZE } from "../types";
-import type { TileType } from "../types";
-import { getTileTypeAt, getTileColor } from "./TileTypes";
+  VertexBuffer
+} from '@babylonjs/core';
+import { GRID_SIZE, TILE_SIZE } from '../types';
+import type { TileType } from '../types';
+import { getTileTypeAt, getTileColor } from './TileTypes';
 
 export class GridManager {
   private scene: Scene;
@@ -79,10 +79,7 @@ export class GridManager {
     const scale2 = 0.07; // Secondary frequency to break up repetition
 
     // Combine two wave patterns
-    const noise =
-      Math.sin(x * scale1) +
-      Math.cos(z * scale1) +
-      Math.sin(z * scale2 + x * 0.5);
+    const noise = Math.sin(x * scale1) + Math.cos(z * scale1) + Math.sin(z * scale2 + x * 0.5);
 
     // noise ranges roughly from -3 to +3, normalize to 0..1
     const normalized = (noise + 3) / 6;
@@ -98,17 +95,13 @@ export class GridManager {
   /**
    * Get jitter for a corner point (deterministic, shared between adjacent tiles)
    */
-  private getCornerJitter(
-    cornerX: number,
-    cornerZ: number,
-  ): { jx: number; jz: number } {
+  private getCornerJitter(cornerX: number, cornerZ: number): { jx: number; jz: number } {
     const roughness = this.getRoughness(cornerX, cornerZ);
     const jitterAmount = 0.6 * roughness; // Scale base jitter by roughness
 
     return {
       jx: (this.seededRandom(cornerX, cornerZ) - 0.5) * jitterAmount,
-      jz:
-        (this.seededRandom(cornerX + 1000, cornerZ + 1000) - 0.5) * jitterAmount,
+      jz: (this.seededRandom(cornerX + 1000, cornerZ + 1000) - 0.5) * jitterAmount
     };
   }
 
@@ -121,7 +114,7 @@ export class GridManager {
     let landTileCount = 0;
     for (let z = 0; z < GRID_SIZE; z++) {
       for (let x = 0; x < GRID_SIZE; x++) {
-        if (this.tileMap[z][x] !== "sea") {
+        if (this.tileMap[z][x] !== 'sea') {
           landTileCount++;
         }
       }
@@ -143,7 +136,7 @@ export class GridManager {
         const tileType = this.tileMap[z][x];
 
         // Skip sea tiles - leave holes for water mesh to show through
-        if (tileType === "sea") continue;
+        if (tileType === 'sea') continue;
 
         // Get jitter for each corner (consistent across adjacent tiles)
         const j00 = this.getCornerJitter(x, z); // top-left
@@ -168,15 +161,13 @@ export class GridManager {
         let r = rgb.r,
           g = rgb.g,
           b = rgb.b;
-        if (tileType === "sand") {
+        if (tileType === 'sand') {
           // Get roughness at tile center for consistent per-tile appearance
           const tileRoughness = this.getRoughness(x + 0.5, z + 0.5);
 
           // Scale variation by roughness: flat=±1%, rough=±10%
-          const baseVariation =
-            (this.seededRandom(x + 5000, z + 5000) - 0.5) * 0.2;
-          const variation =
-            tileRoughness > 0 ? baseVariation : baseVariation * 0.1;
+          const baseVariation = (this.seededRandom(x + 5000, z + 5000) - 0.5) * 0.2;
+          const variation = tileRoughness > 0 ? baseVariation : baseVariation * 0.1;
 
           // Rough areas are slightly darker (up to 10% darker at max roughness)
           const roughnessDarken = tileRoughness * 0.1;
@@ -187,7 +178,7 @@ export class GridManager {
         }
 
         // Height: rocks elevated above sand, all corners same height (no gaps)
-        const tileY = tileType === "rock" ? 0.25 : 0.15;
+        const tileY = tileType === 'rock' ? 0.25 : 0.15;
 
         // Create 4 unique vertices for this tile
         // Vertex 0: top-left corner (x, z)
@@ -217,7 +208,7 @@ export class GridManager {
           vertexIndex + 1,
           vertexIndex + 1,
           vertexIndex + 2,
-          vertexIndex + 3,
+          vertexIndex + 3
         );
 
         vertexIndex += 4;
@@ -225,7 +216,7 @@ export class GridManager {
     }
 
     // Create mesh from vertex data
-    this.landMesh = new Mesh("landMesh", this.scene);
+    this.landMesh = new Mesh('landMesh', this.scene);
 
     const vertexData = new VertexData();
     vertexData.positions = positions;
@@ -236,7 +227,7 @@ export class GridManager {
     vertexData.applyToMesh(this.landMesh);
 
     // Create matte material that uses vertex colors
-    const material = new StandardMaterial("landMat", this.scene);
+    const material = new StandardMaterial('landMat', this.scene);
     material.specularColor = Color3.Black();
     material.diffuseColor = Color3.White(); // Let vertex colors show through
     material.backFaceCulling = false; // Show both sides
@@ -251,14 +242,14 @@ export class GridManager {
     // Create ground with enough subdivisions for wave vertices
     const subdivisions = Math.floor(GRID_SIZE / 2); // ~25 segments
     this.seaMesh = MeshBuilder.CreateGround(
-      "seaMesh",
+      'seaMesh',
       {
         width: GRID_SIZE,
         height: GRID_SIZE,
         subdivisions: subdivisions,
-        updatable: true, // Required for vertex animation
+        updatable: true // Required for vertex animation
       },
-      this.scene,
+      this.scene
     );
 
     // Position below land level
@@ -268,7 +259,7 @@ export class GridManager {
     this.seaMesh.position.y = -0.55;
 
     // Create unlit water material (fully opaque to hide base underneath)
-    const waterMaterial = new StandardMaterial("waterMat", this.scene);
+    const waterMaterial = new StandardMaterial('waterMat', this.scene);
     waterMaterial.emissiveColor = new Color3(0.18, 0.45, 0.52); // Teal
     waterMaterial.diffuseColor = Color3.Black();
     waterMaterial.specularColor = Color3.Black();
@@ -321,13 +312,13 @@ export class GridManager {
    */
   private createDioramaBase(): void {
     this.baseMesh = MeshBuilder.CreateBox(
-      "baseMesh",
+      'baseMesh',
       {
         width: GRID_SIZE + 2, // Slightly larger than land
         depth: GRID_SIZE + 2,
-        height: 10,
+        height: 10
       },
-      this.scene,
+      this.scene
     );
 
     // Position: top surface below lowest wave valley (water can dip to -1.15)
@@ -336,7 +327,7 @@ export class GridManager {
     this.baseMesh.position.y = -6.5; // Center of 10-height box at -6.5 means top at -1.5
 
     // Dark rock material
-    const baseMaterial = new StandardMaterial("baseMat", this.scene);
+    const baseMaterial = new StandardMaterial('baseMat', this.scene);
     baseMaterial.diffuseColor = new Color3(0.15, 0.12, 0.1); // Dark brown/black
     baseMaterial.specularColor = Color3.Black();
 
@@ -345,12 +336,12 @@ export class GridManager {
 
   private createHighlightMesh(): void {
     this.highlightMesh = MeshBuilder.CreateBox(
-      "highlight",
+      'highlight',
       { width: TILE_SIZE, height: 0.15, depth: TILE_SIZE },
-      this.scene,
+      this.scene
     );
 
-    this.highlightMaterial = new StandardMaterial("highlightMat", this.scene);
+    this.highlightMaterial = new StandardMaterial('highlightMat', this.scene);
     this.highlightMaterial.diffuseColor = this.validColor;
     this.highlightMaterial.alpha = 0.5;
     this.highlightMaterial.emissiveColor = this.validColor.scale(0.5);
@@ -372,7 +363,7 @@ export class GridManager {
     this.highlightMesh.position = new Vector3(
       gridX * TILE_SIZE + TILE_SIZE / 2,
       groundY + 0.01, // Slightly above ground to prevent z-fighting
-      gridZ * TILE_SIZE + TILE_SIZE / 2,
+      gridZ * TILE_SIZE + TILE_SIZE / 2
     );
 
     const color = valid ? this.validColor : this.invalidColor;

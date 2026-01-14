@@ -2,11 +2,7 @@ import { ICONS } from './Icons';
 import { soundManager } from '../managers/SoundManager';
 import { gameState } from '../simulation/GameState';
 import { tickSystem } from '../simulation/TickSystem';
-import {
-  HISTORICAL_FACTS,
-  getFactByTrigger,
-  type HistoricalFact
-} from '../data/historicalFacts';
+import { HISTORICAL_FACTS, getFactByTrigger, type HistoricalFact } from '../data/historicalFacts';
 import { t, td, i18n } from '../i18n';
 import { keyMatches } from '../utils/keyboard';
 
@@ -64,7 +60,6 @@ export class Chronicle {
   private saveDiscoveredFacts(): void {
     localStorage.setItem(STORAGE_KEY, JSON.stringify([...this.discoveredFacts]));
   }
-
 
   private loadReadFacts(): void {
     try {
@@ -185,7 +180,11 @@ export class Chronicle {
       // J for Journal/Chronicle archive
       const active = document.activeElement;
       if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) return;
-      if (keyMatches(e.key, 'j') && !this.modalEl.classList.contains('open') && !this.archiveEl.classList.contains('open')) {
+      if (
+        keyMatches(e.key, 'j') &&
+        !this.modalEl.classList.contains('open') &&
+        !this.archiveEl.classList.contains('open')
+      ) {
         this.showArchive();
         soundManager.play('click');
       }
@@ -402,7 +401,7 @@ export class Chronicle {
       const fullText = td(`fact.${fact.id}.full`);
       bodyEl.innerHTML = fullText
         .split('\n\n')
-        .map(p => `<p>${p}</p>`)
+        .map((p) => `<p>${p}</p>`)
         .join('');
     }
 
@@ -472,39 +471,46 @@ export class Chronicle {
 
       listEl.innerHTML = Object.entries(categories)
         .filter(([, facts]) => facts.length > 0)
-        .map(([category, facts]) => `
+        .map(
+          ([category, facts]) => `
           <div class="archive-category">
             <h3>${td(`chronicle.category.${category}`)}</h3>
             <div class="archive-facts">
-              ${facts.map(fact => {
-                const isDiscovered = this.discoveredFacts.has(fact.id);
-                const isRead = this.readFacts.has(fact.id);
-                const isUnread = isDiscovered && !isRead;
-                const factTitle = td(`fact.${fact.id}.title`);
-                const factShort = td(`fact.${fact.id}.short`);
-                const classes = [
-                  'archive-fact',
-                  isDiscovered ? 'discovered' : 'locked',
-                  isUnread ? 'unread' : ''
-                ].filter(Boolean).join(' ');
-                return `
+              ${facts
+                .map((fact) => {
+                  const isDiscovered = this.discoveredFacts.has(fact.id);
+                  const isRead = this.readFacts.has(fact.id);
+                  const isUnread = isDiscovered && !isRead;
+                  const factTitle = td(`fact.${fact.id}.title`);
+                  const factShort = td(`fact.${fact.id}.short`);
+                  const classes = [
+                    'archive-fact',
+                    isDiscovered ? 'discovered' : 'locked',
+                    isUnread ? 'unread' : ''
+                  ]
+                    .filter(Boolean)
+                    .join(' ');
+                  return `
                   <div class="${classes}"
                        ${isDiscovered ? `data-fact-id="${fact.id}"` : ''}>
                     <span class="archive-fact-title">${isDiscovered ? factTitle : '???'}${isUnread ? '<span class="unread-dot"></span>' : ''}</span>
                     ${isDiscovered ? `<span class="archive-fact-preview">${factShort.slice(0, 60)}...</span>` : `<span class="archive-fact-locked">${t('chronicle.locked')}</span>`}
                   </div>
                 `;
-              }).join('')}
+                })
+                .join('')}
             </div>
           </div>
-        `).join('');
+        `
+        )
+        .join('');
 
       // Add click handlers for discovered facts
-      listEl.querySelectorAll('.archive-fact.discovered').forEach(el => {
+      listEl.querySelectorAll('.archive-fact.discovered').forEach((el) => {
         el.addEventListener('click', () => {
           const factId = el.getAttribute('data-fact-id');
           if (factId) {
-            const fact = HISTORICAL_FACTS.find(f => f.id === factId);
+            const fact = HISTORICAL_FACTS.find((f) => f.id === factId);
             if (fact) {
               this.hideArchive();
               setTimeout(() => this.showModal(fact), 200);
@@ -517,7 +523,7 @@ export class Chronicle {
 
   // Public method to manually trigger a fact (for testing)
   public showFact(factId: string): void {
-    const fact = HISTORICAL_FACTS.find(f => f.id === factId);
+    const fact = HISTORICAL_FACTS.find((f) => f.id === factId);
     if (fact) {
       this.queueNotification(fact);
     }

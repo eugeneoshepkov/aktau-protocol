@@ -9,9 +9,9 @@ import type { TileType } from '../types';
  */
 export function getCoastlineZ(x: number): number {
   // Mix of frequencies creates a natural, jagged "fractal" shoreline
-  const primaryWave = Math.sin(x * 0.1) * 4;      // Large bays/peninsulas
-  const secondaryWave = Math.sin(x * 0.4) * 1.5;  // Medium variation
-  const tertiaryWave = Math.cos(x * 1.3) * 0.5;   // Fine detail/jaggedness
+  const primaryWave = Math.sin(x * 0.1) * 4; // Large bays/peninsulas
+  const secondaryWave = Math.sin(x * 0.4) * 1.5; // Medium variation
+  const tertiaryWave = Math.cos(x * 1.3) * 0.5; // Fine detail/jaggedness
   return SEA_ROWS + primaryWave + secondaryWave + tertiaryWave;
 }
 
@@ -66,7 +66,11 @@ export function hexToRgb(hex: string): { r: number; g: number; b: number } {
 /**
  * Get color for tile type
  */
-export function getTileColor(type: TileType): { r: number; g: number; b: number } {
+export function getTileColor(type: TileType): {
+  r: number;
+  g: number;
+  b: number;
+} {
   return hexToRgb(TILE_COLORS[type]);
 }
 

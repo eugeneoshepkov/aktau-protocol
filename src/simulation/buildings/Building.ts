@@ -25,7 +25,8 @@ export const BUILDING_META: Record<BuildingType, BuildingMeta> = {
   reactor: {
     type: 'reactor',
     name: 'BN-350 Reactor',
-    description: 'Nuclear reactor providing heat and electricity. Build on ROCK tiles (gray). Warning: +1°C/tick!',
+    description:
+      'Nuclear reactor providing heat and electricity. Build on ROCK tiles (gray). Warning: +1°C/tick!',
     allowedTiles: BUILDING_PLACEMENT.reactor,
     costs: BUILDING_COSTS.reactor,
     production: BUILDING_PRODUCTION.reactor
@@ -33,7 +34,8 @@ export const BUILDING_META: Record<BuildingType, BuildingMeta> = {
   distiller: {
     type: 'distiller',
     name: 'Desalination Plant',
-    description: 'Converts seawater to freshwater using heat. Also cools the reactor by -0.8°C/tick.',
+    description:
+      'Converts seawater to freshwater using heat. Also cools the reactor by -0.8°C/tick.',
     allowedTiles: BUILDING_PLACEMENT.distiller,
     costs: BUILDING_COSTS.distiller,
     production: BUILDING_PRODUCTION.distiller
@@ -41,7 +43,8 @@ export const BUILDING_META: Record<BuildingType, BuildingMeta> = {
   microrayon: {
     type: 'microrayon',
     name: 'Microrayon Housing',
-    description: 'Soviet-style housing block. Consumes water and heat, generates happiness. Build on SAND tiles.',
+    description:
+      'Soviet-style housing block. Consumes water and heat, generates happiness. Build on SAND tiles.',
     allowedTiles: BUILDING_PLACEMENT.microrayon,
     costs: BUILDING_COSTS.microrayon,
     production: BUILDING_PRODUCTION.microrayon
@@ -57,7 +60,8 @@ export const BUILDING_META: Record<BuildingType, BuildingMeta> = {
   thermal_plant: {
     type: 'thermal_plant',
     name: 'Thermal Plant',
-    description: 'Fossil fuel power plant. Provides electricity and heat, but less than the reactor.',
+    description:
+      'Fossil fuel power plant. Provides electricity and heat, but less than the reactor.',
     allowedTiles: BUILDING_PLACEMENT.thermal_plant,
     costs: BUILDING_COSTS.thermal_plant,
     production: BUILDING_PRODUCTION.thermal_plant

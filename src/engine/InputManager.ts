@@ -23,10 +23,7 @@ export class InputManager {
     this.gridManager = gridManager;
 
     // Create a ground plane at y=0 for raycasting
-    this.groundPlane = Plane.FromPositionAndNormal(
-      Vector3.Zero(),
-      Vector3.Up()
-    );
+    this.groundPlane = Plane.FromPositionAndNormal(Vector3.Zero(), Vector3.Up());
 
     this.setupPointerEvents();
   }

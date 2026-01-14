@@ -5,7 +5,7 @@ class MusicManagerClass {
     '/audio/background/track3.mp3',
     '/audio/background/track4.mp3',
     '/audio/background/track5.mp3',
-    '/audio/background/track6.mp3',
+    '/audio/background/track6.mp3'
   ];
   private playlist: string[] = [];
   private currentIndex = 0;
@@ -59,13 +59,17 @@ class MusicManagerClass {
     if (!this.audio) return;
 
     this.audio.src = src;
-    this.audio.play().catch(err => {
+    this.audio.play().catch((err) => {
       console.warn('[MusicManager] Autoplay blocked, will retry on user interaction', err);
-      document.addEventListener('click', () => {
-        if (this.audio && this.isPlaying) {
-          this.audio.play().catch(() => {});
-        }
-      }, { once: true });
+      document.addEventListener(
+        'click',
+        () => {
+          if (this.audio && this.isPlaying) {
+            this.audio.play().catch(() => {});
+          }
+        },
+        { once: true }
+      );
     });
   }
 

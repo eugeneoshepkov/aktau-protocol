@@ -106,7 +106,7 @@ export class HUD {
     this.tempElement = container.querySelector('#hud-temp');
     this.pauseButton = container.querySelector('#hud-pause');
 
-    ['freshWater', 'seawater', 'heat', 'electricity', 'happiness', 'population'].forEach(key => {
+    ['freshWater', 'seawater', 'heat', 'electricity', 'happiness', 'population'].forEach((key) => {
       const el = container.querySelector(`#hud-${key}`);
       if (el) this.resourceElements.set(key, el as HTMLSpanElement);
       const trendEl = container.querySelector(`#hud-trend-${key}`);
@@ -263,7 +263,9 @@ export class HUD {
       const season = gameState.getSeason();
       const mult = gameState.getSeasonMultiplier();
       this.seasonElement.innerHTML = this.seasonIcons[season];
-      this.seasonElement.title = td(`season.${season}`, { mult: mult.toString() });
+      this.seasonElement.title = td(`season.${season}`, {
+        mult: mult.toString()
+      });
       this.seasonElement.className = `hud-season icon-wrap ${season}`;
     }
   }
@@ -307,7 +309,12 @@ export class HUD {
     });
   }
 
-  public updateActiveEvents(events: Array<{ event: { id: string; name: string; icon: string }; remainingDays: number }>): void {
+  public updateActiveEvents(
+    events: Array<{
+      event: { id: string; name: string; icon: string };
+      remainingDays: number;
+    }>
+  ): void {
     let eventsContainer = document.getElementById('hud-events');
     if (!eventsContainer) {
       eventsContainer = document.createElement('div');
@@ -323,12 +330,15 @@ export class HUD {
     }
 
     eventsContainer.style.display = 'flex';
-    eventsContainer.innerHTML = events.map(e =>
-      `<div class="hud-event" title="${e.event.name} (${t('hud.daysLeft', { days: e.remainingDays })})">
+    eventsContainer.innerHTML = events
+      .map(
+        (e) =>
+          `<div class="hud-event" title="${e.event.name} (${t('hud.daysLeft', { days: e.remainingDays })})">
         <span class="event-icon">${e.event.icon}</span>
         <span class="event-days">${e.remainingDays}d</span>
       </div>`
-    ).join('');
+      )
+      .join('');
   }
 
   public dispose(): void {

@@ -4,17 +4,17 @@
  */
 const RU_TO_EN_MAP: Record<string, string> = {
   // WASD movement
-  'ц': 'w',
-  'ф': 'a',
-  'ы': 's',
-  'в': 'd',
+  ц: 'w',
+  ф: 'a',
+  ы: 's',
+  в: 'd',
   // QE rotation
-  'й': 'q',
-  'у': 'e',
+  й: 'q',
+  у: 'e',
   // Other shortcuts
-  'о': 'j',  // J for journal
-  'с': 'c',  // C for center
-  'ь': 'm',  // M for mute
+  о: 'j', // J for journal
+  с: 'c', // C for center
+  ь: 'm' // M for mute
 };
 
 /**

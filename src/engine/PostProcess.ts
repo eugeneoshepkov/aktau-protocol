@@ -1,9 +1,4 @@
-import {
-  Scene,
-  PostProcess,
-  Effect,
-  Camera
-} from '@babylonjs/core';
+import { Scene, PostProcess, Effect, Camera } from '@babylonjs/core';
 
 const GRAIN_FRAGMENT_SHADER = `
 precision highp float;
@@ -97,8 +92,7 @@ export class FilmGrainEffect {
     };
   }
 
-  public setIntensity(_intensity: number): void {
-  }
+  public setIntensity(_intensity: number): void {}
 
   public dispose(): void {
     this.postProcess?.dispose();

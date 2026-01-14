@@ -20,13 +20,17 @@ const SOUNDS: Record<string, ZzFXParams> = {
   reactor: [0.7, 0.1, 60, 0.2, 0.4, 0.3, 1, 0.8, 20, 0, 0, 0, 0, 0.2, 8, 0, 0.1, 0.4, 0.15],
 
   // Distiller placement - steam/water processing
-  distiller: [0.5, 0, 500, 0.05, 0.2, 0.3, 2, 0.3, -20, 0, 30, 0.08, 0.1, 0.3, 0, 0, 0.05, 0.5, 0.1],
+  distiller: [
+    0.5, 0, 500, 0.05, 0.2, 0.3, 2, 0.3, -20, 0, 30, 0.08, 0.1, 0.3, 0, 0, 0.05, 0.5, 0.1
+  ],
 
   // Housing placement - construction, multiple hits
   microrayon: [0.6, 0.2, 200, 0.02, 0.1, 0.2, 4, 1.2, 0, 0, 0, 0, 0.05, 0.3, 0, 0.15, 0, 0.5, 0.03],
 
   // Water tank - metallic clang
-  water_tank: [0.6, 0, 180, 0.01, 0.12, 0.25, 4, 1.8, 0, 0, 0, 0, 0, 0.15, 0, 0.2, 0.02, 0.55, 0.04],
+  water_tank: [
+    0.6, 0, 180, 0.01, 0.12, 0.25, 4, 1.8, 0, 0, 0, 0, 0, 0.15, 0, 0.2, 0.02, 0.55, 0.04
+  ],
 
   // UI click - crisp button press
   click: [0.4, 0, 900, 0, 0.015, 0.04, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
@@ -92,8 +96,7 @@ class SoundManagerClass {
     if (params) {
       try {
         this.zzfx(...params);
-      } catch {
-      }
+      } catch {}
     }
   }
 
@@ -106,8 +109,7 @@ class SoundManagerClass {
 
     try {
       this.zzfx(...params);
-    } catch {
-    }
+    } catch {}
   }
 
   public setEnabled(enabled: boolean): void {

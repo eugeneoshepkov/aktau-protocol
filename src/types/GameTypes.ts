@@ -43,7 +43,13 @@ export const TILE_COLORS: Record<TileType, string> = {
 // Building Types
 // ============================================
 
-export type BuildingType = 'pump' | 'reactor' | 'distiller' | 'microrayon' | 'water_tank' | 'thermal_plant';
+export type BuildingType =
+  | 'pump'
+  | 'reactor'
+  | 'distiller'
+  | 'microrayon'
+  | 'water_tank'
+  | 'thermal_plant';
 
 export interface Building {
   id: string;
@@ -70,9 +76,19 @@ export const BUILDING_COSTS: Record<BuildingType, Partial<Resources>> = {
 
 export const BUILDING_PRODUCTION: Record<BuildingType, ProductionRule> = {
   pump: { consumes: { electricity: 5 }, produces: { seawater: 10 } },
-  reactor: { consumes: {}, produces: { heat: 50, electricity: 20 }, special: 'tempIncrease' },
-  distiller: { consumes: { seawater: 10, heat: 10 }, produces: { freshWater: 10 } },
-  microrayon: { consumes: { freshWater: 5, heat: 5 }, produces: { happiness: 1 } },
+  reactor: {
+    consumes: {},
+    produces: { heat: 50, electricity: 20 },
+    special: 'tempIncrease'
+  },
+  distiller: {
+    consumes: { seawater: 10, heat: 10 },
+    produces: { freshWater: 10 }
+  },
+  microrayon: {
+    consumes: { freshWater: 5, heat: 5 },
+    produces: { happiness: 1 }
+  },
   water_tank: { consumes: {}, produces: {} },
   thermal_plant: { consumes: {}, produces: { heat: 15, electricity: 25 } }
 };
@@ -88,7 +104,7 @@ export const BUILDING_PLACEMENT: Record<BuildingType, TileType[]> = {
 
 // Maximum number of each building type allowed (undefined = unlimited)
 export const BUILDING_MAX_ALLOWED: Partial<Record<BuildingType, number>> = {
-  reactor: 1  // BN-350 is unique - the heart of Aktau
+  reactor: 1 // BN-350 is unique - the heart of Aktau
 };
 
 export const WATER_TANK_CAPACITY = 50;
@@ -129,8 +145,8 @@ export const SEA_ROWS = 10; // First 10 rows are sea
 // Camera Constants
 // ============================================
 
-export const ISOMETRIC_ALPHA = Math.PI / 4;      // 45 degrees
-export const ISOMETRIC_BETA = Math.PI / 3;       // ~60 degrees
+export const ISOMETRIC_ALPHA = Math.PI / 4; // 45 degrees
+export const ISOMETRIC_BETA = Math.PI / 3; // ~60 degrees
 export const MIN_ZOOM = 15;
-export const MAX_ZOOM = 55;  // Reduced to keep map in view
+export const MAX_ZOOM = 55; // Reduced to keep map in view
 export const DEFAULT_ZOOM = 35;

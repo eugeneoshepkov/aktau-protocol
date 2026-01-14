@@ -16,7 +16,10 @@ class DecorManagerClass {
   private decoratedTiles: Set<string> = new Set();
   private roadTiles: Set<string> = new Set();
 
-  public async initialize(scene: Scene, getTileAt: (x: number, z: number) => TileType | null): Promise<void> {
+  public async initialize(
+    scene: Scene,
+    getTileAt: (x: number, z: number) => TileType | null
+  ): Promise<void> {
     this.scene = scene;
 
     gameState.on('buildingPlaced', (building: any) => {
@@ -53,7 +56,7 @@ class DecorManagerClass {
     const mainRoads = [
       { start: { x: 15, z: 10 }, direction: 'horizontal', length: 25 },
       { start: { x: 20, z: 15 }, direction: 'vertical', length: 20 },
-      { start: { x: 30, z: 25 }, direction: 'horizontal', length: 15 },
+      { start: { x: 30, z: 25 }, direction: 'horizontal', length: 15 }
     ];
 
     for (const road of mainRoads) {
@@ -64,12 +67,16 @@ class DecorManagerClass {
   }
 
   private async placeRoad(
-    road: { start: { x: number; z: number }; direction: string; length: number },
+    road: {
+      start: { x: number; z: number };
+      direction: string;
+      length: number;
+    },
     config: RoadsConfig,
     basePath: string,
     validTiles: { x: number; z: number }[]
   ): Promise<void> {
-    const validSet = new Set(validTiles.map(t => `${t.x},${t.z}`));
+    const validSet = new Set(validTiles.map((t) => `${t.x},${t.z}`));
     let x = road.start.x;
     let z = road.start.z;
 

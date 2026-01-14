@@ -56,14 +56,16 @@ export class Tumbleweed {
 
     this.mesh.position.x += this.speed * deltaTime;
 
-    const baseDrift = Math.sin(this.elapsedTime * DRIFT_FREQUENCY + this.driftPhase) * DRIFT_AMPLITUDE * deltaTime;
+    const baseDrift =
+      Math.sin(this.elapsedTime * DRIFT_FREQUENCY + this.driftPhase) * DRIFT_AMPLITUDE * deltaTime;
     const avoidanceDrift = this.avoidanceOffset * deltaTime * 2;
     this.mesh.position.z += baseDrift + avoidanceDrift;
 
     this.mesh.rotation.z -= this.speed * deltaTime * 3;
     this.mesh.rotation.x += Math.sin(this.elapsedTime * 2) * deltaTime * 0.5;
 
-    this.mesh.position.y = GROUND_OFFSET + Math.abs(Math.sin(this.elapsedTime * BOUNCE_FREQUENCY) * BOUNCE_AMPLITUDE);
+    this.mesh.position.y =
+      GROUND_OFFSET + Math.abs(Math.sin(this.elapsedTime * BOUNCE_FREQUENCY) * BOUNCE_AMPLITUDE);
   }
 
   public isOffScreen(): boolean {

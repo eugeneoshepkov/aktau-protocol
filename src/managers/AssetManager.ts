@@ -1,9 +1,4 @@
-import {
-  Scene,
-  SceneLoader,
-  AbstractMesh,
-  AssetContainer
-} from '@babylonjs/core';
+import { Scene, SceneLoader, AbstractMesh, AssetContainer } from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
 import type { BuildingType, TileType } from '../types';
 
@@ -86,7 +81,7 @@ class AssetManagerClass {
     this.scene = scene;
 
     try {
-      const response = await fetch("/assets/manifest.json");
+      const response = await fetch('/assets/manifest.json');
       if (!response.ok) {
         throw new Error(`Failed to load manifest: ${response.statusText}`);
       }
@@ -94,7 +89,7 @@ class AssetManagerClass {
       console.log(`[AssetManager] Loaded manifest v${this.manifest?.version}`);
       this.initialized = true;
     } catch (error) {
-      console.error("[AssetManager] Failed to load manifest:", error);
+      console.error('[AssetManager] Failed to load manifest:', error);
       this.manifest = this.getDefaultManifest();
       this.initialized = true;
     }
@@ -160,25 +155,22 @@ class AssetManagerClass {
   }
 
   public getBasePath(key: string): string {
-    return this.manifest?.basePaths?.[key] ?? "/models/";
+    return this.manifest?.basePaths?.[key] ?? '/models/';
   }
 
   public getModelFullPath(model: ModelConfig): string {
-    const basePathKey = model.basePath ?? "suburban";
+    const basePathKey = model.basePath ?? 'suburban';
     const basePath = this.getBasePath(basePathKey);
     return `${basePath}${model.file}`;
   }
 
-  public async loadModel(
-    filename: string,
-    basePath?: string,
-  ): Promise<AbstractMesh[] | null> {
+  public async loadModel(filename: string, basePath?: string): Promise<AbstractMesh[] | null> {
     if (!this.scene) {
-      console.error("[AssetManager] Scene not initialized");
+      console.error('[AssetManager] Scene not initialized');
       return null;
     }
 
-    const basePathResolved = basePath ?? this.getBasePath("suburban");
+    const basePathResolved = basePath ?? this.getBasePath('suburban');
     const fullPath = `${basePathResolved}${filename}`;
     const cacheKey = fullPath;
 
@@ -207,37 +199,25 @@ class AssetManagerClass {
     }
   }
 
-  public async loadModelFromConfig(
-    config: ModelConfig,
-  ): Promise<AbstractMesh[] | null> {
-    const basePathKey = config.basePath ?? "suburban";
+  public async loadModelFromConfig(config: ModelConfig): Promise<AbstractMesh[] | null> {
+    const basePathKey = config.basePath ?? 'suburban';
     const basePath = this.getBasePath(basePathKey);
     return this.loadModel(config.file, basePath);
   }
 
-  private async loadModelAsync(
-    fullPath: string,
-    filename: string,
-  ): Promise<AssetContainer> {
-    const dirPath = fullPath.substring(0, fullPath.lastIndexOf("/") + 1);
-    const file = fullPath.substring(fullPath.lastIndexOf("/") + 1);
+  private async loadModelAsync(fullPath: string, filename: string): Promise<AssetContainer> {
+    const dirPath = fullPath.substring(0, fullPath.lastIndexOf('/') + 1);
+    const file = fullPath.substring(fullPath.lastIndexOf('/') + 1);
 
     console.log(`[AssetManager] Loading model: ${filename} from ${dirPath}`);
 
-    const container = await SceneLoader.LoadAssetContainerAsync(
-      dirPath,
-      file,
-      this.scene!,
-    );
+    const container = await SceneLoader.LoadAssetContainerAsync(dirPath, file, this.scene!);
 
     return container;
   }
 
   public getTileColor(type: TileType): string {
-    return (
-      this.manifest?.tiles[type]?.primitive?.color ??
-      this.getDefaultTileColor(type)
-    );
+    return this.manifest?.tiles[type]?.primitive?.color ?? this.getDefaultTileColor(type);
   }
 
   public getTileModel(type: TileType): ModelConfig | null {
@@ -251,20 +231,20 @@ class AssetManagerClass {
 
     for (const asset of Object.values(this.manifest.buildings)) {
       if (asset.model) {
-        const basePathKey = asset.model.basePath ?? "suburban";
+        const basePathKey = asset.model.basePath ?? 'suburban';
         const basePath = this.getBasePath(basePathKey);
         loadTasks.push(this.preloadModel(asset.model.file, basePath));
       }
       if (asset.models) {
         for (const model of asset.models) {
-          const basePathKey = model.basePath ?? "suburban";
+          const basePathKey = model.basePath ?? 'suburban';
           const basePath = this.getBasePath(basePathKey);
           loadTasks.push(this.preloadModel(model.file, basePath));
         }
       }
       if (asset.variants) {
         for (const variant of asset.variants) {
-          const basePathKey = variant.basePath ?? "suburban";
+          const basePathKey = variant.basePath ?? 'suburban';
           const basePath = this.getBasePath(basePathKey);
           loadTasks.push(this.preloadModel(variant.file, basePath));
         }
@@ -272,9 +252,7 @@ class AssetManagerClass {
     }
 
     if (this.manifest.decorations) {
-      const decorBasePath = this.getBasePath(
-        this.manifest.decorations.basePath,
-      );
+      const decorBasePath = this.getBasePath(this.manifest.decorations.basePath);
       for (const item of this.manifest.decorations.items) {
         loadTasks.push(this.preloadModel(item.file, decorBasePath));
       }
@@ -282,13 +260,10 @@ class AssetManagerClass {
 
     console.log(`[AssetManager] Preloading ${loadTasks.length} models...`);
     await Promise.all(loadTasks);
-    console.log("[AssetManager] Preload complete");
+    console.log('[AssetManager] Preload complete');
   }
 
-  private async preloadModel(
-    filename: string,
-    basePath: string,
-  ): Promise<void> {
+  private async preloadModel(filename: string, basePath: string): Promise<void> {
     const fullPath = `${basePath}${filename}`;
     const cacheKey = fullPath;
 
@@ -303,10 +278,7 @@ class AssetManagerClass {
       this.loadedModels.set(cacheKey, container);
       this.loadingPromises.delete(cacheKey);
     } catch (error) {
-      console.error(
-        `[AssetManager] Failed to preload model: ${filename}`,
-        error,
-      );
+      console.error(`[AssetManager] Failed to preload model: ${filename}`, error);
       this.loadingPromises.delete(cacheKey);
     }
   }
@@ -322,54 +294,54 @@ class AssetManagerClass {
 
   private getDefaultManifest(): AssetManifest {
     return {
-      version: "1.0.0",
+      version: '1.0.0',
       useModels: false,
-      basePaths: { suburban: "/models/suburban/Models/GLB format/" },
+      basePaths: { suburban: '/models/suburban/Models/GLB format/' },
       buildings: {},
-      tiles: {},
+      tiles: {}
     };
   }
 
   private getDefaultBuildingPrimitive(type: BuildingType): PrimitiveConfig {
     const defaults: Record<BuildingType, PrimitiveConfig> = {
-      pump: { type: "cylinder", height: 1.5, diameter: 0.8, color: "#2F8D8D" },
-      reactor: { type: "cylinder", height: 3, diameter: 2, color: "#FF6B35" },
+      pump: { type: 'cylinder', height: 1.5, diameter: 0.8, color: '#2F8D8D' },
+      reactor: { type: 'cylinder', height: 3, diameter: 2, color: '#FF6B35' },
       distiller: {
-        type: "box",
+        type: 'box',
         height: 1,
         width: 1.2,
         depth: 1.2,
-        color: "#4A90A4",
+        color: '#4A90A4'
       },
       microrayon: {
-        type: "box",
+        type: 'box',
         height: 2,
         width: 0.9,
         depth: 0.9,
-        color: "#D4C5A9",
+        color: '#D4C5A9'
       },
       water_tank: {
-        type: "cylinder",
+        type: 'cylinder',
         height: 1.2,
         diameter: 1.4,
-        color: "#5599CC",
+        color: '#5599CC'
       },
       thermal_plant: {
-        type: "box",
+        type: 'box',
         height: 2.0,
         width: 1.2,
         depth: 1.2,
-        color: "#8B7355",
-      },
+        color: '#8B7355'
+      }
     };
     return defaults[type];
   }
 
   private getDefaultTileColor(type: TileType): string {
     const defaults: Record<TileType, string> = {
-      sand: "#E6D5AC",
-      sea: "#2F8D8D",
-      rock: "#555555",
+      sand: '#E6D5AC',
+      sea: '#2F8D8D',
+      rock: '#555555'
     };
     return defaults[type];
   }

@@ -1,27 +1,27 @@
-import { BuildingManager } from "../managers/BuildingManager";
-import { getAllBuildingTypes } from "../simulation/buildings/Building";
-import { ICONS } from "./Icons";
-import { soundManager } from "../managers/SoundManager";
-import { gameState } from "../simulation/GameState";
-import type { BuildingType } from "../types";
-import { t, td } from "../i18n";
+import { BuildingManager } from '../managers/BuildingManager';
+import { getAllBuildingTypes } from '../simulation/buildings/Building';
+import { ICONS } from './Icons';
+import { soundManager } from '../managers/SoundManager';
+import { gameState } from '../simulation/GameState';
+import type { BuildingType } from '../types';
+import { t, td } from '../i18n';
 
 // Reactor is auto-placed at game start, so not in menu
 const BUILDING_HOTKEYS: Record<string, BuildingType> = {
-  "1": "pump",
-  "2": "distiller",
-  "3": "microrayon",
-  "4": "water_tank",
-  "5": "thermal_plant",
+  '1': 'pump',
+  '2': 'distiller',
+  '3': 'microrayon',
+  '4': 'water_tank',
+  '5': 'thermal_plant'
 };
 
 const BUILDING_COLORS: Record<BuildingType, string> = {
-  pump: "#22d3d1",
-  reactor: "#f97316",
-  distiller: "#60a5fa",
-  microrayon: "#a78bfa",
-  water_tank: "#6ee7b7",
-  thermal_plant: "#d97706",
+  pump: '#22d3d1',
+  reactor: '#f97316',
+  distiller: '#60a5fa',
+  microrayon: '#a78bfa',
+  water_tank: '#6ee7b7',
+  thermal_plant: '#d97706'
 };
 
 export class BuildPanel {
@@ -42,43 +42,39 @@ export class BuildPanel {
   }
 
   private setupKeyboardShortcuts(): void {
-    window.addEventListener("keydown", (e) => {
-      if (
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement
-      )
-        return;
+    window.addEventListener('keydown', (e) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
       const type = BUILDING_HOTKEYS[e.key];
       if (type) {
         e.preventDefault();
         this.toggleBuilding(type);
-        soundManager.play("click");
+        soundManager.play('click');
       }
 
-      if (e.key === "Escape") {
+      if (e.key === 'Escape') {
         this.cancelSelection();
       }
     });
   }
 
   private createPanel(): HTMLDivElement {
-    const container = document.createElement("div");
-    container.id = "build-panel";
+    const container = document.createElement('div');
+    container.id = 'build-panel';
 
-    const title = document.createElement("div");
-    title.className = "panel-title";
+    const title = document.createElement('div');
+    title.className = 'panel-title';
     title.textContent = t('build.title');
     container.appendChild(title);
 
-    const buttonContainer = document.createElement("div");
-    buttonContainer.className = "build-buttons";
+    const buttonContainer = document.createElement('div');
+    buttonContainer.className = 'build-buttons';
 
     // Filter out reactor since it's auto-placed at game start
-    const types = getAllBuildingTypes().filter(bt => bt !== 'reactor');
+    const types = getAllBuildingTypes().filter((bt) => bt !== 'reactor');
     types.forEach((type, index) => {
-      const button = document.createElement("button");
-      button.className = "build-button";
+      const button = document.createElement('button');
+      button.className = 'build-button';
       button.dataset.type = type;
 
       const icon = this.getBuildingIcon(type);
@@ -97,9 +93,9 @@ export class BuildPanel {
 
       button.title = `${desc} [${hotkey}]`;
 
-      button.addEventListener("click", () => {
+      button.addEventListener('click', () => {
         this.toggleBuilding(type);
-        soundManager.play("click");
+        soundManager.play('click');
       });
 
       buttonContainer.appendChild(button);
@@ -118,7 +114,7 @@ export class BuildPanel {
       distiller: ICONS.distiller,
       microrayon: ICONS.microrayon,
       water_tank: ICONS.water_tank,
-      thermal_plant: ICONS.thermal_plant,
+      thermal_plant: ICONS.thermal_plant
     };
     return icons[type];
   }
@@ -133,11 +129,11 @@ export class BuildPanel {
       if (amount) {
         const icon = this.getResourceIcon(resource);
         parts.push(
-          `<span class="cost-item"><span class="icon-wrap cost-icon">${icon}</span>${amount}</span>`,
+          `<span class="cost-item"><span class="icon-wrap cost-icon">${icon}</span>${amount}</span>`
         );
       }
     }
-    return parts.join("") || t('build.free');
+    return parts.join('') || t('build.free');
   }
 
   private getDisplayCost(type: BuildingType): Partial<Record<string, number>> | null {
@@ -162,19 +158,19 @@ export class BuildPanel {
 
   private getResourceIcon(resource: string): string {
     const iconMap: Record<string, { icon: string; colorClass: string }> = {
-      electricity: { icon: ICONS.electricity, colorClass: "icon-electricity" },
-      freshWater: { icon: ICONS.water, colorClass: "icon-water" },
-      heat: { icon: ICONS.heat, colorClass: "icon-heat" },
-      seawater: { icon: ICONS.seawater, colorClass: "icon-seawater" },
+      electricity: { icon: ICONS.electricity, colorClass: 'icon-electricity' },
+      freshWater: { icon: ICONS.water, colorClass: 'icon-water' },
+      heat: { icon: ICONS.heat, colorClass: 'icon-heat' },
+      seawater: { icon: ICONS.seawater, colorClass: 'icon-seawater' }
     };
     const entry = iconMap[resource];
-    if (!entry) return "";
+    if (!entry) return '';
     return `<span class="${entry.colorClass}">${entry.icon}</span>`;
   }
 
   private toggleBuilding(type: BuildingType): void {
     const currentSelection = this.buildingManager.getSelectedBuildingType();
-    
+
     if (currentSelection === type) {
       this.cancelSelection();
     } else {
@@ -185,22 +181,22 @@ export class BuildPanel {
   private selectBuilding(type: BuildingType): void {
     for (const [t, btn] of this.buttons) {
       if (t === type) {
-        btn.classList.add("selected");
+        btn.classList.add('selected');
       } else {
-        btn.classList.remove("selected");
+        btn.classList.remove('selected');
       }
     }
 
     this.buildingManager.selectBuildingType(type);
-    this.container.classList.add("building-selected");
+    this.container.classList.add('building-selected');
   }
 
   private cancelSelection(): void {
     for (const btn of this.buttons.values()) {
-      btn.classList.remove("selected");
+      btn.classList.remove('selected');
     }
     this.buildingManager.selectBuildingType(null);
-    this.container.classList.remove("building-selected");
+    this.container.classList.remove('building-selected');
   }
 
   public getButton(type: BuildingType): HTMLButtonElement | undefined {

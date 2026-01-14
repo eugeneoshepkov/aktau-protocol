@@ -1,11 +1,4 @@
-import {
-  Scene,
-  ParticleSystem,
-  Texture,
-  Vector3,
-  Color4,
-  AbstractMesh
-} from '@babylonjs/core';
+import { Scene, ParticleSystem, Texture, Vector3, Color4, AbstractMesh } from '@babylonjs/core';
 import { gameState } from '../simulation/GameState';
 import { TILE_SIZE } from '../types';
 import type { Building, BuildingType } from '../types';
@@ -16,9 +9,11 @@ interface BuildingParticles {
   systems: ParticleSystem[];
 }
 
-const SMOKE_TEXTURE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAACXBIWXMAAAsTAAALEwEAmpwYAAAF8WlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4gPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iQWRvYmUgWE1QIENvcmUgNS42LWMxNDUgNzkuMTYzNDk5LCAyMDE4LzA4LzEzLTE2OjQwOjIyICAgICAgICAiPiA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPiA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIi8+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz7kSLWoAAABe0lEQVRYhe2XMU7DQBBF/zgRFRUlR+ASHIIjcASOwBFyBKroKCgoE4mOgoqWgoKCfRTsrO2dfWPHCFL8aqXNzrz5M7veGQN/PqpWB2C7BHgFtv3aAfAMvALPVQf8bgDGhsV6xW0hzl2LtiKuW4CdyJ7VKN4r7trqCjvTsW+Ad+AduKs6oGkJrjvVCbyh7Ii7CvCBuBcgbbFTnQCz+B3inuqAhyXAdifA2FC8T4ALLq24o+IFuO3WbMEy/gR4BO6rDqhrAjwDN4g7BF6K9cVdqe6VuKc6YFyLOzesLM6dVNcVO0LcdupcifsW1HbiPqh7AOwT9+0ScG4J3o3E/WriHisOqGuBF5XgdUvwk0vA06rCugJYX1wC3O1UeUNx7hL8INYn7tqq4VVNcN1KOEnccetVxkHiTgmeBl8DnwMvPcG3ivVO3PXE3Tg4tuKuFDxfHHwVNe55JeC9SsCpJfhe1Y4S8FoJ8Oiq+MhSwKlVwJ0lcC/EvYvqruCrVYf8FfgCb/+SLoGHEdEAAAAASUVORK5CYII=';
+const SMOKE_TEXTURE =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAACXBIWXMAAAsTAAALEwEAmpwYAAAF8WlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4gPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iQWRvYmUgWE1QIENvcmUgNS42LWMxNDUgNzkuMTYzNDk5LCAyMDE4LzA4LzEzLTE2OjQwOjIyICAgICAgICAiPiA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPiA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIi8+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz7kSLWoAAABe0lEQVRYhe2XMU7DQBBF/zgRFRUlR+ASHIIjcASOwBFyBKroKCgoE4mOgoqWgoKCfRTsrO2dfWPHCFL8aqXNzrz5M7veGQN/PqpWB2C7BHgFtv3aAfAMvALPVQf8bgDGhsV6xW0hzl2LtiKuW4CdyJ7VKN4r7trqCjvTsW+Ad+AduKs6oGkJrjvVCbyh7Ii7CvCBuBcgbbFTnQCz+B3inuqAhyXAdifA2FC8T4ALLq24o+IFuO3WbMEy/gR4BO6rDqhrAjwDN4g7BF6K9cVdqe6VuKc6YFyLOzesLM6dVNcVO0LcdupcifsW1HbiPqh7AOwT9+0ScG4J3o3E/WriHisOqGuBF5XgdUvwk0vA06rCugJYX1wC3O1UeUNx7hL8INYn7tqq4VVNcN1KOEnccetVxkHiTgmeBl8DnwMvPcG3ivVO3PXE3Tg4tuKuFDxfHHwVNe55JeC9SsCpJfhe1Y4S8FoJ8Oiq+MhSwKlVwJ0lcC/EvYvqruCrVYf8FfgCb/+SLoGHEdEAAAAASUVORK5CYII=';
 
-const DUST_TEXTURE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAAsTAAALEwEAmpwYAAAA2klEQVQ4jZ2TMQ6CQBBF/wBegZ7CxsLGxlNYeAobL2DhBSy8gIW38QCewMZT2NjY0BB3nQm7LCz6ki/DzLz5M8suAHjvc5VwAHZ5E9A4TtLkKGGGmQDA1kVfqsQJZubunWYJQGkiZKhMPMfMAGBmBqCOYGmyANCKQm1cAGgVwdJSANwwM9TNQiQeANxyuZwBsE3TxOV5DgCYTCYL7/0GgJmmKQBgPB4DwGQ6nTpNE4/Ho4wxPgBgt9t1lDQcDvuaJgCA8XgMABiNRo79fs+ur+8BeL1e5WQy2eh1/AN/DvINL4Fo1HmPTNUAAAAASUVORK5CYII=';
+const DUST_TEXTURE =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAAsTAAALEwEAmpwYAAAA2klEQVQ4jZ2TMQ6CQBBF/wBegZ7CxsLGxlNYeAobL2DhBSy8gIW38QCewMZT2NjY0BB3nQm7LCz6ki/DzLz5M8suAHjvc5VwAHZ5E9A4TtLkKGGGmQDA1kVfqsQJZubunWYJQGkiZKhMPMfMAGBmBqCOYGmyANCKQm1cAGgVwdJSANwwM9TNQiQeANxyuZwBsE3TxOV5DgCYTCYL7/0GgJmmKQBgPB4DwGQ6nTpNE4/Ho4wxPgBgt9t1lDQcDvuaJgCA8XgMABiNRo79fs+ur+8BeL1e5WQy2eh1/AN/DvINL4Fo1HmPTNUAAAAASUVORK5CYII=';
 
 export class ParticleManager {
   private scene: Scene;
@@ -223,10 +218,10 @@ export class ParticleManager {
           system.emitRate = 8 + intensity * 25;
           system.minSize = 0.4 + intensity * 0.4;
           system.maxSize = 1.0 + intensity * 0.6;
-          
+
           const alpha = 0.4 + intensity * 0.4;
           system.color1 = new Color4(0.25 + intensity * 0.15, 0.25, 0.28, alpha);
-          system.color2 = new Color4(0.35 + intensity * 0.15, 0.30, 0.32, alpha * 0.8);
+          system.color2 = new Color4(0.35 + intensity * 0.15, 0.3, 0.32, alpha * 0.8);
         }
       }
     }

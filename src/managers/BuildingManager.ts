@@ -80,8 +80,14 @@ export class BuildingManager {
   }
 
   private createMaterials(): void {
-    const buildingTypes: BuildingType[] = ['pump', 'reactor', 'distiller', 'microrayon', 'water_tank'];
-    
+    const buildingTypes: BuildingType[] = [
+      'pump',
+      'reactor',
+      'distiller',
+      'microrayon',
+      'water_tank'
+    ];
+
     for (const type of buildingTypes) {
       const primitive = assetManager.getBuildingPrimitive(type);
       const material = new StandardMaterial(`mat_building_${type}`, this.scene);
@@ -131,16 +137,14 @@ export class BuildingManager {
       return false;
     }
 
-    const check = gameState.canPlaceBuilding(
-      this.selectedBuildingType,
-      gridX,
-      gridZ,
-      tileType
-    );
+    const check = gameState.canPlaceBuilding(this.selectedBuildingType, gridX, gridZ, tileType);
 
     if (!check.canPlace) {
       console.log(`Cannot place building: ${check.reason}`);
-      feedbackManager.showPlacementError(check.reason ?? 'Cannot place here', this.selectedBuildingType);
+      feedbackManager.showPlacementError(
+        check.reason ?? 'Cannot place here',
+        this.selectedBuildingType
+      );
       soundManager.play('error');
       return false;
     }
@@ -161,12 +165,7 @@ export class BuildingManager {
     const tileType = this.gridManager.getTileAt(gridX, gridZ);
     if (!tileType) return false;
 
-    return gameState.canPlaceBuilding(
-      this.selectedBuildingType,
-      gridX,
-      gridZ,
-      tileType
-    ).canPlace;
+    return gameState.canPlaceBuilding(this.selectedBuildingType, gridX, gridZ, tileType).canPlace;
   }
 
   private playSquashStretchAnimation(node: Mesh | TransformNode): void {
@@ -204,13 +203,16 @@ export class BuildingManager {
       this.particleManager.createDust(new Vector3(position.x, GROUND_LEVEL, position.z));
     }
 
-    const buildingSounds: Record<BuildingType, keyof typeof import('./SoundManager')['soundManager'] extends never ? string : string> = {
+    const buildingSounds: Record<
+      BuildingType,
+      keyof (typeof import('./SoundManager'))['soundManager'] extends never ? string : string
+    > = {
       pump: 'pump',
       reactor: 'reactor',
       distiller: 'distiller',
       microrayon: 'microrayon',
       water_tank: 'water_tank',
-      thermal_plant: 'reactor'  // Use reactor sound for thermal plant
+      thermal_plant: 'reactor' // Use reactor sound for thermal plant
     };
     const sound = buildingSounds[building.type];
     if (sound) {
@@ -224,7 +226,10 @@ export class BuildingManager {
     }
   }
 
-  private createBuildingFromPrimitive(building: Building, position: { x: number; z: number }): void {
+  private createBuildingFromPrimitive(
+    building: Building,
+    position: { x: number; z: number }
+  ): void {
     const primitive = assetManager.getBuildingPrimitive(building.type);
 
     let mesh: Mesh;
@@ -276,18 +281,21 @@ export class BuildingManager {
     }
   }
 
-  private async createBuildingFromModel(building: Building, position: { x: number; z: number }): Promise<void> {
+  private async createBuildingFromModel(
+    building: Building,
+    position: { x: number; z: number }
+  ): Promise<void> {
     if (assetManager.hasCompositeModel(building.type)) {
       await this.createCompositeModel(building, position);
       return;
     }
 
     let modelConfig = assetManager.getBuildingModel(building.type);
-    
+
     if (assetManager.hasVariants(building.type)) {
       modelConfig = assetManager.getRandomVariant(building.type);
     }
-    
+
     if (!modelConfig) {
       this.createBuildingFromPrimitive(building, position);
       return;
@@ -295,7 +303,7 @@ export class BuildingManager {
 
     try {
       const meshes = await assetManager.loadModelFromConfig(modelConfig);
-      
+
       if (!meshes || meshes.length === 0) {
         console.warn(`[BuildingManager] No meshes loaded for ${building.type}, using primitive`);
         this.createBuildingFromPrimitive(building, position);
@@ -305,7 +313,7 @@ export class BuildingManager {
       const parent = new TransformNode(`building_${building.id}`, this.scene);
       parent.position = new Vector3(position.x, modelConfig.yOffset + GROUND_LEVEL, position.z);
       parent.scaling = new Vector3(modelConfig.scale, modelConfig.scale, modelConfig.scale);
-      
+
       let rotation = modelConfig.rotation;
       if (building.type === 'microrayon') {
         rotation = Math.floor(Math.random() * 4) * (Math.PI / 2);
@@ -335,9 +343,12 @@ export class BuildingManager {
     }
   }
 
-  private async createCompositeModel(building: Building, position: { x: number; z: number }): Promise<void> {
+  private async createCompositeModel(
+    building: Building,
+    position: { x: number; z: number }
+  ): Promise<void> {
     const modelConfigs = assetManager.getBuildingModels(building.type);
-    
+
     if (!modelConfigs || modelConfigs.length === 0) {
       this.createBuildingFromPrimitive(building, position);
       return;
@@ -349,12 +360,12 @@ export class BuildingManager {
     try {
       for (const config of modelConfigs) {
         const meshes = await assetManager.loadModelFromConfig(config);
-        
+
         if (!meshes || meshes.length === 0) continue;
 
         const subParent = new TransformNode(`${building.id}_part`, this.scene);
         subParent.parent = parent;
-        
+
         const offset = config.offset ?? { x: 0, y: 0, z: 0 };
         subParent.position = new Vector3(offset.x, config.yOffset + offset.y, offset.z);
         subParent.scaling = new Vector3(config.scale, config.scale, config.scale);
@@ -379,7 +390,10 @@ export class BuildingManager {
         });
       }
     } catch (error) {
-      console.error(`[BuildingManager] Failed to create composite model for ${building.type}:`, error);
+      console.error(
+        `[BuildingManager] Failed to create composite model for ${building.type}:`,
+        error
+      );
       this.createBuildingFromPrimitive(building, position);
     }
   }
@@ -392,14 +406,14 @@ export class BuildingManager {
           node.material.dispose();
         }
       }
-      
+
       if (node instanceof TransformNode && !(node instanceof Mesh)) {
         const children = node.getChildMeshes();
         for (const child of children) {
           child.dispose();
         }
       }
-      
+
       node.dispose();
       this.meshes.delete(building.id);
     }

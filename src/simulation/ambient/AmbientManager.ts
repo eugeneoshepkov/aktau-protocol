@@ -63,7 +63,8 @@ class AmbientManagerClass {
   }
 
   private spawnCamels(): void {
-    const count = CAMEL_COUNT_MIN + Math.floor(Math.random() * (CAMEL_COUNT_MAX - CAMEL_COUNT_MIN + 1));
+    const count =
+      CAMEL_COUNT_MIN + Math.floor(Math.random() * (CAMEL_COUNT_MAX - CAMEL_COUNT_MIN + 1));
 
     for (let i = 0; i < count; i++) {
       const camel = this.createCamel();
@@ -149,7 +150,7 @@ class AmbientManagerClass {
       tumbleweed.update(deltaTime);
     }
 
-    this.tumbleweeds = this.tumbleweeds.filter(t => {
+    this.tumbleweeds = this.tumbleweeds.filter((t) => {
       if (t.isOffScreen()) {
         t.dispose();
         return false;

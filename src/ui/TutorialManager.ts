@@ -40,7 +40,13 @@ const STEP_CONFIGS: Record<TutorialStep, StepConfig> = {
   }
 };
 
-const STEP_ORDER: TutorialStep[] = ['WELCOME', 'BUILD_PUMP', 'BUILD_DESAL', 'BUILD_HOUSING', 'COMPLETED'];
+const STEP_ORDER: TutorialStep[] = [
+  'WELCOME',
+  'BUILD_PUMP',
+  'BUILD_DESAL',
+  'BUILD_HOUSING',
+  'COMPLETED'
+];
 
 export class TutorialManager {
   private currentStep: TutorialStep = 'WELCOME';
@@ -147,7 +153,7 @@ export class TutorialManager {
     }
 
     const buildings = gameState.getBuildings();
-    const count = buildings.filter(b => b.type === config.target).length;
+    const count = buildings.filter((b) => b.type === config.target).length;
     return { current: count, target: config.targetCount };
   }
 
@@ -208,7 +214,10 @@ export class TutorialManager {
     const progressEl = this.panel.querySelector('.mission-progress');
     if (progressEl) {
       if (progress.target > 0) {
-        progressEl.textContent = t('tutorial.progress', { current: progress.current, target: progress.target });
+        progressEl.textContent = t('tutorial.progress', {
+          current: progress.current,
+          target: progress.target
+        });
         (progressEl as HTMLElement).style.display = 'block';
       } else {
         (progressEl as HTMLElement).style.display = 'none';
@@ -220,7 +229,13 @@ export class TutorialManager {
     if (!this.buildPanel) return;
 
     // Remove highlight from all buttons (reactor excluded since it's auto-placed)
-    const allTypes: BuildingType[] = ['pump', 'distiller', 'microrayon', 'water_tank', 'thermal_plant'];
+    const allTypes: BuildingType[] = [
+      'pump',
+      'distiller',
+      'microrayon',
+      'water_tank',
+      'thermal_plant'
+    ];
     for (const type of allTypes) {
       const button = this.buildPanel.getButton(type);
       if (button) {

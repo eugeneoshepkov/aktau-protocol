@@ -13,7 +13,8 @@ import {
 } from '@babylonjs/core';
 import { GRID_SIZE, TILE_SIZE } from '../types';
 
-const DUST_TEXTURE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAAsTAAALEwEAmpwYAAAA2klEQVQ4jZ2TMQ6CQBBF/wBegZ7CxsLGxlNYeAobL2DhBSy8gIW38QCewMZT2NjY0BB3nQm7LCz6ki/DzLz5M8suAHjvc5VwAHZ5E9A4TtLkKGGGmQDA1kVfqsQJZubunWYJQGkiZKhMPMfMAGBmBqCOYGmyANCKQm1cAGgVwdJSANwwM9TNQiQeANxyuZwBsE3TxOV5DgCYTCYL7/0GgJmmKQBgPB4DwGQ6nTpNE4/Ho4wxPgBgt9t1lDQcDvuaJgCA8XgMABiNRo79fs+ur+8BeL1e5WQy2eh1/AN/DvINL4Fo1HmPTNUAAAAASUVORK5CYII=';
+const DUST_TEXTURE =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAAsTAAALEwEAmpwYAAAA2klEQVQ4jZ2TMQ6CQBBF/wBegZ7CxsLGxlNYeAobL2DhBSy8gIW38QCewMZT2NjY0BB3nQm7LCz6ki/DzLz5M8suAHjvc5VwAHZ5E9A4TtLkKGGGmQDA1kVfqsQJZubunWYJQGkiZKhMPMfMAGBmBqCOYGmyANCKQm1cAGgVwdJSANwwM9TNQiQeANxyuZwBsE3TxOV5DgCYTCYL7/0GgJmmKQBgPB4DwGQ6nTpNE4/Ho4wxPgBgt9t1lDQcDvuaJgCA8XgMABiNRo79fs+ur+8BeL1e5WQy2eh1/AN/DvINL4Fo1HmPTNUAAAAASUVORK5CYII=';
 
 export class GameEngine {
   private canvas: HTMLCanvasElement;
@@ -55,40 +56,40 @@ export class GameEngine {
   }
 
   private preventBrowserZoom(): void {
-    this.canvas.addEventListener('wheel', (e: WheelEvent) => {
-      if (e.ctrlKey) {
-        e.preventDefault();
-      }
-    }, { passive: false });
+    this.canvas.addEventListener(
+      'wheel',
+      (e: WheelEvent) => {
+        if (e.ctrlKey) {
+          e.preventDefault();
+        }
+      },
+      { passive: false }
+    );
 
     document.addEventListener('gesturestart', (e) => e.preventDefault());
     document.addEventListener('gesturechange', (e) => e.preventDefault());
     document.addEventListener('gestureend', (e) => e.preventDefault());
 
     let lastTouchEnd = 0;
-    document.addEventListener('touchend', (e) => {
-      const now = Date.now();
-      if (now - lastTouchEnd <= 300) {
-        e.preventDefault();
-      }
-      lastTouchEnd = now;
-    }, { passive: false });
+    document.addEventListener(
+      'touchend',
+      (e) => {
+        const now = Date.now();
+        if (now - lastTouchEnd <= 300) {
+          e.preventDefault();
+        }
+        lastTouchEnd = now;
+      },
+      { passive: false }
+    );
   }
 
   private setupLighting(): void {
-    this.hemiLight = new HemisphericLight(
-      'hemiLight',
-      new Vector3(0, 1, 0),
-      this.scene
-    );
+    this.hemiLight = new HemisphericLight('hemiLight', new Vector3(0, 1, 0), this.scene);
     this.hemiLight.intensity = 0.9;
     this.hemiLight.groundColor.set(0.3, 0.3, 0.35);
 
-    this.sunLight = new HemisphericLight(
-      'sunLight',
-      new Vector3(1, 1, -0.5),
-      this.scene
-    );
+    this.sunLight = new HemisphericLight('sunLight', new Vector3(1, 1, -0.5), this.scene);
     this.sunLight.intensity = 0.4;
   }
 
@@ -159,7 +160,7 @@ export class GameEngine {
       { x: 80, y: 58, z: 60, scale: 0.8 },
       { x: -100, y: 62, z: 30, scale: 1.1 },
       { x: 20, y: 68, z: -100, scale: 1.0 },
-      { x: -60, y: 55, z: -120, scale: 0.7 },
+      { x: -60, y: 55, z: -120, scale: 0.7 }
     ];
 
     const cloudMaterial = new StandardMaterial('cloudMat', this.scene);
@@ -199,37 +200,52 @@ export class GameEngine {
   }
 
   private createCloudMesh(name: string, scale: number) {
-    const cloud = MeshBuilder.CreateSphere(name, {
-      diameter: 20 * scale,
-      segments: 8
-    }, this.scene);
+    const cloud = MeshBuilder.CreateSphere(
+      name,
+      {
+        diameter: 20 * scale,
+        segments: 8
+      },
+      this.scene
+    );
 
-    const puff1 = MeshBuilder.CreateSphere(`${name}_puff1`, {
-      diameter: 14 * scale,
-      segments: 6
-    }, this.scene);
+    const puff1 = MeshBuilder.CreateSphere(
+      `${name}_puff1`,
+      {
+        diameter: 14 * scale,
+        segments: 6
+      },
+      this.scene
+    );
     puff1.position = new Vector3(-8 * scale, 2 * scale, 0);
     puff1.parent = cloud;
 
-    const puff2 = MeshBuilder.CreateSphere(`${name}_puff2`, {
-      diameter: 16 * scale,
-      segments: 6
-    }, this.scene);
+    const puff2 = MeshBuilder.CreateSphere(
+      `${name}_puff2`,
+      {
+        diameter: 16 * scale,
+        segments: 6
+      },
+      this.scene
+    );
     puff2.position = new Vector3(7 * scale, 1 * scale, 3 * scale);
     puff2.parent = cloud;
 
-    const puff3 = MeshBuilder.CreateSphere(`${name}_puff3`, {
-      diameter: 12 * scale,
-      segments: 6
-    }, this.scene);
+    const puff3 = MeshBuilder.CreateSphere(
+      `${name}_puff3`,
+      {
+        diameter: 12 * scale,
+        segments: 6
+      },
+      this.scene
+    );
     puff3.position = new Vector3(0, 4 * scale, -4 * scale);
     puff3.parent = cloud;
 
     return cloud;
   }
 
-  public updateDayNightCycle(_day: number): void {
-  }
+  public updateDayNightCycle(_day: number): void {}
 
   public getScene(): Scene {
     return this.scene;

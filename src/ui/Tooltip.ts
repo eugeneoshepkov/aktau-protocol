@@ -108,7 +108,8 @@ export class Tooltip {
     let specialHtml = '';
     if (building.type === 'reactor') {
       const reactor = gameState.getReactorState();
-      const tempColor = reactor.temperature >= 80 ? '#ff4444' : reactor.temperature >= 50 ? '#ffaa00' : '#88ff88';
+      const tempColor =
+        reactor.temperature >= 80 ? '#ff4444' : reactor.temperature >= 50 ? '#ffaa00' : '#88ff88';
       specialHtml = `<div class="tooltip-special" style="color: ${tempColor}">${icon('nuclear', 14)} ${t('tooltip.temp', { temp: Math.floor(reactor.temperature) })}</div>`;
     }
 
@@ -117,11 +118,14 @@ export class Tooltip {
         specialHtml = `<div class="tooltip-special" style="color: #88ccff">${icon('water', 14)} ${t('tooltip.cooling')}</div>`;
       } else {
         const missing = this.pipeManager?.getMissingConnections(building) || [];
-        const missingNames = missing.map(m => {
-          const name = td(`building.${m.type}.name`);
-          const resourceIcon = m.resourceType === 'water' ? coloredIcon('water') : coloredIcon('heat');
-          return `${resourceIcon} ${name}`;
-        }).join(', ');
+        const missingNames = missing
+          .map((m) => {
+            const name = td(`building.${m.type}.name`);
+            const resourceIcon =
+              m.resourceType === 'water' ? coloredIcon('water') : coloredIcon('heat');
+            return `${resourceIcon} ${name}`;
+          })
+          .join(', ');
         if (missingNames) {
           specialHtml = `<div class="tooltip-special">${coloredIcon('warning')} ${t('tooltip.needs', { missing: missingNames })}</div>`;
         }
@@ -165,33 +169,40 @@ export class Tooltip {
 
     let html = '<div class="tooltip-connections">';
 
-    const incoming = connections.filter(c => c.direction === 'incoming');
-    const outgoing = connections.filter(c => c.direction === 'outgoing');
+    const incoming = connections.filter((c) => c.direction === 'incoming');
+    const outgoing = connections.filter((c) => c.direction === 'outgoing');
 
     if (incoming.length > 0) {
-      const sources = incoming.map(c => {
-        const name = td(`building.${c.building.type}.name`);
-        const resourceIcon = c.type === 'water' ? coloredIcon('water') : coloredIcon('heat');
-        return `${resourceIcon} ${name}`;
-      }).join(', ');
+      const sources = incoming
+        .map((c) => {
+          const name = td(`building.${c.building.type}.name`);
+          const resourceIcon = c.type === 'water' ? coloredIcon('water') : coloredIcon('heat');
+          return `${resourceIcon} ${name}`;
+        })
+        .join(', ');
       html += `<div class="tooltip-conn-in">${t('tooltip.receiving', { sources })}</div>`;
     }
 
     if (outgoing.length > 0) {
-      const targets = outgoing.map(c => {
-        const name = td(`building.${c.building.type}.name`);
-        const resourceIcon = c.type === 'water' ? coloredIcon('water') : coloredIcon('heat');
-        return `${resourceIcon} ${name}`;
-      }).join(', ');
+      const targets = outgoing
+        .map((c) => {
+          const name = td(`building.${c.building.type}.name`);
+          const resourceIcon = c.type === 'water' ? coloredIcon('water') : coloredIcon('heat');
+          return `${resourceIcon} ${name}`;
+        })
+        .join(', ');
       html += `<div class="tooltip-conn-out">${t('tooltip.sending', { targets })}</div>`;
     }
 
     if (!isOperational && missing.length > 0 && building.type !== 'distiller') {
-      const missingNames = missing.map(m => {
-        const name = td(`building.${m.type}.name`);
-        const resourceIcon = m.resourceType === 'water' ? coloredIcon('water') : coloredIcon('heat');
-        return `${resourceIcon} ${name}`;
-      }).join(', ');
+      const missingNames = missing
+        .map((m) => {
+          const name = td(`building.${m.type}.name`);
+          const resourceIcon =
+            m.resourceType === 'water' ? coloredIcon('water') : coloredIcon('heat');
+          return `${resourceIcon} ${name}`;
+        })
+        .join(', ');
       html += `<div class="tooltip-disconnected">${coloredIcon('warning')} ${t('tooltip.needs', { missing: missingNames })}</div>`;
     }
 
@@ -203,7 +214,7 @@ export class Tooltip {
     this.element.style.display = 'none';
     this.visible = false;
     this.currentBuilding = null;
-    
+
     if (this.updateInterval !== null) {
       clearInterval(this.updateInterval);
       this.updateInterval = null;
