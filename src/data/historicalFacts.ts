@@ -269,7 +269,7 @@ This success required constant vigilance. Soviet nuclear workers were highly tra
 The reactor's design included multiple safety systems: neutron-absorbing control rods that could shut down the chain reaction in seconds, backup cooling systems, and containment structures designed to survive any credible accident. These features informed the design of later fast breeder reactors worldwide.`,
     wikiUrls: {
       en: 'https://en.wikipedia.org/wiki/Soviet_nuclear_power',
-      ru: 'https://ru.wikipedia.org/wiki/Ядерная_энергетика_СССР'
+      ru: 'https://ru.wikipedia.org/wiki/Ядерный_реактор'
     },
     trigger: { type: 'building', value: 10 }
   },
