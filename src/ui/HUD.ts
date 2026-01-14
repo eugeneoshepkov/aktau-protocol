@@ -3,6 +3,7 @@ import { tickSystem } from '../simulation/TickSystem';
 import { musicManager } from '../managers/MusicManager';
 import { ICONS } from './Icons';
 import type { Resources } from '../types';
+import { t, td } from '../i18n';
 
 export class HUD {
   private container: HTMLDivElement;
@@ -44,52 +45,52 @@ export class HUD {
     container.innerHTML = `
       <div class="hud-top">
         <div class="hud-section">
-          <span class="hud-label">DAY</span>
+          <span class="hud-label">${t('hud.day')}</span>
           <span id="hud-day" class="hud-value">1</span>
           <span id="hud-season" class="hud-season icon-wrap icon-season">${ICONS.spring}</span>
         </div>
         <div class="hud-section">
-          <span class="hud-label"><span class="icon-wrap icon-population">${ICONS.population}</span> POP</span>
+          <span class="hud-label"><span class="icon-wrap icon-population">${ICONS.population}</span> ${t('hud.pop')}</span>
           <span id="hud-population" class="hud-value">0</span>
           <span id="hud-trend-population" class="hud-trend"></span>
         </div>
         <div class="hud-section">
-          <span class="hud-label"><span class="icon-wrap icon-water">${ICONS.water}</span> H<sup>2</sup>O</span>
+          <span class="hud-label"><span class="icon-wrap icon-water">${ICONS.water}</span> ${t('hud.water')}</span>
           <span id="hud-freshWater" class="hud-value">0</span>
           <span id="hud-trend-freshWater" class="hud-trend"></span>
         </div>
         <div class="hud-section">
-          <span class="hud-label"><span class="icon-wrap icon-seawater">${ICONS.seawater}</span> SEA</span>
+          <span class="hud-label"><span class="icon-wrap icon-seawater">${ICONS.seawater}</span> ${t('hud.sea')}</span>
           <span id="hud-seawater" class="hud-value">0</span>
           <span id="hud-trend-seawater" class="hud-trend"></span>
         </div>
         <div class="hud-section">
-          <span class="hud-label"><span class="icon-wrap icon-heat">${ICONS.heat}</span> HEAT</span>
+          <span class="hud-label"><span class="icon-wrap icon-heat">${ICONS.heat}</span> ${t('hud.heat')}</span>
           <span id="hud-heat" class="hud-value">0</span>
           <span id="hud-trend-heat" class="hud-trend"></span>
         </div>
         <div class="hud-section">
-          <span class="hud-label"><span class="icon-wrap icon-electricity">${ICONS.electricity}</span> PWR</span>
+          <span class="hud-label"><span class="icon-wrap icon-electricity">${ICONS.electricity}</span> ${t('hud.power')}</span>
           <span id="hud-electricity" class="hud-value">0</span>
           <span id="hud-trend-electricity" class="hud-trend"></span>
         </div>
         <div class="hud-section reactor-temp">
-          <span class="hud-label"><span class="icon-wrap icon-nuclear">${ICONS.nuclear}</span> TEMP</span>
+          <span class="hud-label"><span class="icon-wrap icon-nuclear">${ICONS.nuclear}</span> ${t('hud.temp')}</span>
           <span id="hud-temp" class="hud-value">0</span>
           <span class="hud-unit">°C</span>
         </div>
         <div class="hud-section">
-          <span class="hud-label"><span class="icon-wrap icon-happiness">${ICONS.happiness}</span> MOOD</span>
+          <span class="hud-label"><span class="icon-wrap icon-happiness">${ICONS.happiness}</span> ${t('hud.mood')}</span>
           <span id="hud-happiness" class="hud-value">0</span>
           <span id="hud-trend-happiness" class="hud-trend"></span>
         </div>
         <div class="hud-controls">
-          <button id="hud-save" class="hud-button" title="Save Game"><span class="icon-wrap">${ICONS.save}</span></button>
-          <button id="hud-load" class="hud-button" title="Load Game"><span class="icon-wrap">${ICONS.load}</span></button>
+          <button id="hud-save" class="hud-button" title="${t('hud.save')}"><span class="icon-wrap">${ICONS.save}</span></button>
+          <button id="hud-load" class="hud-button" title="${t('hud.load')}"><span class="icon-wrap">${ICONS.load}</span></button>
           <span class="hud-divider">│</span>
-          <span class="hud-volume-control" title="Music volume">
+          <span class="hud-volume-control" title="${t('hud.volume')}">
             <span class="volume-icon icon-wrap">${ICONS.volumeOn}</span>
-            <input type="range" id="hud-volume" min="0" max="100" value="30" class="volume-slider" title="Music volume">
+            <input type="range" id="hud-volume" min="0" max="100" value="30" class="volume-slider" title="${t('hud.volume')}">
           </span>
           <span class="hud-divider">│</span>
           <button id="hud-pause" class="hud-button"><span class="icon-wrap pause-icon">${ICONS.pause}</span></button>
@@ -128,15 +129,15 @@ export class HUD {
       const pauseIcon = this.pauseButton?.querySelector('.pause-icon');
       if (pauseIcon) pauseIcon.innerHTML = ICONS.play;
       if (gameState.save()) {
-        this.showNotification('SAVED');
+        this.showNotification(t('hud.saved'));
       } else {
-        this.showNotification('SAVE FAILED', true);
+        this.showNotification(t('hud.saveFailed'), true);
       }
     });
 
     loadBtn?.addEventListener('click', () => {
       if (!gameState.hasSave()) {
-        this.showNotification('NO SAVE FOUND', true);
+        this.showNotification(t('hud.noSave'), true);
         return;
       }
       tickSystem.pause();
@@ -145,9 +146,9 @@ export class HUD {
       if (gameState.load()) {
         this.updateResources();
         this.updateDay();
-        this.showNotification('LOADED');
+        this.showNotification(t('hud.loaded'));
       } else {
-        this.showNotification('LOAD FAILED', true);
+        this.showNotification(t('hud.loadFailed'), true);
       }
     });
 
@@ -262,7 +263,7 @@ export class HUD {
       const season = gameState.getSeason();
       const mult = gameState.getSeasonMultiplier();
       this.seasonElement.innerHTML = this.seasonIcons[season];
-      this.seasonElement.title = `${season.charAt(0).toUpperCase() + season.slice(1)} (Heat ×${mult})`;
+      this.seasonElement.title = td(`season.${season}`, { mult: mult.toString() });
       this.seasonElement.className = `hud-season icon-wrap ${season}`;
     }
   }
@@ -278,20 +279,23 @@ export class HUD {
     const overlay = document.createElement('div');
     overlay.className = 'game-over-overlay';
 
-    const messages: Record<string, string> = {
-      meltdown: `<span class="icon-wrap go-icon">${ICONS.nuclear}</span> NUCLEAR MELTDOWN`,
-      drought: `<span class="icon-wrap go-icon">${ICONS.warning}</span> CITY DROUGHT`,
-      freeze: `<span class="icon-wrap go-icon">${ICONS.winter}</span> CITY FROZEN`,
-      extinction: `<span class="icon-wrap go-icon">${ICONS.warning}</span> POPULATION EXTINCT`,
-      revolt: `<span class="icon-wrap go-icon">${ICONS.population}</span> CITIZENS REVOLT`
+    const icons: Record<string, string> = {
+      meltdown: ICONS.nuclear,
+      drought: ICONS.warning,
+      freeze: ICONS.winter,
+      extinction: ICONS.warning,
+      revolt: ICONS.population
     };
+
+    const icon = icons[data.reason] || ICONS.warning;
+    const reasonText = td(`gameover.${data.reason}`);
 
     overlay.innerHTML = `
       <div class="game-over-content">
-        <h1>GAME OVER</h1>
-        <h2>${messages[data.reason] || data.reason}</h2>
-        <p>SURVIVED ${data.day} DAYS</p>
-        <button id="restart-btn">[ RESTART ]</button>
+        <h1>${t('gameover.title')}</h1>
+        <h2><span class="icon-wrap go-icon">${icon}</span> ${reasonText}</h2>
+        <p>${t('gameover.survived', { days: data.day })}</p>
+        <button id="restart-btn">${t('gameover.restart')}</button>
       </div>
     `;
 
@@ -320,7 +324,7 @@ export class HUD {
 
     eventsContainer.style.display = 'flex';
     eventsContainer.innerHTML = events.map(e =>
-      `<div class="hud-event" title="${e.event.name} (${e.remainingDays} days left)">
+      `<div class="hud-event" title="${e.event.name} (${t('hud.daysLeft', { days: e.remainingDays })})">
         <span class="event-icon">${e.event.icon}</span>
         <span class="event-days">${e.remainingDays}d</span>
       </div>`

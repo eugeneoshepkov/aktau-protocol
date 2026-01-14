@@ -8,6 +8,7 @@ import {
   GRID_SIZE,
   TILE_SIZE
 } from '../types';
+import { normalizeKey } from '../utils/keyboard';
 
 let cameraInstance: IsometricCamera | null = null;
 
@@ -68,8 +69,8 @@ export class IsometricCamera {
         this.keysPressed.clear();
         return;
       }
-      
-      const key = e.key.toLowerCase();
+
+      const key = normalizeKey(e.key);
       this.keysPressed.add(key);
 
       if (e.key === 'Shift') {
@@ -80,7 +81,7 @@ export class IsometricCamera {
     };
 
     const onKeyUp = (e: KeyboardEvent) => {
-      const key = e.key.toLowerCase();
+      const key = normalizeKey(e.key);
       this.keysPressed.delete(key);
 
       if (e.key === 'Shift') {

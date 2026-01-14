@@ -211,6 +211,12 @@ public/
 
 src/
 ├── main.ts                 # Entry point, game initialization
+├── i18n/
+│   ├── index.ts            # i18n singleton, locale detection, t() function
+│   ├── en.ts               # English translations (~400 keys)
+│   └── ru.ts               # Russian translations
+├── utils/
+│   └── keyboard.ts         # Russian keyboard layout support
 ├── engine/
 │   ├── Engine.ts           # Babylon.js scene, sky, lighting
 │   ├── Camera.ts           # Isometric camera + WASD/QE controls
@@ -278,6 +284,8 @@ src/
 | Camera constraints | `engine/Camera.ts` (clampCameraTarget) |
 | Scene effects (fog) | `engine/Engine.ts` |
 | Modify tutorial objectives | `ui/TutorialManager.ts` (STEP_CONFIGS) |
+| Add/modify translations | `i18n/en.ts`, `i18n/ru.ts` |
+| Add keyboard shortcut | `utils/keyboard.ts` (add Russian mapping), relevant handler file |
 
 ---
 
@@ -332,17 +340,23 @@ src/
 - [x] Geiger clicks on reactor hover
 
 ### UI/UX
-- [x] Intro screen with lore
+- [x] Intro screen with lore and historical image
 - [x] HUD with all resources
 - [x] Build panel with hotkeys (1-5)
 - [x] Mission objectives system (guides new players through Power → Water → Housing)
 - [x] Toast notifications
 - [x] Building tooltips
-- [x] Historical facts archive (Chronicle)
+- [x] Historical facts archive (Chronicle) with unread tracking
 - [x] Keyboard shortcuts modal
 - [x] SVG icons throughout
 - [x] WASD + QE camera controls
 - [x] Auto-pause when modals open
+
+### Localization
+- [x] i18n system with auto locale detection (`navigator.language`)
+- [x] English and Russian translations (~400 keys)
+- [x] Russian keyboard layout support (WASD → ЦФЫВ, QE → ЙУ, etc.)
+- [x] Locale-specific Wikipedia links in Chronicle (en/ru)
 
 ---
 

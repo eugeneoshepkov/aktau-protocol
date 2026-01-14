@@ -1,12 +1,10 @@
 import { BuildingManager } from "../managers/BuildingManager";
-import {
-  BUILDING_META,
-  getAllBuildingTypes,
-} from "../simulation/buildings/Building";
+import { getAllBuildingTypes } from "../simulation/buildings/Building";
 import { ICONS } from "./Icons";
 import { soundManager } from "../managers/SoundManager";
 import { gameState } from "../simulation/GameState";
 import type { BuildingType } from "../types";
+import { t, td } from "../i18n";
 
 // Reactor is auto-placed at game start, so not in menu
 const BUILDING_HOTKEYS: Record<string, BuildingType> = {
@@ -70,16 +68,15 @@ export class BuildPanel {
 
     const title = document.createElement("div");
     title.className = "panel-title";
-    title.textContent = "BUILD";
+    title.textContent = t('build.title');
     container.appendChild(title);
 
     const buttonContainer = document.createElement("div");
     buttonContainer.className = "build-buttons";
 
     // Filter out reactor since it's auto-placed at game start
-    const types = getAllBuildingTypes().filter(t => t !== 'reactor');
+    const types = getAllBuildingTypes().filter(bt => bt !== 'reactor');
     types.forEach((type, index) => {
-      const meta = BUILDING_META[type];
       const button = document.createElement("button");
       button.className = "build-button";
       button.dataset.type = type;
@@ -88,15 +85,17 @@ export class BuildPanel {
       const color = BUILDING_COLORS[type];
       const costText = this.formatCost(this.getDisplayCost(type));
       const hotkey = index + 1;
+      const name = td(`building.${type}.name`);
+      const desc = td(`building.${type}.desc`);
 
       button.innerHTML = `
         <span class="build-icon icon-wrap" style="color: ${color}">${icon}</span>
-        <span class="build-name">${meta.name}</span>
+        <span class="build-name">${name}</span>
         <span class="build-cost">${costText}</span>
         <span class="build-hotkey">${hotkey}</span>
       `;
 
-      button.title = `${meta.description} [${hotkey}]`;
+      button.title = `${desc} [${hotkey}]`;
 
       button.addEventListener("click", () => {
         this.toggleBuilding(type);
@@ -127,7 +126,7 @@ export class BuildPanel {
   private formatCost(costs: Partial<Record<string, number>> | null): string {
     // null means max limit reached
     if (costs === null) {
-      return '<span class="cost-maxed">BUILT</span>';
+      return `<span class="cost-maxed">${t('build.maxed')}</span>`;
     }
     const parts: string[] = [];
     for (const [resource, amount] of Object.entries(costs)) {
@@ -138,7 +137,7 @@ export class BuildPanel {
         );
       }
     }
-    return parts.join("") || "Free";
+    return parts.join("") || t('build.free');
   }
 
   private getDisplayCost(type: BuildingType): Partial<Record<string, number>> | null {

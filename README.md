@@ -78,13 +78,16 @@ Winter is coming. And it wants 2× the heat.
 
 | Key | Action |
 |-----|--------|
-| `WASD` | Pan camera |
-| `Q` / `E` | Rotate camera |
+| `WASD` (or `ЦФЫВ`) | Pan camera |
+| `Q` / `E` (or `Й` / `У`) | Rotate camera |
 | `Scroll` | Zoom |
 | `1-5` | Select building |
 | `Space` | Pause/Resume |
+| `M` (or `Ь`) | Mute/unmute |
 | `?` | Keyboard shortcuts |
-| `J` | Historical archive |
+| `J` (or `О`) | Historical archive |
+
+*All shortcuts work with both English and Russian keyboard layouts.*
 
 ---
 
@@ -117,9 +120,11 @@ bun run dev    # http://localhost:5173
 - Population growth/decline based on happiness
 - Roaming camels and tumbleweeds
 - Guided mission objectives for new players
-- Historical facts about the real Aktau
+- Historical facts about the real Aktau (20 discoverable entries)
 - Save/load to browser storage
 - Time controls (pause, 1×, 2×, 4×)
+- **Russian & English languages** (auto-detected from browser)
+- Russian keyboard layout support (WASD works as ЦФЫВ)
 
 ---
 

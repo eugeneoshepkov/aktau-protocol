@@ -7,12 +7,16 @@ import {
   getFactByTrigger,
   type HistoricalFact
 } from '../data/historicalFacts';
+import { t, td, i18n } from '../i18n';
+import { keyMatches } from '../utils/keyboard';
 
 const STORAGE_KEY = 'aktau-chronicle-discovered';
+const STORAGE_KEY_READ = 'aktau-chronicle-read';
 const NOTIFICATION_DURATION = 10000; // 10 seconds
 
 export class Chronicle {
   private discoveredFacts: Set<string> = new Set();
+  private readFacts: Set<string> = new Set();
   private notificationQueue: HistoricalFact[] = [];
   private currentNotification: HistoricalFact | null = null;
   private notificationTimeout: number | null = null;
@@ -21,6 +25,7 @@ export class Chronicle {
   private modalEl!: HTMLDivElement;
   private archiveEl!: HTMLDivElement;
   private archiveBtn!: HTMLButtonElement;
+  private unreadBadge!: HTMLSpanElement;
 
   // Track building counts for milestone triggers
   private buildingCounts: Record<string, number> = {};
@@ -29,11 +34,20 @@ export class Chronicle {
 
   constructor() {
     this.loadDiscoveredFacts();
+    this.loadReadFacts();
     this.createNotificationElement();
     this.createModalElement();
     this.createArchiveElement();
     this.createArchiveButton();
     this.setupEventListeners();
+
+    // Check for day 1 trigger on startup (after a short delay to let UI initialize)
+    setTimeout(() => {
+      const currentDay = gameState.getDay();
+      if (currentDay === 1) {
+        this.checkDayTrigger(1);
+      }
+    }, 2000);
   }
 
   private loadDiscoveredFacts(): void {
@@ -51,6 +65,52 @@ export class Chronicle {
     localStorage.setItem(STORAGE_KEY, JSON.stringify([...this.discoveredFacts]));
   }
 
+
+  private loadReadFacts(): void {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY_READ);
+      if (stored) {
+        this.readFacts = new Set(JSON.parse(stored));
+      }
+    } catch {
+      this.readFacts = new Set();
+    }
+  }
+
+  private saveReadFacts(): void {
+    localStorage.setItem(STORAGE_KEY_READ, JSON.stringify([...this.readFacts]));
+  }
+
+  private getUnreadCount(): number {
+    let count = 0;
+    for (const factId of this.discoveredFacts) {
+      if (!this.readFacts.has(factId)) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  private updateUnreadBadge(): void {
+    const count = this.getUnreadCount();
+    if (count > 0) {
+      this.unreadBadge.textContent = String(count);
+      this.unreadBadge.classList.add('visible');
+      this.archiveBtn.classList.add('has-unread');
+    } else {
+      this.unreadBadge.classList.remove('visible');
+      this.archiveBtn.classList.remove('has-unread');
+    }
+  }
+
+  private markAsRead(factId: string): void {
+    if (!this.readFacts.has(factId)) {
+      this.readFacts.add(factId);
+      this.saveReadFacts();
+      this.updateUnreadBadge();
+    }
+  }
+
   private createNotificationElement(): void {
     this.notificationEl = document.createElement('div');
     this.notificationEl.id = 'chronicle-notification';
@@ -58,7 +118,7 @@ export class Chronicle {
       <div class="chronicle-notif-icon">${ICONS.chronicle}</div>
       <div class="chronicle-notif-content">
         <div class="chronicle-notif-text"></div>
-        <button class="chronicle-notif-more">Learn more...</button>
+        <button class="chronicle-notif-more">${t('chronicle.learnMore')}</button>
       </div>
       <button class="chronicle-notif-close">${ICONS.close}</button>
     `;
@@ -89,8 +149,11 @@ export class Chronicle {
         <h2 class="chronicle-modal-title"></h2>
         <div class="chronicle-modal-body"></div>
         <div class="chronicle-modal-footer">
+          <button class="chronicle-modal-back">
+            ← ${t('chronicle.backToArchive')}
+          </button>
           <a class="chronicle-modal-wiki" href="#" target="_blank" rel="noopener noreferrer">
-            ${ICONS.externalLink} Read more on Wikipedia
+            ${ICONS.externalLink} ${t('chronicle.wikiLink')}
           </a>
         </div>
       </div>
@@ -105,6 +168,13 @@ export class Chronicle {
     const closeBtn = this.modalEl.querySelector('.chronicle-modal-close');
     closeBtn?.addEventListener('click', () => this.hideModal());
 
+    // Back to archive button
+    const backBtn = this.modalEl.querySelector('.chronicle-modal-back');
+    backBtn?.addEventListener('click', () => {
+      this.hideModal();
+      setTimeout(() => this.showArchive(), 200);
+    });
+
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && this.modalEl.classList.contains('open')) {
         this.hideModal();
@@ -115,7 +185,7 @@ export class Chronicle {
       // J for Journal/Chronicle archive
       const active = document.activeElement;
       if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) return;
-      if ((e.key === 'j' || e.key === 'J') && !this.modalEl.classList.contains('open') && !this.archiveEl.classList.contains('open')) {
+      if (keyMatches(e.key, 'j') && !this.modalEl.classList.contains('open') && !this.archiveEl.classList.contains('open')) {
         this.showArchive();
         soundManager.play('click');
       }
@@ -128,13 +198,13 @@ export class Chronicle {
     this.archiveEl.innerHTML = `
       <div class="chronicle-archive-content">
         <div class="chronicle-archive-header">
-          <h2><span class="chronicle-archive-icon">${ICONS.chronicle}</span> Historical Chronicle</h2>
+          <h2><span class="chronicle-archive-icon">${ICONS.chronicle}</span> ${t('chronicle.archiveTitle')}</h2>
           <button class="chronicle-archive-close">${ICONS.close}</button>
         </div>
         <div class="chronicle-archive-stats"></div>
         <div class="chronicle-archive-list"></div>
         <div class="chronicle-archive-footer">
-          <button class="chronicle-reset-btn">Reset Discoveries</button>
+          <button class="chronicle-reset-btn">${t('chronicle.reset')}</button>
         </div>
       </div>
     `;
@@ -161,12 +231,21 @@ export class Chronicle {
     this.archiveBtn = document.createElement('button');
     this.archiveBtn.id = 'chronicle-btn';
     this.archiveBtn.innerHTML = `<span class="icon-wrap">${ICONS.chronicle}</span>`;
-    this.archiveBtn.title = 'Historical Chronicle (J)';
+    this.archiveBtn.title = t('chronicle.button');
     this.archiveBtn.addEventListener('click', () => {
       soundManager.play('click');
       this.showArchive();
     });
+
+    // Add unread badge
+    this.unreadBadge = document.createElement('span');
+    this.unreadBadge.className = 'chronicle-unread-badge';
+    this.archiveBtn.appendChild(this.unreadBadge);
+
     document.body.appendChild(this.archiveBtn);
+
+    // Update badge after creation
+    this.updateUnreadBadge();
   }
 
   private setupEventListeners(): void {
@@ -257,6 +336,9 @@ export class Chronicle {
     this.discoveredFacts.add(fact.id);
     this.saveDiscoveredFacts();
 
+    // Update unread badge
+    this.updateUnreadBadge();
+
     // Add to queue
     this.notificationQueue.push(fact);
 
@@ -275,13 +357,13 @@ export class Chronicle {
     const fact = this.notificationQueue.shift()!;
     this.currentNotification = fact;
 
-    // Update content
+    // Update content - use translated text
     const textEl = this.notificationEl.querySelector('.chronicle-notif-text');
-    if (textEl) textEl.textContent = fact.shortText;
+    if (textEl) textEl.textContent = td(`fact.${fact.id}.short`);
 
     // Show notification
     this.notificationEl.classList.add('visible');
-    soundManager.play('click');
+    soundManager.play('discover');
 
     // Auto-hide after duration
     this.notificationTimeout = window.setTimeout(() => {
@@ -310,34 +392,33 @@ export class Chronicle {
     const footerEl = this.modalEl.querySelector('.chronicle-modal-footer');
 
     if (categoryEl) {
-      const categoryLabels: Record<string, string> = {
-        city: 'City History',
-        reactor: 'Nuclear Technology',
-        water: 'Desalination',
-        life: 'Daily Life',
-        geography: 'Geography'
-      };
-      categoryEl.textContent = categoryLabels[fact.category] || fact.category;
+      categoryEl.textContent = td(`chronicle.category.${fact.category}`);
     }
 
-    if (titleEl) titleEl.textContent = fact.title;
+    if (titleEl) titleEl.textContent = td(`fact.${fact.id}.title`);
 
     if (bodyEl) {
-      // Convert paragraphs
-      bodyEl.innerHTML = fact.fullText
+      // Convert paragraphs - use translated text
+      const fullText = td(`fact.${fact.id}.full`);
+      bodyEl.innerHTML = fullText
         .split('\n\n')
         .map(p => `<p>${p}</p>`)
         .join('');
     }
 
     if (wikiEl && footerEl) {
-      if (fact.wikiUrl) {
-        wikiEl.href = fact.wikiUrl;
+      const locale = i18n.getLocale();
+      const wikiUrl = fact.wikiUrls?.[locale] || fact.wikiUrls?.en;
+      if (wikiUrl) {
+        wikiEl.href = wikiUrl;
         footerEl.classList.remove('hidden');
       } else {
         footerEl.classList.add('hidden');
       }
     }
+
+    // Mark as read when modal is opened
+    this.markAsRead(fact.id);
 
     this.modalEl.classList.add('open');
     tickSystem.onModalOpen();
@@ -371,7 +452,7 @@ export class Chronicle {
         <div class="archive-progress">
           <div class="archive-progress-bar" style="width: ${(discovered / total) * 100}%"></div>
         </div>
-        <div class="archive-progress-text">${discovered} / ${total} facts discovered</div>
+        <div class="archive-progress-text">${t('chronicle.discovered', { count: discovered, total })}</div>
       `;
     }
 
@@ -389,27 +470,28 @@ export class Chronicle {
         categories[fact.category].push(fact);
       }
 
-      const categoryLabels: Record<string, string> = {
-        city: 'City History',
-        reactor: 'Nuclear Technology',
-        water: 'Desalination',
-        life: 'Daily Life',
-        geography: 'Geography'
-      };
-
       listEl.innerHTML = Object.entries(categories)
         .filter(([, facts]) => facts.length > 0)
         .map(([category, facts]) => `
           <div class="archive-category">
-            <h3>${categoryLabels[category]}</h3>
+            <h3>${td(`chronicle.category.${category}`)}</h3>
             <div class="archive-facts">
               ${facts.map(fact => {
                 const isDiscovered = this.discoveredFacts.has(fact.id);
+                const isRead = this.readFacts.has(fact.id);
+                const isUnread = isDiscovered && !isRead;
+                const factTitle = td(`fact.${fact.id}.title`);
+                const factShort = td(`fact.${fact.id}.short`);
+                const classes = [
+                  'archive-fact',
+                  isDiscovered ? 'discovered' : 'locked',
+                  isUnread ? 'unread' : ''
+                ].filter(Boolean).join(' ');
                 return `
-                  <div class="archive-fact ${isDiscovered ? 'discovered' : 'locked'}"
+                  <div class="${classes}"
                        ${isDiscovered ? `data-fact-id="${fact.id}"` : ''}>
-                    <span class="archive-fact-title">${isDiscovered ? fact.title : '???'}</span>
-                    ${isDiscovered ? `<span class="archive-fact-preview">${fact.shortText.slice(0, 60)}...</span>` : '<span class="archive-fact-locked">Not yet discovered</span>'}
+                    <span class="archive-fact-title">${isDiscovered ? factTitle : '???'}${isUnread ? '<span class="unread-dot"></span>' : ''}</span>
+                    ${isDiscovered ? `<span class="archive-fact-preview">${factShort.slice(0, 60)}...</span>` : `<span class="archive-fact-locked">${t('chronicle.locked')}</span>`}
                   </div>
                 `;
               }).join('')}
@@ -445,6 +527,9 @@ export class Chronicle {
   public reset(): void {
     this.discoveredFacts.clear();
     this.saveDiscoveredFacts();
+    this.readFacts.clear();
+    this.saveReadFacts();
+    this.updateUnreadBadge();
     this.buildingCounts = {};
     this.hasShownWinterFact = false;
     this.hasShownReactorWarning = false;

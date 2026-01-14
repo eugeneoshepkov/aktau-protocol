@@ -2,56 +2,39 @@ import { gameState } from '../simulation/GameState';
 import { soundManager } from '../managers/SoundManager';
 import type { BuildingType } from '../types';
 import type { BuildPanel } from './BuildPanel';
+import { t, td } from '../i18n';
 
 type TutorialStep = 'WELCOME' | 'BUILD_PUMP' | 'BUILD_DESAL' | 'BUILD_HOUSING' | 'COMPLETED';
 
 interface StepConfig {
-  header: string;
-  title: string;
-  description: string;
-  note: string;
+  translationKey: string;
   target: BuildingType | null;
   targetCount: number;
 }
 
 const STEP_CONFIGS: Record<TutorialStep, StepConfig> = {
   WELCOME: {
-    header: 'MISSION LOG: AKTAU PROTOCOL',
-    title: 'Welcome, Comrade Engineer',
-    description: 'The BN-350 reactor has been established. Your mission: build a self-sustaining city around it.',
-    note: 'Begin by connecting the reactor to the Caspian Sea.',
+    translationKey: 'tutorial.welcome',
     target: null,
     targetCount: 0
   },
   BUILD_PUMP: {
-    header: 'MISSION LOG: STEP 1',
-    title: 'Extract Seawater',
-    description: 'Build a Water Pump in the Caspian Sea to extract seawater for the desalination plant.',
-    note: 'Pumps must be placed on sea tiles (teal). Place it near the reactor.',
+    translationKey: 'tutorial.pump',
     target: 'pump',
     targetCount: 1
   },
   BUILD_DESAL: {
-    header: 'MISSION LOG: STEP 2',
-    title: 'Secure Water Supply',
-    description: 'Build a Desalination Plant to convert seawater into fresh drinking water.',
-    note: 'Connect it to both the Water Pump and the Reactor.',
+    translationKey: 'tutorial.desal',
     target: 'distiller',
     targetCount: 1
   },
   BUILD_HOUSING: {
-    header: 'MISSION LOG: STEP 3',
-    title: 'Prepare for Residents',
-    description: 'Build Microrayon housing blocks to accommodate workers and their families.',
-    note: 'Housing requires water and heat connections.',
+    translationKey: 'tutorial.housing',
     target: 'microrayon',
     targetCount: 2
   },
   COMPLETED: {
-    header: 'MISSION LOG: COMPLETE',
-    title: 'Mission Successful!',
-    description: 'Basic infrastructure established. The city of Aktau is ready to grow. Manage your resources wisely.',
-    note: 'Good luck, Comrade.',
+    translationKey: 'tutorial.complete',
     target: null,
     targetCount: 0
   }
@@ -89,14 +72,10 @@ export class TutorialManager {
     overlay.innerHTML = `
       <div class="welcome-box">
         <div class="welcome-header">THE AKTAU PROTOCOL</div>
-        <div class="welcome-title">Welcome, Comrade Engineer</div>
-        <div class="welcome-desc">
-          The BN-350 nuclear reactor has been established on the Mangyshlak Peninsula.
-          The survival of 150,000 souls depends on your ability to desalinate seawater
-          and build shelter from the desert around this nuclear heart.
-        </div>
-        <div class="welcome-note">Your first priority: Connect the reactor to the sea.</div>
-        <button class="welcome-btn">Begin Mission</button>
+        <div class="welcome-title">${t('welcome.title')}</div>
+        <div class="welcome-desc">${t('welcome.desc')}</div>
+        <div class="welcome-note">${t('welcome.note')}</div>
+        <button class="welcome-btn">${t('welcome.button')}</button>
       </div>
     `;
 
@@ -205,16 +184,17 @@ export class TutorialManager {
 
   private updateUI(): void {
     const config = STEP_CONFIGS[this.currentStep];
+    const key = config.translationKey;
 
     const headerEl = this.panel.querySelector('.mission-header');
     const titleEl = this.panel.querySelector('.mission-title');
     const descEl = this.panel.querySelector('.mission-desc');
     const noteEl = this.panel.querySelector('.mission-note');
 
-    if (headerEl) headerEl.textContent = config.header;
-    if (titleEl) titleEl.textContent = config.title;
-    if (descEl) descEl.textContent = config.description;
-    if (noteEl) noteEl.textContent = config.note;
+    if (headerEl) headerEl.textContent = td(`${key}.header`);
+    if (titleEl) titleEl.textContent = td(`${key}.title`);
+    if (descEl) descEl.textContent = td(`${key}.desc`);
+    if (noteEl) noteEl.textContent = td(`${key}.note`);
 
     // Update progress display
     const progress = this.getProgress();
@@ -228,7 +208,7 @@ export class TutorialManager {
     const progressEl = this.panel.querySelector('.mission-progress');
     if (progressEl) {
       if (progress.target > 0) {
-        progressEl.textContent = `Progress: ${progress.current}/${progress.target} Built`;
+        progressEl.textContent = t('tutorial.progress', { current: progress.current, target: progress.target });
         (progressEl as HTMLElement).style.display = 'block';
       } else {
         (progressEl as HTMLElement).style.display = 'none';

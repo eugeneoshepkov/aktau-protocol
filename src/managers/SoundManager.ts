@@ -37,6 +37,9 @@ const SOUNDS: Record<string, ZzFXParams> = {
   // Success/confirm sound
   success: [0.5, 0, 600, 0, 0.05, 0.1, 0, 0, 50, 0, 200, 0.05, 0, 0, 0, 0, 0, 0.8, 0.05],
 
+  // Chronicle discovery - mystical chime with rising tone
+  discover: [0.5, 0, 800, 0.02, 0.15, 0.3, 0, 0.5, 30, 0, 150, 0.08, 0, 0, 0, 0, 0.05, 0.7, 0.1],
+
   // Warning alarm
   warning: [0.6, 0, 300, 0, 0.15, 0.1, 2, 0, 0, 0, 100, 0.1, 0.2, 0, 0, 0, 0, 0.5, 0.1],
 

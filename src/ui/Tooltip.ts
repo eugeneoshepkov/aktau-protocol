@@ -3,6 +3,7 @@ import { BUILDING_META } from '../simulation/buildings/Building';
 import type { Building } from '../types';
 import type { PipeManager } from '../managers/PipeManager';
 import { icon } from './Icons';
+import { t, td } from '../i18n';
 
 // Icon colors for tooltip
 const ICON_COLORS: Record<string, string> = {
@@ -70,6 +71,8 @@ export class Tooltip {
   private renderBuilding(building: Building): void {
     const meta = BUILDING_META[building.type];
     const prod = meta.production;
+    const buildingName = td(`building.${building.type}.name`);
+    const buildingDesc = td(`building.${building.type}.desc`);
 
     let consumesHtml = '';
     let producesHtml = '';
@@ -106,39 +109,39 @@ export class Tooltip {
     if (building.type === 'reactor') {
       const reactor = gameState.getReactorState();
       const tempColor = reactor.temperature >= 80 ? '#ff4444' : reactor.temperature >= 50 ? '#ffaa00' : '#88ff88';
-      specialHtml = `<div class="tooltip-special" style="color: ${tempColor}">${icon('nuclear', 14)} Temp: ${Math.floor(reactor.temperature)}°C (+1/tick)</div>`;
+      specialHtml = `<div class="tooltip-special" style="color: ${tempColor}">${icon('nuclear', 14)} ${t('tooltip.temp', { temp: Math.floor(reactor.temperature) })}</div>`;
     }
 
     if (building.type === 'distiller') {
       if (this.pipeManager?.isFullyOperational(building)) {
-        specialHtml = `<div class="tooltip-special" style="color: #88ccff">${icon('water', 14)} Cooling reactor: -0.8°C/tick</div>`;
+        specialHtml = `<div class="tooltip-special" style="color: #88ccff">${icon('water', 14)} ${t('tooltip.cooling')}</div>`;
       } else {
         const missing = this.pipeManager?.getMissingConnections(building) || [];
         const missingNames = missing.map(m => {
-          const name = BUILDING_META[m.type]?.name || m.type;
+          const name = td(`building.${m.type}.name`);
           const resourceIcon = m.resourceType === 'water' ? coloredIcon('water') : coloredIcon('heat');
           return `${resourceIcon} ${name}`;
         }).join(', ');
         if (missingNames) {
-          specialHtml = `<div class="tooltip-special">${coloredIcon('warning')} Needs: ${missingNames}</div>`;
+          specialHtml = `<div class="tooltip-special">${coloredIcon('warning')} ${t('tooltip.needs', { missing: missingNames })}</div>`;
         }
       }
     }
 
     if (building.type === 'microrayon') {
       if (!this.pipeManager?.isFullyOperational(building)) {
-        specialHtml = `<div class="tooltip-special">${coloredIcon('warning')} No water supply - residents unhappy!</div>`;
+        specialHtml = `<div class="tooltip-special">${coloredIcon('warning')} ${t('tooltip.noWater')}</div>`;
       }
     }
 
     const connectionsHtml = this.renderConnections(building);
 
     this.element.innerHTML = `
-      <div class="tooltip-header">${meta.name}</div>
-      <div class="tooltip-desc">${meta.description}</div>
+      <div class="tooltip-header">${buildingName}</div>
+      <div class="tooltip-desc">${buildingDesc}</div>
       <div class="tooltip-row">
-        ${consumesHtml ? `<div class="tooltip-consumes">Uses: ${consumesHtml}</div>` : ''}
-        ${producesHtml ? `<div class="tooltip-produces">Makes: ${producesHtml}</div>` : ''}
+        ${consumesHtml ? `<div class="tooltip-consumes">${t('tooltip.uses')} ${consumesHtml}</div>` : ''}
+        ${producesHtml ? `<div class="tooltip-produces">${t('tooltip.makes')} ${producesHtml}</div>` : ''}
       </div>
       ${specialHtml}
       ${connectionsHtml}
@@ -155,41 +158,41 @@ export class Tooltip {
     if (connections.length === 0 && missing.length === 0) {
       const canOutput = ['pump', 'reactor', 'water_tank'].includes(building.type);
       if (canOutput) {
-        return `<div class="tooltip-connections tooltip-disconnected">${coloredIcon('warning')} Not connected to network</div>`;
+        return `<div class="tooltip-connections tooltip-disconnected">${coloredIcon('warning')} ${t('tooltip.disconnected')}</div>`;
       }
       return '';
     }
 
     let html = '<div class="tooltip-connections">';
-    
+
     const incoming = connections.filter(c => c.direction === 'incoming');
     const outgoing = connections.filter(c => c.direction === 'outgoing');
-    
+
     if (incoming.length > 0) {
       const sources = incoming.map(c => {
-        const name = BUILDING_META[c.building.type].name;
+        const name = td(`building.${c.building.type}.name`);
         const resourceIcon = c.type === 'water' ? coloredIcon('water') : coloredIcon('heat');
         return `${resourceIcon} ${name}`;
       }).join(', ');
-      html += `<div class="tooltip-conn-in">← Receiving: ${sources}</div>`;
+      html += `<div class="tooltip-conn-in">${t('tooltip.receiving', { sources })}</div>`;
     }
 
     if (outgoing.length > 0) {
       const targets = outgoing.map(c => {
-        const name = BUILDING_META[c.building.type].name;
+        const name = td(`building.${c.building.type}.name`);
         const resourceIcon = c.type === 'water' ? coloredIcon('water') : coloredIcon('heat');
         return `${resourceIcon} ${name}`;
       }).join(', ');
-      html += `<div class="tooltip-conn-out">→ Sending: ${targets}</div>`;
+      html += `<div class="tooltip-conn-out">${t('tooltip.sending', { targets })}</div>`;
     }
 
     if (!isOperational && missing.length > 0 && building.type !== 'distiller') {
       const missingNames = missing.map(m => {
-        const name = BUILDING_META[m.type]?.name || m.type;
+        const name = td(`building.${m.type}.name`);
         const resourceIcon = m.resourceType === 'water' ? coloredIcon('water') : coloredIcon('heat');
         return `${resourceIcon} ${name}`;
       }).join(', ');
-      html += `<div class="tooltip-disconnected">${coloredIcon('warning')} Needs: ${missingNames}</div>`;
+      html += `<div class="tooltip-disconnected">${coloredIcon('warning')} ${t('tooltip.needs', { missing: missingNames })}</div>`;
     }
 
     html += '</div>';

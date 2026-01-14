@@ -1,6 +1,7 @@
 import { ICONS } from './Icons';
 import { soundManager } from '../managers/SoundManager';
 import { tickSystem } from '../simulation/TickSystem';
+import { t, td } from '../i18n';
 
 export class ShortcutsModal {
   private overlay: HTMLDivElement;
@@ -44,43 +45,43 @@ export class ShortcutsModal {
     return `
       <div class="shortcuts-content">
         <div class="shortcuts-header">
-          <h2><span class="shortcuts-icon">${ICONS.keyboard}</span> Keyboard Shortcuts</h2>
+          <h2><span class="shortcuts-icon">${ICONS.keyboard}</span> ${t('shortcuts.title')}</h2>
           <button class="shortcuts-close">${ICONS.close}</button>
         </div>
 
         <div class="shortcuts-sections">
           <div class="shortcuts-section">
-            <h3>Camera</h3>
-            <div class="shortcut-row"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span>Pan camera</span></div>
-            <div class="shortcut-row"><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd><span>Pan camera (drag-style)</span></div>
-            <div class="shortcut-row"><kbd>Q</kbd> / <kbd>E</kbd><span>Rotate camera</span></div>
-            <div class="shortcut-row"><kbd>Scroll</kbd><span>Zoom in/out</span></div>
-            <div class="shortcut-row"><kbd>Shift</kbd> + <kbd>Drag</kbd><span>Pan camera (mouse)</span></div>
-            <div class="shortcut-row"><kbd>C</kbd><span>Center map</span></div>
-            <div class="shortcut-row"><kbd>Home</kbd><span>Reset view</span></div>
+            <h3>${t('shortcuts.camera')}</h3>
+            <div class="shortcut-row"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span>${t('shortcuts.pan')}</span></div>
+            <div class="shortcut-row"><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd><span>${t('shortcuts.panDrag')}</span></div>
+            <div class="shortcut-row"><kbd>Q</kbd> / <kbd>E</kbd><span>${t('shortcuts.rotate')}</span></div>
+            <div class="shortcut-row"><kbd>Scroll</kbd><span>${t('shortcuts.zoom')}</span></div>
+            <div class="shortcut-row"><kbd>Shift</kbd> + <kbd>Drag</kbd><span>${t('shortcuts.panMouse')}</span></div>
+            <div class="shortcut-row"><kbd>C</kbd><span>${t('shortcuts.center')}</span></div>
+            <div class="shortcut-row"><kbd>Home</kbd><span>${t('shortcuts.reset')}</span></div>
           </div>
 
           <div class="shortcuts-section">
-            <h3>Building</h3>
-            <div class="shortcut-row"><kbd>1</kbd><span>Water Pump</span></div>
-            <div class="shortcut-row"><kbd>2</kbd><span>BN-350 Reactor</span></div>
-            <div class="shortcut-row"><kbd>3</kbd><span>Desalination Plant</span></div>
-            <div class="shortcut-row"><kbd>4</kbd><span>Microrayon Housing</span></div>
-            <div class="shortcut-row"><kbd>5</kbd><span>Water Tank</span></div>
-            <div class="shortcut-row"><kbd>Esc</kbd><span>Cancel placement</span></div>
+            <h3>${t('shortcuts.building')}</h3>
+            <div class="shortcut-row"><kbd>1</kbd><span>${td('building.pump.name')}</span></div>
+            <div class="shortcut-row"><kbd>2</kbd><span>${td('building.distiller.name')}</span></div>
+            <div class="shortcut-row"><kbd>3</kbd><span>${td('building.microrayon.name')}</span></div>
+            <div class="shortcut-row"><kbd>4</kbd><span>${td('building.water_tank.name')}</span></div>
+            <div class="shortcut-row"><kbd>5</kbd><span>${td('building.thermal_plant.name')}</span></div>
+            <div class="shortcut-row"><kbd>Esc</kbd><span>${t('shortcuts.cancel')}</span></div>
           </div>
 
           <div class="shortcuts-section">
-            <h3>General</h3>
-            <div class="shortcut-row"><kbd>?</kbd> / <kbd>F1</kbd><span>Show shortcuts</span></div>
-            <div class="shortcut-row"><kbd>J</kbd><span>Historical Chronicle</span></div>
-            <div class="shortcut-row"><kbd>Space</kbd><span>Pause/Resume</span></div>
-            <div class="shortcut-row"><kbd>M</kbd><span>Mute/Unmute music</span></div>
+            <h3>${t('shortcuts.general')}</h3>
+            <div class="shortcut-row"><kbd>?</kbd> / <kbd>F1</kbd><span>${t('shortcuts.show')}</span></div>
+            <div class="shortcut-row"><kbd>J</kbd><span>${t('shortcuts.chronicle')}</span></div>
+            <div class="shortcut-row"><kbd>Space</kbd><span>${t('shortcuts.pause')}</span></div>
+            <div class="shortcut-row"><kbd>M</kbd><span>${t('shortcuts.mute')}</span></div>
           </div>
         </div>
 
         <div class="shortcuts-footer">
-          Press <kbd>Esc</kbd> to close
+          ${t('shortcuts.close')}
         </div>
       </div>
     `;

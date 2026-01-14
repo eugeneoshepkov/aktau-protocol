@@ -1,4 +1,5 @@
 import { ICONS } from './Icons';
+import { t } from '../i18n';
 
 export class IntroScreen {
   private overlay: HTMLDivElement;
@@ -16,10 +17,6 @@ export class IntroScreen {
     document.body.appendChild(this.overlay);
 
     this.initAudio();
-
-    requestAnimationFrame(() => {
-      this.overlay.classList.add('visible');
-    });
   }
 
   private initAudio(): void {
@@ -43,37 +40,43 @@ export class IntroScreen {
   private createOverlay(): HTMLDivElement {
     const overlay = document.createElement('div');
     overlay.id = 'intro-overlay';
+    // Start visible immediately to prevent flash of game underneath
+    overlay.classList.add('visible');
     overlay.innerHTML = `
       <div class="intro-content">
         <div class="intro-header">
           <div class="intro-emblem">☢</div>
           <h1>THE AKTAU PROTOCOL</h1>
-          <div class="intro-subtitle">Mangyshlak Atomic Energy Complex</div>
+          <div class="intro-subtitle">${t('intro.subtitle')}</div>
+        </div>
+
+        <div class="intro-image">
+          <img src="/pictures/intro-horizontal.png" alt="Aktau" />
         </div>
 
         <div class="intro-lore">
-          <p class="intro-year">1958 — KAZAKH SSR</p>
-          
-          <p>In the barren Mangyshlak Peninsula, where the Caspian Sea meets endless desert, Soviet engineers attempted the impossible: building a city where no city should exist.</p>
-          
-          <p><strong>Shevchenko</strong> — a closed nuclear city, hidden from maps. Its beating heart: the <em>BN-350</em>, the world's first fast breeder reactor designed not just for power, but to turn seawater into drinking water.</p>
-          
-          <p>For decades, the reactor sustained 150,000 souls in this hostile land. Fresh water flowed. Lights never dimmed. The desert bloomed.</p>
-          
-          <p class="intro-highlight">Then came 1991. The Union fell. The reactor aged. Now renamed <strong>Aktau</strong>, the city faces an uncertain future.</p>
-          
-          <p class="intro-mission">Your mission: manage the delicate balance of water, power, and heat. Keep the reactor stable. Keep the people alive. One miscalculation, and the desert reclaims what was never meant to be.</p>
+          <p class="intro-year">${t('intro.year')}</p>
+
+          <p>${t('intro.lore1')}</p>
+
+          <p>${t('intro.lore2')}</p>
+
+          <p>${t('intro.lore3')}</p>
+
+          <p class="intro-highlight">${t('intro.lore4')}</p>
+
+          <p class="intro-mission">${t('intro.mission')}</p>
         </div>
 
         <button class="intro-start-btn">
-          <span>[ INITIALIZE PROTOCOL ]</span>
+          <span>${t('intro.start')}</span>
         </button>
 
         <div class="intro-footer">
-          <span>WASD: move │ QE: rotate │ Scroll: zoom │ Shift+Drag: pan</span>
+          <span>${t('intro.controls')}</span>
         </div>
 
-        <button class="intro-mute-btn" title="Toggle music">
+        <button class="intro-mute-btn" title="${t('intro.mute')}">
           <span class="icon-wrap">${this.muted ? ICONS.volumeOff : ICONS.volumeOn}</span>
         </button>
       </div>

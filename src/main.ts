@@ -23,6 +23,7 @@ import { eventSystem } from './simulation/EventSystem';
 import { FilmGrainEffect, HeatHazeEffect } from './engine/PostProcess';
 import { ParticleManager } from './effects/ParticleManager';
 import { ICONS } from './ui/Icons';
+import { keyMatches } from './utils/keyboard';
 import { ambientManager } from './simulation/ambient';
 import { getTileTypeAt, getCoastlineZ } from './grid/TileTypes';
 import { getTileCenter } from './grid/GridCoords';
@@ -94,7 +95,7 @@ async function initGame(): Promise<void> {
     if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) return;
 
     // Center map (C or Home)
-    if (e.key === 'c' || e.key === 'C' || e.key === 'Home') {
+    if (keyMatches(e.key, 'c') || e.key === 'Home') {
       camera.resetView();
       soundManager.play('click');
     }
@@ -107,7 +108,7 @@ async function initGame(): Promise<void> {
     }
 
     // Mute/Unmute music (M)
-    if (e.key === 'm' || e.key === 'M') {
+    if (keyMatches(e.key, 'm')) {
       const muted = !musicManager.isMuted();
       musicManager.setMuted(muted);
       localStorage.setItem('aktau-muted', muted.toString());

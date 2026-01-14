@@ -812,7 +812,7 @@ html, body {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   padding: 40px 20px;
-  opacity: 0;
+  opacity: 1;
   transition: opacity 0.8s ease;
 }
 
@@ -901,6 +901,28 @@ html, body {
   letter-spacing: 4px;
   margin-top: 8px;
   text-transform: uppercase;
+}
+
+.intro-image {
+  margin-bottom: 32px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.5),
+    0 0 60px rgba(255, 200, 100, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.intro-image img {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: sepia(0.15) contrast(1.05);
+  transition: filter 0.3s ease;
+}
+
+.intro-image:hover img {
+  filter: sepia(0) contrast(1.1);
 }
 
 .intro-lore {
@@ -1334,6 +1356,46 @@ html, body {
   height: 100%;
 }
 
+/* Chronicle Unread Badge */
+.chronicle-unread-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  background: #d4a574;
+  color: #1a1a1a;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  opacity: 0;
+  transform: scale(0.5);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: none;
+}
+
+.chronicle-unread-badge.visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+#chronicle-btn.has-unread {
+  animation: chronicle-pulse 2s ease-in-out infinite;
+}
+
+@keyframes chronicle-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(212, 165, 116, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(212, 165, 116, 0.3);
+  }
+}
+
 /* Chronicle Notification */
 #chronicle-notification {
   position: fixed;
@@ -1536,10 +1598,32 @@ html, body {
   padding: 16px 24px;
   border-top: 1px solid rgba(212, 165, 116, 0.15);
   background: rgba(0, 0, 0, 0.2);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
 }
 
 .chronicle-modal-footer.hidden {
   display: none;
+}
+
+.chronicle-modal-back {
+  background: none;
+  border: 1px solid rgba(212, 165, 116, 0.3);
+  color: #a0a0a0;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.chronicle-modal-back:hover {
+  color: #d4a574;
+  border-color: rgba(212, 165, 116, 0.5);
+  background: rgba(212, 165, 116, 0.1);
 }
 
 .chronicle-modal-wiki {
@@ -1777,6 +1861,38 @@ html, body {
   font-size: 11px;
   color: #64748b;
   font-style: italic;
+}
+
+/* Unread items highlight */
+.archive-fact.unread {
+  background: rgba(212, 165, 116, 0.08);
+  border-color: rgba(212, 165, 116, 0.25);
+}
+
+.archive-fact.unread .archive-fact-title {
+  color: #d4a574;
+}
+
+.unread-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: #d4a574;
+  border-radius: 50%;
+  margin-left: 8px;
+  vertical-align: middle;
+  animation: unread-pulse 2s ease-in-out infinite;
+}
+
+@keyframes unread-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(0.85);
+  }
 }
 
 /* ==================== Welcome Overlay (Tutorial) ==================== */
