@@ -214,6 +214,10 @@ export class BuildPanel {
     this.container.classList.remove("building-selected");
   }
 
+  public getButton(type: BuildingType): HTMLButtonElement | undefined {
+    return this.buttons.get(type);
+  }
+
   public dispose(): void {
     this.stopGeigerSound();
     this.container.remove();

@@ -1,98 +1,148 @@
-# Caspian Atom: The Aktau Protocol
+<p align="center">
+  <img src="public/favicon.svg" alt="Aktau Protocol" width="80" height="80">
+</p>
 
-A browser-based isometric city-builder where you manage a Soviet-era nuclear-powered desalination city in the Kazakh desert.
+<h1 align="center">Caspian Atom: The Aktau Protocol</h1>
 
-**[Play Now](https://aktau.eone.work/)**
+<p align="center">
+  <em>A Soviet-era nuclear city-builder where one reactor stands between 150,000 souls and the desert.</em>
+</p>
 
-## About
+<p align="center">
+  <a href="https://aktau.eone.work/"><strong>Play Now</strong></a>
+</p>
 
-Set in 1958–1991 on the Mangyshlak Peninsula, you control the legendary city of Aktau—where the [BN-350 fast breeder reactor](https://en.wikipedia.org/wiki/BN-350_reactor) sustained 150,000 people by converting Caspian seawater into drinking water.
+---
 
-**Your Mission:** Survive as long as possible by balancing nuclear power, water extraction, and district heating without causing a meltdown, drought, or freezing your population.
+## The Story
 
-## Quick Start
+**Mangyshlak Peninsula, 1972.**
 
-```bash
-bun install
-bun run dev    # Open http://localhost:5173
-```
+In the middle of the Kazakh desert, Soviet engineers achieved the impossible: a city that shouldn't exist. No rivers. No rainfall. Just endless sand, the Caspian Sea, and one audacious idea—use a nuclear reactor to turn seawater into life.
+
+The **BN-350 fast breeder reactor** wasn't just generating power. It was *desalinating* the sea, pumping fresh water to 150,000 people who had no business surviving there. For 27 years, this engineering marvel kept Aktau alive.
+
+**Now it's your turn.**
+
+---
 
 ## Gameplay
 
-### Resources
-- **Seawater** — extracted from the Caspian Sea
-- **Fresh Water** — desalinated water for citizens
-- **Heat** — district heating (demand doubles in winter!)
-- **Electricity** — powers all buildings
-- **Population** — grows when happy, flees when not
-- **Happiness** — keep citizens connected to water!
+You are the city engineer. Balance the impossible:
+
+| Challenge | Consequence |
+|-----------|-------------|
+| Reactor overheats | ☢️ **Meltdown** — Game Over |
+| Fresh water depleted | 🏜️ **Drought** — Game Over |
+| Heat runs out in winter | ❄️ **Frozen City** — Game Over |
+| Citizens unhappy | 👥 **Exodus** — Population flees |
+
+### The Production Chain
+
+```
+    Caspian Sea
+         ↓
+    [Water Pump] ──→ Seawater
+         ↓
+    [BN-350 Reactor] ──→ Heat + Electricity
+         ↓                    ↓
+    [Desalination] ←──────────┘
+         ↓
+    Fresh Water ──→ [Microrayon Housing] ──→ Happy Citizens
+```
 
 ### Buildings
 
-| Building | Function |
-|----------|----------|
-| **Water Pump** | Extracts seawater from Caspian |
-| **BN-350 Reactor** | Generates heat + power, but heats up! |
-| **Desalination Plant** | Converts seawater → freshwater, cools reactor |
-| **Microrayon Housing** | Houses population, needs water connection |
-| **Water Tank** | Stores freshwater reserves |
+| Building | What it Does |
+|----------|--------------|
+| **Water Pump** | Extracts seawater from the Caspian |
+| **BN-350 Reactor** | The heart of the city. Generates heat & power. *Warning: +1°C every tick!* |
+| **Desalination Plant** | Converts seawater → freshwater. Also cools the reactor. |
+| **Microrayon Housing** | Soviet housing blocks. Needs water connection or citizens get angry. |
+| **Water Tank** | Emergency freshwater storage |
 
-### Connections Matter!
+### Seasons
 
-Buildings must be connected via pipes (within 5 tiles) to function:
-- **Distillers** need both a pump AND reactor connection
-- **Housing** needs a distiller or tank connection — disconnected housing makes citizens unhappy (-2/tick)!
+Winter is coming. And it wants 2× the heat.
 
-### Fail States
-- **Nuclear Meltdown** — reactor reaches 100°C
-- **Drought** — freshwater runs out
-- **Frozen City** — heat runs out in winter
-- **Extinction** — population reaches zero
+| Season | Heat Demand |
+|--------|-------------|
+| Spring | Normal |
+| Summer | 0.5× |
+| Autumn | 1.2× |
+| **Winter** | **2×** |
+
+---
 
 ## Controls
 
 | Key | Action |
 |-----|--------|
-| **WASD** | Pan camera |
-| **Q/E** | Rotate camera |
-| **Scroll** | Zoom in/out |
-| **1-5** | Building hotkeys |
-| **Esc** | Cancel placement |
-| **Shift+Drag** | Pan camera (mouse) |
+| `WASD` | Pan camera |
+| `Q` / `E` | Rotate camera |
+| `Scroll` | Zoom |
+| `1-5` | Select building |
+| `Space` | Pause/Resume |
+| `?` | Keyboard shortcuts |
+| `J` | Historical archive |
 
-## Features
+---
 
-- Isometric 3D graphics with Babylon.js
-- Four seasons affecting heat demand (2× in winter!)
-- Auto-connecting pipe networks with visual preview
-- Dynamic population growth/decline
-- Roaming camels and tumbleweeds
-- Procedural sound effects (ZzFX)
-- Background music
-- Save/load to browser storage
-- Time controls (pause, 1×, 2×, 4×)
-- Film grain and heat haze effects
+## Quick Start
+
+```bash
+bun install
+bun run dev    # http://localhost:5173
+```
+
+---
 
 ## Tech Stack
 
-- **Runtime:** Bun
-- **Build:** Vite + TypeScript
-- **Rendering:** Babylon.js (WebGPU/WebGL)
-- **Audio:** ZzFX (SFX) + HTML5 Audio (music)
-- **Assets:** Kenney asset packs (Suburban, Industrial, Roads, Roguelike)
+| Layer | Technology |
+|-------|------------|
+| Runtime | Bun |
+| Build | Vite + TypeScript |
+| Rendering | Babylon.js (WebGPU/WebGL) |
+| Audio | ZzFX (procedural SFX) + HTML5 Audio |
+| Assets | Kenney asset packs |
+
+---
+
+## Features
+
+- Isometric 3D graphics with film grain & heat haze effects
+- Dynamic pipe networks with connection preview
+- Four seasons affecting resource consumption
+- Population growth/decline based on happiness
+- Roaming camels and tumbleweeds
+- Guided mission objectives for new players
+- Historical facts about the real Aktau
+- Save/load to browser storage
+- Time controls (pause, 1×, 2×, 4×)
+
+---
 
 ## Development
 
 ```bash
 bun run dev      # Development server
 bun run build    # Production build
-bun run preview  # Preview production build
+bun run preview  # Preview build
 ```
-
-## License
-
-MIT
 
 ---
 
-*Based on the real Soviet city of Aktau and the BN-350 reactor that powered it from 1972-1999.*
+## The Real Aktau
+
+This game is based on the true story of **Aktau, Kazakhstan** (formerly Shevchenko). The BN-350 reactor operated from 1972 to 1999, producing both electricity and fresh water for a city built in one of the most inhospitable places on Earth.
+
+At its peak, the reactor desalinated **120,000 cubic meters of water per day**.
+
+[Learn more on Wikipedia →](https://en.wikipedia.org/wiki/BN-350_reactor)
+
+---
+
+<p align="center">
+  <sub>MIT License</sub>
+</p>

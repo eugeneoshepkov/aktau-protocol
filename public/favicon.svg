@@ -3,12 +3,26 @@
   <circle cx="16" cy="16" r="15" fill="#E6D5AC"/>
 
   <!-- Calm sea waves at bottom -->
-  <path d="M1 20 Q8 18 16 20 Q24 22 31 20 L31 31 L1 31 Z" fill="#2F8D8D" opacity="0.8"/>
-  <path d="M1 23 Q8 21 16 23 Q24 25 31 23 L31 31 L1 31 Z" fill="#3A9E9E" opacity="0.9"/>
+  <path d="M1 22 Q8 20 16 22 Q24 24 31 22 L31 31 L1 31 Z" fill="#2F8D8D" opacity="0.8"/>
+  <path d="M1 25 Q8 23 16 25 Q24 27 31 25 L31 31 L1 31 Z" fill="#3A9E9E" opacity="0.9"/>
 
-  <!-- Simple water droplet -->
-  <path d="M16 6 Q21 13 16 19 Q11 13 16 6" fill="#4AA8A8" stroke="#2F8D8D" stroke-width="0.5"/>
+  <!-- Cooling tower silhouette (hyperbolic shape) -->
+  <path d="M11 20
+           Q10 15 12 12
+           Q14 9 16 8
+           Q18 9 20 12
+           Q22 15 21 20
+           Z"
+        fill="#4A5568" stroke="#2D3748" stroke-width="0.5"/>
 
-  <!-- Droplet highlight -->
-  <ellipse cx="14" cy="12" rx="1.2" ry="2" fill="#7FCFCF" opacity="0.7"/>
+  <!-- Tower top rim -->
+  <ellipse cx="16" cy="8" rx="4" ry="1.2" fill="#5A6A7A" stroke="#2D3748" stroke-width="0.3"/>
+
+  <!-- Steam/vapor from tower -->
+  <ellipse cx="14" cy="5.5" rx="2" ry="1.2" fill="#fff" opacity="0.5"/>
+  <ellipse cx="17" cy="4" rx="2.5" ry="1.5" fill="#fff" opacity="0.4"/>
+  <ellipse cx="15" cy="3" rx="1.5" ry="1" fill="#fff" opacity="0.3"/>
+
+  <!-- Subtle glow at tower base (reactor heat) -->
+  <ellipse cx="16" cy="19" rx="3" ry="1" fill="#F6AD55" opacity="0.4"/>
 </svg>

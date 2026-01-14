@@ -16,6 +16,7 @@ import { IntroScreen } from './ui/IntroScreen';
 import { ShortcutsModal } from './ui/ShortcutsModal';
 import { Chronicle } from './ui/Chronicle';
 import { feedbackManager } from './ui/FeedbackManager';
+import { TutorialManager } from './ui/TutorialManager';
 import { tickSystem } from './simulation/TickSystem';
 import { gameState } from './simulation/GameState';
 import { eventSystem } from './simulation/EventSystem';
@@ -183,8 +184,12 @@ async function initGame(): Promise<void> {
   });
 
   const hud = new HUD();
-  new BuildPanel(buildingManager);
+  const buildPanel = new BuildPanel(buildingManager);
   new Chronicle();
+
+  // Initialize tutorial system
+  const tutorialManager = new TutorialManager();
+  tutorialManager.setBuildPanel(buildPanel);
 
   feedbackManager.initialize();
 

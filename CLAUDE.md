@@ -244,9 +244,11 @@ src/
 │   ├── HUD.ts              # Top bar (resources, controls)
 │   ├── BuildPanel.ts       # Bottom build menu
 │   ├── IntroScreen.ts      # Intro overlay with lore
-│   ├── Tutorial.ts         # Contextual hints
+│   ├── TutorialManager.ts  # Mission objectives system
 │   ├── Tooltip.ts          # Building info on hover
 │   ├── FeedbackManager.ts  # Toast notifications
+│   ├── ShortcutsModal.ts   # Keyboard shortcuts modal
+│   ├── Chronicle.ts        # Historical facts archive
 │   └── Icons.ts            # SVG icon definitions
 ├── types/
 │   ├── GameTypes.ts        # All type definitions
@@ -274,6 +276,7 @@ src/
 | Modify terrain visuals | `grid/GridManager.ts` (createLandMesh, createWaterMesh) |
 | Camera constraints | `engine/Camera.ts` (clampCameraTarget) |
 | Scene effects (fog) | `engine/Engine.ts` |
+| Modify tutorial objectives | `ui/TutorialManager.ts` (STEP_CONFIGS) |
 
 ---
 
@@ -331,11 +334,14 @@ src/
 - [x] Intro screen with lore
 - [x] HUD with all resources
 - [x] Build panel with hotkeys (1-5)
-- [x] Contextual tutorial hints
+- [x] Mission objectives system (guides new players through Power → Water → Housing)
 - [x] Toast notifications
 - [x] Building tooltips
+- [x] Historical facts archive (Chronicle)
+- [x] Keyboard shortcuts modal
 - [x] SVG icons throughout
 - [x] WASD + QE camera controls
+- [x] Auto-pause when modals open
 
 ---
 
