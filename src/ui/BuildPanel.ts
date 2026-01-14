@@ -171,9 +171,8 @@ export class BuildPanel {
   private toggleBuilding(type: BuildingType): void {
     const currentSelection = this.buildingManager.getSelectedBuildingType();
 
-    if (currentSelection === type) {
-      this.cancelSelection();
-    } else {
+    // Only change selection if a different building type is clicked
+    if (currentSelection !== type) {
       this.selectBuilding(type);
     }
   }
