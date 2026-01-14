@@ -2,7 +2,8 @@ import {
   STARTING_RESOURCES,
   BUILDING_PRODUCTION,
   BUILDING_COSTS,
-  BUILDING_PLACEMENT
+  BUILDING_PLACEMENT,
+  BUILDING_MAX_ALLOWED
 } from '../types';
 import type {
   Resources,
@@ -162,13 +163,20 @@ export class GameState {
    * Returns the effective cost for placing a building.
    * First reactor is free to prevent energy deadlock.
    */
-  public getEffectiveCost(type: BuildingType): Partial<Resources> {
-    if (type === 'reactor') {
-      const reactorCount = this.buildings.filter(b => b.type === 'reactor').length;
-      if (reactorCount === 0) {
-        return {}; // First reactor is free
-      }
+  public getEffectiveCost(type: BuildingType): Partial<Resources> | null {
+    const count = this.buildings.filter(b => b.type === type).length;
+    const maxAllowed = BUILDING_MAX_ALLOWED[type];
+
+    // Return null if max limit reached (can't build more)
+    if (maxAllowed !== undefined && count >= maxAllowed) {
+      return null;
     }
+
+    // First reactor is free
+    if (type === 'reactor' && count === 0) {
+      return {};
+    }
+
     return BUILDING_COSTS[type];
   }
 
@@ -190,8 +198,13 @@ export class GameState {
       return { canPlace: false, reason: 'Tile is already occupied' };
     }
 
-    // Check if we have enough resources
+    // Check if max limit reached
     const cost = this.getEffectiveCost(type);
+    if (cost === null) {
+      return { canPlace: false, reason: 'Maximum limit reached' };
+    }
+
+    // Check if we have enough resources
     for (const [resource, amount] of Object.entries(cost)) {
       if (this.resources[resource as keyof Resources] < (amount ?? 0)) {
         return { canPlace: false, reason: `Not enough ${resource}` };
@@ -204,6 +217,9 @@ export class GameState {
   public placeBuilding(type: BuildingType, gridX: number, gridZ: number): Building | null {
     // Deduct costs
     const cost = this.getEffectiveCost(type);
+    if (cost === null) {
+      return null; // Max limit reached
+    }
     for (const [resource, amount] of Object.entries(cost)) {
       this.resources[resource as keyof Resources] -= amount ?? 0;
     }
@@ -302,7 +318,8 @@ export class GameState {
       reactor: 0,
       distiller: 0,
       microrayon: 0,
-      water_tank: 0
+      water_tank: 0,
+      thermal_plant: 0
     };
 
     let connectedMicrorayons = 0;
@@ -421,6 +438,12 @@ export class GameState {
     if (this.resources.population <= 0 && this.buildings.some(b => b.type === 'microrayon')) {
       this.resources.population = 0;
       this.triggerGameOver('extinction');
+      return;
+    }
+
+    if (this.resources.happiness <= 0 && this.resources.population > 0) {
+      this.resources.happiness = 0;
+      this.triggerGameOver('revolt');
       return;
     }
   }

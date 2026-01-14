@@ -113,7 +113,8 @@ class FeedbackManagerClass {
         reactor: '☢️ Reactors → rock tiles (gray)',
         distiller: '💧 Distillers → sand or rock',
         microrayon: '🏠 Housing → sand tiles (beige)',
-        water_tank: '🛢️ Tanks → sand or rock'
+        water_tank: '🛢️ Tanks → sand or rock',
+        thermal_plant: '🏭 Thermal Plant → sand or rock'
       };
       return buildingType ? tileHints[buildingType] : reason;
     }

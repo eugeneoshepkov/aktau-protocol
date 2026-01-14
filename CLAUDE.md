@@ -96,6 +96,7 @@ Population grows/declines based on conditions (requires at least one Microrayon)
 | Fresh Water < 0 | 🏜️ CITY DROUGHT |
 | Heat < 0 (with population) | ❄️ CITY FROZEN |
 | Population = 0 (with housing) | 💀 POPULATION EXTINCT |
+| Happiness = 0 (with population) | ✊ CITIZENS REVOLT |
 
 ### Pipe Connections
 

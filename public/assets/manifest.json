@@ -27,15 +27,15 @@
     "reactor": {
       "primitive": {
         "type": "cylinder",
-        "height": 3,
-        "diameter": 2,
+        "height": 4,
+        "diameter": 2.5,
         "color": "#FF6B35"
       },
       "models": [
         {
           "basePath": "industrial",
           "file": "detail-tank.glb",
-          "scale": 1.2,
+          "scale": 1.8,
           "rotation": 0,
           "yOffset": 0,
           "offset": { "x": 0, "y": 0, "z": 0 }
@@ -43,10 +43,26 @@
         {
           "basePath": "industrial",
           "file": "chimney-large.glb",
-          "scale": 1.0,
+          "scale": 1.4,
           "rotation": 0,
           "yOffset": 0,
-          "offset": { "x": 0.8, "y": 0, "z": 0.5 }
+          "offset": { "x": 1.0, "y": 0, "z": 0.6 }
+        },
+        {
+          "basePath": "industrial",
+          "file": "chimney-medium.glb",
+          "scale": 1.0,
+          "rotation": 45,
+          "yOffset": 0,
+          "offset": { "x": -0.8, "y": 0, "z": 0.5 }
+        },
+        {
+          "basePath": "industrial",
+          "file": "building-g.glb",
+          "scale": 0.8,
+          "rotation": 0,
+          "yOffset": 0,
+          "offset": { "x": 0, "y": 0, "z": -0.7 }
         }
       ]
     },
@@ -224,6 +240,33 @@
         "rotation": 0,
         "yOffset": 0
       }
+    },
+    "thermal_plant": {
+      "primitive": {
+        "type": "box",
+        "height": 2.0,
+        "width": 1.2,
+        "depth": 1.2,
+        "color": "#8B7355"
+      },
+      "models": [
+        {
+          "basePath": "industrial",
+          "file": "building-f.glb",
+          "scale": 1.0,
+          "rotation": 0,
+          "yOffset": 0,
+          "offset": { "x": 0, "y": 0, "z": 0 }
+        },
+        {
+          "basePath": "industrial",
+          "file": "chimney-small.glb",
+          "scale": 0.8,
+          "rotation": 0,
+          "yOffset": 0,
+          "offset": { "x": 0.6, "y": 0, "z": 0.4 }
+        }
+      ]
     }
   },
   "decorations": {

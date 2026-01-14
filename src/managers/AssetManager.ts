@@ -354,6 +354,13 @@ class AssetManagerClass {
         diameter: 1.4,
         color: "#5599CC",
       },
+      thermal_plant: {
+        type: "box",
+        height: 2.0,
+        width: 1.2,
+        depth: 1.2,
+        color: "#8B7355",
+      },
     };
     return defaults[type];
   }

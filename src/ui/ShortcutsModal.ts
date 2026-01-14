@@ -75,6 +75,7 @@ export class ShortcutsModal {
             <div class="shortcut-row"><kbd>?</kbd> / <kbd>F1</kbd><span>Show shortcuts</span></div>
             <div class="shortcut-row"><kbd>J</kbd><span>Historical Chronicle</span></div>
             <div class="shortcut-row"><kbd>Space</kbd><span>Pause/Resume</span></div>
+            <div class="shortcut-row"><kbd>M</kbd><span>Mute/Unmute music</span></div>
           </div>
         </div>
 

@@ -282,7 +282,8 @@ export class HUD {
       meltdown: `<span class="icon-wrap go-icon">${ICONS.nuclear}</span> NUCLEAR MELTDOWN`,
       drought: `<span class="icon-wrap go-icon">${ICONS.warning}</span> CITY DROUGHT`,
       freeze: `<span class="icon-wrap go-icon">${ICONS.winter}</span> CITY FROZEN`,
-      extinction: `<span class="icon-wrap go-icon">${ICONS.warning}</span> POPULATION EXTINCT`
+      extinction: `<span class="icon-wrap go-icon">${ICONS.warning}</span> POPULATION EXTINCT`,
+      revolt: `<span class="icon-wrap go-icon">${ICONS.population}</span> CITIZENS REVOLT`
     };
 
     overlay.innerHTML = `

@@ -2,6 +2,23 @@ import { gameState } from '../simulation/GameState';
 import { BUILDING_META } from '../simulation/buildings/Building';
 import type { Building } from '../types';
 import type { PipeManager } from '../managers/PipeManager';
+import { icon } from './Icons';
+
+// Icon colors for tooltip
+const ICON_COLORS: Record<string, string> = {
+  seawater: '#4a90a4',
+  water: '#88ccff',
+  heat: '#ff8844',
+  electricity: '#ffcc00',
+  happiness: '#88ff88',
+  nuclear: '#88ff88',
+  warning: '#ff8844'
+};
+
+function coloredIcon(name: keyof typeof ICON_COLORS, size = 14): string {
+  const color = ICON_COLORS[name] || 'currentColor';
+  return `<span style="color:${color}">${icon(name as any, size)}</span>`;
+}
 
 export class Tooltip {
   private element: HTMLDivElement;
@@ -58,11 +75,11 @@ export class Tooltip {
     let producesHtml = '';
 
     const icons: Record<string, string> = {
-      seawater: '🌊',
-      freshWater: '💧',
-      heat: '🔥',
-      electricity: '⚡',
-      happiness: '😊'
+      seawater: coloredIcon('seawater'),
+      freshWater: coloredIcon('water'),
+      heat: coloredIcon('heat'),
+      electricity: coloredIcon('electricity'),
+      happiness: coloredIcon('happiness')
     };
 
     for (const [key, val] of Object.entries(prod.consumes)) {
@@ -89,28 +106,28 @@ export class Tooltip {
     if (building.type === 'reactor') {
       const reactor = gameState.getReactorState();
       const tempColor = reactor.temperature >= 80 ? '#ff4444' : reactor.temperature >= 50 ? '#ffaa00' : '#88ff88';
-      specialHtml = `<div class="tooltip-special" style="color: ${tempColor}">☢️ Temp: ${Math.floor(reactor.temperature)}°C (+1/tick)</div>`;
+      specialHtml = `<div class="tooltip-special" style="color: ${tempColor}">${icon('nuclear', 14)} Temp: ${Math.floor(reactor.temperature)}°C (+1/tick)</div>`;
     }
 
     if (building.type === 'distiller') {
       if (this.pipeManager?.isFullyOperational(building)) {
-        specialHtml = `<div class="tooltip-special" style="color: #88ccff">❄️ Cooling reactor: -0.8°C/tick</div>`;
+        specialHtml = `<div class="tooltip-special" style="color: #88ccff">${icon('water', 14)} Cooling reactor: -0.8°C/tick</div>`;
       } else {
         const missing = this.pipeManager?.getMissingConnections(building) || [];
         const missingNames = missing.map(m => {
           const name = BUILDING_META[m.type]?.name || m.type;
-          const icon = m.resourceType === 'water' ? '💧' : '🔥';
-          return `${icon} ${name}`;
+          const resourceIcon = m.resourceType === 'water' ? coloredIcon('water') : coloredIcon('heat');
+          return `${resourceIcon} ${name}`;
         }).join(', ');
         if (missingNames) {
-          specialHtml = `<div class="tooltip-special" style="color: #ff8844">⚠️ Needs: ${missingNames}</div>`;
+          specialHtml = `<div class="tooltip-special">${coloredIcon('warning')} Needs: ${missingNames}</div>`;
         }
       }
     }
 
     if (building.type === 'microrayon') {
       if (!this.pipeManager?.isFullyOperational(building)) {
-        specialHtml = `<div class="tooltip-special" style="color: #ff8844">⚠️ No water supply - residents unhappy!</div>`;
+        specialHtml = `<div class="tooltip-special">${coloredIcon('warning')} No water supply - residents unhappy!</div>`;
       }
     }
 
@@ -138,7 +155,7 @@ export class Tooltip {
     if (connections.length === 0 && missing.length === 0) {
       const canOutput = ['pump', 'reactor', 'water_tank'].includes(building.type);
       if (canOutput) {
-        return `<div class="tooltip-connections tooltip-disconnected">⚠️ Not connected to network</div>`;
+        return `<div class="tooltip-connections tooltip-disconnected">${coloredIcon('warning')} Not connected to network</div>`;
       }
       return '';
     }
@@ -151,8 +168,8 @@ export class Tooltip {
     if (incoming.length > 0) {
       const sources = incoming.map(c => {
         const name = BUILDING_META[c.building.type].name;
-        const icon = c.type === 'water' ? '💧' : '🔥';
-        return `${icon} ${name}`;
+        const resourceIcon = c.type === 'water' ? coloredIcon('water') : coloredIcon('heat');
+        return `${resourceIcon} ${name}`;
       }).join(', ');
       html += `<div class="tooltip-conn-in">← Receiving: ${sources}</div>`;
     }
@@ -160,8 +177,8 @@ export class Tooltip {
     if (outgoing.length > 0) {
       const targets = outgoing.map(c => {
         const name = BUILDING_META[c.building.type].name;
-        const icon = c.type === 'water' ? '💧' : '🔥';
-        return `${icon} ${name}`;
+        const resourceIcon = c.type === 'water' ? coloredIcon('water') : coloredIcon('heat');
+        return `${resourceIcon} ${name}`;
       }).join(', ');
       html += `<div class="tooltip-conn-out">→ Sending: ${targets}</div>`;
     }
@@ -169,10 +186,10 @@ export class Tooltip {
     if (!isOperational && missing.length > 0 && building.type !== 'distiller') {
       const missingNames = missing.map(m => {
         const name = BUILDING_META[m.type]?.name || m.type;
-        const icon = m.resourceType === 'water' ? '💧' : '🔥';
-        return `${icon} ${name}`;
+        const resourceIcon = m.resourceType === 'water' ? coloredIcon('water') : coloredIcon('heat');
+        return `${resourceIcon} ${name}`;
       }).join(', ');
-      html += `<div class="tooltip-disconnected">⚠️ Needs: ${missingNames}</div>`;
+      html += `<div class="tooltip-disconnected">${coloredIcon('warning')} Needs: ${missingNames}</div>`;
     }
 
     html += '</div>';

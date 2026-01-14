@@ -209,7 +209,8 @@ export class BuildingManager {
       reactor: 'reactor',
       distiller: 'distiller',
       microrayon: 'microrayon',
-      water_tank: 'water_tank'
+      water_tank: 'water_tank',
+      thermal_plant: 'reactor'  // Use reactor sound for thermal plant
     };
     const sound = buildingSounds[building.type];
     if (sound) {

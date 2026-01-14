@@ -43,7 +43,7 @@ export const TILE_COLORS: Record<TileType, string> = {
 // Building Types
 // ============================================
 
-export type BuildingType = 'pump' | 'reactor' | 'distiller' | 'microrayon' | 'water_tank';
+export type BuildingType = 'pump' | 'reactor' | 'distiller' | 'microrayon' | 'water_tank' | 'thermal_plant';
 
 export interface Building {
   id: string;
@@ -64,7 +64,8 @@ export const BUILDING_COSTS: Record<BuildingType, Partial<Resources>> = {
   reactor: { electricity: 50 },
   distiller: { electricity: 30 },
   microrayon: { freshWater: 20, heat: 10 },
-  water_tank: { electricity: 15 }
+  water_tank: { electricity: 15 },
+  thermal_plant: { electricity: 40 }
 };
 
 export const BUILDING_PRODUCTION: Record<BuildingType, ProductionRule> = {
@@ -72,7 +73,8 @@ export const BUILDING_PRODUCTION: Record<BuildingType, ProductionRule> = {
   reactor: { consumes: {}, produces: { heat: 50, electricity: 20 }, special: 'tempIncrease' },
   distiller: { consumes: { seawater: 10, heat: 10 }, produces: { freshWater: 10 } },
   microrayon: { consumes: { freshWater: 5, heat: 5 }, produces: { happiness: 1 } },
-  water_tank: { consumes: {}, produces: {} }
+  water_tank: { consumes: {}, produces: {} },
+  thermal_plant: { consumes: {}, produces: { heat: 15, electricity: 25 } }
 };
 
 export const BUILDING_PLACEMENT: Record<BuildingType, TileType[]> = {
@@ -80,7 +82,13 @@ export const BUILDING_PLACEMENT: Record<BuildingType, TileType[]> = {
   reactor: ['rock'],
   distiller: ['sand', 'rock'],
   microrayon: ['sand'],
-  water_tank: ['sand', 'rock']
+  water_tank: ['sand', 'rock'],
+  thermal_plant: ['sand', 'rock']
+};
+
+// Maximum number of each building type allowed (undefined = unlimited)
+export const BUILDING_MAX_ALLOWED: Partial<Record<BuildingType, number>> = {
+  reactor: 1  // BN-350 is unique - the heart of Aktau
 };
 
 export const WATER_TANK_CAPACITY = 50;
@@ -98,7 +106,7 @@ export interface ReactorState {
 // Game State
 // ============================================
 
-export type GameOverReason = 'meltdown' | 'drought' | 'freeze' | 'extinction';
+export type GameOverReason = 'meltdown' | 'drought' | 'freeze' | 'extinction' | 'revolt';
 
 export interface GameStateData {
   resources: Resources;

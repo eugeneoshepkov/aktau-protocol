@@ -24,8 +24,34 @@ import { FilmGrainEffect, HeatHazeEffect } from './engine/PostProcess';
 import { ParticleManager } from './effects/ParticleManager';
 import { ICONS } from './ui/Icons';
 import { ambientManager } from './simulation/ambient';
+import { getTileTypeAt, getCoastlineZ } from './grid/TileTypes';
+import { getTileCenter } from './grid/GridCoords';
+import { GRID_SIZE } from './types';
 
 let gameLoopStarted = false;
+
+/**
+ * Find a rock tile near the coast for the reactor placement.
+ * The reactor needs to be within pipe connection range (5 tiles) of the sea
+ * for water pump connections.
+ */
+function findReactorLocation(): { x: number; z: number } | null {
+  // Search for rock tiles near the coast (within pump connection range)
+  // Start from just inland of the coast and work further inland
+  for (let z = 12; z < 25; z++) {
+    for (let x = 0; x < GRID_SIZE; x++) {
+      const tileType = getTileTypeAt(x, z);
+      if (tileType === 'rock') {
+        // Check if within 5 tiles of sea (pump connection range)
+        const coastZ = getCoastlineZ(x);
+        if (z - coastZ <= 5 && z - coastZ > 0) {
+          return { x, z };
+        }
+      }
+    }
+  }
+  return null;
+}
 
 async function initGame(): Promise<void> {
   console.log('Initializing Caspian Atom - The Aktau Protocol');
@@ -79,6 +105,19 @@ async function initGame(): Promise<void> {
       tickSystem.togglePause();
       soundManager.play('click');
     }
+
+    // Mute/Unmute music (M)
+    if (e.key === 'm' || e.key === 'M') {
+      const muted = !musicManager.isMuted();
+      musicManager.setMuted(muted);
+      localStorage.setItem('aktau-muted', muted.toString());
+      // Update HUD volume icon
+      const volumeIcon = document.querySelector('.volume-icon');
+      if (volumeIcon) {
+        volumeIcon.innerHTML = muted ? ICONS.volumeOff : ICONS.volumeOn;
+      }
+      soundManager.play('click');
+    }
   });
 
   await assetManager.initialize(scene);
@@ -116,6 +155,21 @@ async function initGame(): Promise<void> {
   buildingManager.onSelectionChange(() => {
     pipeManager.hideConnectionPreview();
   });
+
+  // Auto-place the BN-350 reactor near the coast at game start
+  const reactorLocation = findReactorLocation();
+  if (reactorLocation) {
+    // Remove any decoration at the reactor location first
+    decorManager.removeDecorationAt(reactorLocation.x, reactorLocation.z);
+    gameState.placeBuilding('reactor', reactorLocation.x, reactorLocation.z);
+    console.log(`BN-350 reactor auto-placed at (${reactorLocation.x}, ${reactorLocation.z})`);
+
+    // Center camera on the reactor to draw attention to it
+    const reactorWorldPos = getTileCenter(reactorLocation.x, reactorLocation.z);
+    camera.setTarget(reactorWorldPos);
+  } else {
+    console.warn('Could not find suitable rock tile for reactor near coast');
+  }
 
   gameState.on('resourceChange', () => {
     particleManager.updateReactorIntensity();

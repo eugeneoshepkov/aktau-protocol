@@ -340,6 +340,35 @@ export class PipeManager {
     return connections.some(c => c.building.type === 'reactor' && c.direction === 'incoming');
   }
 
+  /**
+   * Check if a water_tank has a valid supply chain back to a primary water source
+   * (pump for seawater, distiller for freshwater)
+   */
+  private hasWaterSupplyChain(tank: Building, visited: Set<string> = new Set()): boolean {
+    if (visited.has(tank.id)) return false; // Prevent infinite loops
+    visited.add(tank.id);
+
+    const connections = this.getConnectionsForBuilding(tank);
+    const incomingWater = connections.filter(
+      c => c.direction === 'incoming' && c.type === 'water'
+    );
+
+    for (const conn of incomingWater) {
+      // Primary sources - direct supply
+      if (conn.building.type === 'pump' || conn.building.type === 'distiller') {
+        return true;
+      }
+      // Relay through another tank - recursive check
+      if (conn.building.type === 'water_tank') {
+        if (this.hasWaterSupplyChain(conn.building, visited)) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
   public isFullyOperational(building: Building): boolean {
     const requirements = BUILDING_REQUIREMENTS[building.type];
     if (!requirements || requirements.requiredInputs.length === 0) {
@@ -349,11 +378,37 @@ export class PipeManager {
     const connections = this.getConnectionsForBuilding(building);
     const incomingConnections = connections.filter(c => c.direction === 'incoming');
 
-    for (const req of requirements.requiredInputs) {
-      const hasConnection = incomingConnections.some(
-        c => c.building.type === req.type && c.type === req.resourceType
-      );
-      if (!hasConnection) {
+    // Group requirements by resourceType - need at least ONE provider for each resourceType
+    const resourceTypes = new Set(requirements.requiredInputs.map(r => r.resourceType));
+
+    for (const resourceType of resourceTypes) {
+      // Get all building types that can provide this resource
+      const providers = requirements.requiredInputs
+        .filter(r => r.resourceType === resourceType)
+        .map(r => r.type);
+
+      let hasProvider = false;
+
+      // Check direct connections
+      for (const conn of incomingConnections) {
+        if (conn.type !== resourceType) continue;
+
+        // Direct connection from a primary source
+        if (providers.includes(conn.building.type) && conn.building.type !== 'water_tank') {
+          hasProvider = true;
+          break;
+        }
+
+        // Water tank relay - check if tank has valid supply chain
+        if (conn.building.type === 'water_tank' && resourceType === 'water') {
+          if (this.hasWaterSupplyChain(conn.building)) {
+            hasProvider = true;
+            break;
+          }
+        }
+      }
+
+      if (!hasProvider) {
         return false;
       }
     }
@@ -371,12 +426,39 @@ export class PipeManager {
     const incomingConnections = connections.filter(c => c.direction === 'incoming');
     const missing: { type: BuildingType; resourceType: 'water' | 'heat' }[] = [];
 
-    for (const req of requirements.requiredInputs) {
-      const hasConnection = incomingConnections.some(
-        c => c.building.type === req.type && c.type === req.resourceType
-      );
-      if (!hasConnection) {
-        missing.push({ type: req.type, resourceType: req.resourceType });
+    // Group requirements by resourceType
+    const resourceTypes = new Set(requirements.requiredInputs.map(r => r.resourceType));
+
+    for (const resourceType of resourceTypes) {
+      // Get all building types that can provide this resource
+      const providers = requirements.requiredInputs
+        .filter(r => r.resourceType === resourceType)
+        .map(r => r.type);
+
+      let hasProvider = false;
+
+      // Check direct connections and relay chains
+      for (const conn of incomingConnections) {
+        if (conn.type !== resourceType) continue;
+
+        // Direct connection from a primary source
+        if (providers.includes(conn.building.type) && conn.building.type !== 'water_tank') {
+          hasProvider = true;
+          break;
+        }
+
+        // Water tank relay - check if tank has valid supply chain
+        if (conn.building.type === 'water_tank' && resourceType === 'water') {
+          if (this.hasWaterSupplyChain(conn.building)) {
+            hasProvider = true;
+            break;
+          }
+        }
+      }
+
+      if (!hasProvider) {
+        // Return the first provider type as the missing one (for display purposes)
+        missing.push({ type: providers[0], resourceType });
       }
     }
 

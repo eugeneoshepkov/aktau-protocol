@@ -7,12 +7,19 @@ export interface ConnectionRule {
 }
 
 export const CONNECTION_RULES: ConnectionRule[] = [
+  // Water from pumps
   { source: 'pump', target: 'distiller', resourceType: 'water' },
   { source: 'pump', target: 'water_tank', resourceType: 'water' },
+  // Heat sources
   { source: 'reactor', target: 'distiller', resourceType: 'heat' },
+  { source: 'thermal_plant', target: 'distiller', resourceType: 'heat' },
+  // Water distribution
   { source: 'distiller', target: 'microrayon', resourceType: 'water' },
   { source: 'distiller', target: 'water_tank', resourceType: 'water' },
   { source: 'water_tank', target: 'microrayon', resourceType: 'water' },
+  // Water tank relay chains
+  { source: 'water_tank', target: 'water_tank', resourceType: 'water' },
+  { source: 'water_tank', target: 'distiller', resourceType: 'water' },
 ];
 
 export interface BuildingRequirement {
@@ -37,23 +44,31 @@ export const BUILDING_REQUIREMENTS: Record<BuildingType, BuildingRequirements> =
     canCoolReactor: false,
     canProduce: true
   },
-  distiller: { 
+  distiller: {
     requiredInputs: [
       { type: 'pump', resourceType: 'water' },
-      { type: 'reactor', resourceType: 'heat' }
-    ], 
+      { type: 'water_tank', resourceType: 'water' },  // Can receive water via tank relay
+      { type: 'reactor', resourceType: 'heat' },
+      { type: 'thermal_plant', resourceType: 'heat' }
+    ],
     canCoolReactor: true,
     canProduce: true
   },
-  microrayon: { 
+  microrayon: {
     requiredInputs: [
-      { type: 'distiller', resourceType: 'water' }
-    ], 
+      { type: 'distiller', resourceType: 'water' },
+      { type: 'water_tank', resourceType: 'water' }  // Can receive water via tank relay
+    ],
     canCoolReactor: false,
     canProduce: true
   },
-  water_tank: { 
-    requiredInputs: [], 
+  water_tank: {
+    requiredInputs: [],
+    canCoolReactor: false,
+    canProduce: true
+  },
+  thermal_plant: {
+    requiredInputs: [],
     canCoolReactor: false,
     canProduce: true
   },
@@ -71,7 +86,10 @@ export const PIPE_VISUAL_CONFIG: Record<BuildingType, { targets: BuildingType[];
   ],
   microrayon: [],
   water_tank: [
-    { targets: ['microrayon'], color: '#5599CC', type: 'water' }
+    { targets: ['microrayon', 'distiller', 'water_tank'], color: '#5599CC', type: 'water' }
+  ],
+  thermal_plant: [
+    { targets: ['distiller'], color: '#D97706', type: 'heat' }
   ]
 };
 

@@ -8,12 +8,13 @@ import { soundManager } from "../managers/SoundManager";
 import { gameState } from "../simulation/GameState";
 import type { BuildingType } from "../types";
 
+// Reactor is auto-placed at game start, so not in menu
 const BUILDING_HOTKEYS: Record<string, BuildingType> = {
   "1": "pump",
-  "2": "reactor",
-  "3": "distiller",
-  "4": "microrayon",
-  "5": "water_tank",
+  "2": "distiller",
+  "3": "microrayon",
+  "4": "water_tank",
+  "5": "thermal_plant",
 };
 
 const BUILDING_COLORS: Record<BuildingType, string> = {
@@ -22,13 +23,13 @@ const BUILDING_COLORS: Record<BuildingType, string> = {
   distiller: "#60a5fa",
   microrayon: "#a78bfa",
   water_tank: "#6ee7b7",
+  thermal_plant: "#d97706",
 };
 
 export class BuildPanel {
   private container: HTMLDivElement;
   private buildingManager: BuildingManager;
   private buttons: Map<BuildingType, HTMLButtonElement> = new Map();
-  private geigerInterval: number | null = null;
 
   constructor(buildingManager: BuildingManager) {
     this.buildingManager = buildingManager;
@@ -36,12 +37,9 @@ export class BuildPanel {
     document.body.appendChild(this.container);
     this.setupKeyboardShortcuts();
 
-    // Update reactor button cost when first reactor is placed
-    gameState.on('buildingPlaced', (data) => {
-      const building = data as { type: BuildingType };
-      if (building.type === 'reactor') {
-        this.updateReactorButtonCost();
-      }
+    // Update button states when buildings are placed (for max limits and cost changes)
+    gameState.on('buildingPlaced', () => {
+      this.updateButtonStates();
     });
   }
 
@@ -78,7 +76,8 @@ export class BuildPanel {
     const buttonContainer = document.createElement("div");
     buttonContainer.className = "build-buttons";
 
-    const types = getAllBuildingTypes();
+    // Filter out reactor since it's auto-placed at game start
+    const types = getAllBuildingTypes().filter(t => t !== 'reactor');
     types.forEach((type, index) => {
       const meta = BUILDING_META[type];
       const button = document.createElement("button");
@@ -104,11 +103,6 @@ export class BuildPanel {
         soundManager.play("click");
       });
 
-      if (type === "reactor") {
-        button.addEventListener("mouseenter", () => this.startGeigerSound());
-        button.addEventListener("mouseleave", () => this.stopGeigerSound());
-      }
-
       buttonContainer.appendChild(button);
       this.buttons.set(type, button);
     });
@@ -118,21 +112,6 @@ export class BuildPanel {
     return container;
   }
 
-  private startGeigerSound(): void {
-    this.stopGeigerSound();
-    soundManager.playGeigerClick();
-    this.geigerInterval = window.setInterval(() => {
-      soundManager.playGeigerClick();
-    }, 150 + Math.random() * 200);
-  }
-
-  private stopGeigerSound(): void {
-    if (this.geigerInterval !== null) {
-      clearInterval(this.geigerInterval);
-      this.geigerInterval = null;
-    }
-  }
-
   private getBuildingIcon(type: BuildingType): string {
     const icons: Record<BuildingType, string> = {
       pump: ICONS.pump,
@@ -140,11 +119,16 @@ export class BuildPanel {
       distiller: ICONS.distiller,
       microrayon: ICONS.microrayon,
       water_tank: ICONS.water_tank,
+      thermal_plant: ICONS.thermal_plant,
     };
     return icons[type];
   }
 
-  private formatCost(costs: Partial<Record<string, number>>): string {
+  private formatCost(costs: Partial<Record<string, number>> | null): string {
+    // null means max limit reached
+    if (costs === null) {
+      return '<span class="cost-maxed">BUILT</span>';
+    }
     const parts: string[] = [];
     for (const [resource, amount] of Object.entries(costs)) {
       if (amount) {
@@ -157,16 +141,22 @@ export class BuildPanel {
     return parts.join("") || "Free";
   }
 
-  private getDisplayCost(type: BuildingType): Partial<Record<string, number>> {
-    return gameState.getEffectiveCost(type) as Partial<Record<string, number>>;
+  private getDisplayCost(type: BuildingType): Partial<Record<string, number>> | null {
+    return gameState.getEffectiveCost(type) as Partial<Record<string, number>> | null;
   }
 
-  private updateReactorButtonCost(): void {
-    const button = this.buttons.get('reactor');
-    if (button) {
+  private updateButtonStates(): void {
+    for (const [type, button] of this.buttons) {
+      const cost = this.getDisplayCost(type);
       const costEl = button.querySelector('.build-cost');
-      if (costEl) {
-        costEl.innerHTML = this.formatCost(this.getDisplayCost('reactor'));
+
+      if (cost === null) {
+        // Max limit reached - disable button
+        button.classList.add('max-reached');
+        if (costEl) costEl.innerHTML = this.formatCost(null);
+      } else {
+        button.classList.remove('max-reached');
+        if (costEl) costEl.innerHTML = this.formatCost(cost);
       }
     }
   }
@@ -219,7 +209,6 @@ export class BuildPanel {
   }
 
   public dispose(): void {
-    this.stopGeigerSound();
     this.container.remove();
   }
 }

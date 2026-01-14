@@ -133,6 +133,9 @@ export class Chronicle {
         </div>
         <div class="chronicle-archive-stats"></div>
         <div class="chronicle-archive-list"></div>
+        <div class="chronicle-archive-footer">
+          <button class="chronicle-reset-btn">Reset Discoveries</button>
+        </div>
       </div>
     `;
     document.body.appendChild(this.archiveEl);
@@ -144,6 +147,14 @@ export class Chronicle {
 
     const closeBtn = this.archiveEl.querySelector('.chronicle-archive-close');
     closeBtn?.addEventListener('click', () => this.hideArchive());
+
+    // Reset button handler
+    const resetBtn = this.archiveEl.querySelector('.chronicle-reset-btn');
+    resetBtn?.addEventListener('click', () => {
+      this.reset();
+      this.updateArchiveContent();
+      soundManager.play('click');
+    });
   }
 
   private createArchiveButton(): void {

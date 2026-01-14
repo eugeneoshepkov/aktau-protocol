@@ -53,6 +53,14 @@ export const BUILDING_META: Record<BuildingType, BuildingMeta> = {
     allowedTiles: BUILDING_PLACEMENT.water_tank,
     costs: BUILDING_COSTS.water_tank,
     production: BUILDING_PRODUCTION.water_tank
+  },
+  thermal_plant: {
+    type: 'thermal_plant',
+    name: 'Thermal Plant',
+    description: 'Fossil fuel power plant. Provides electricity and heat, but less than the reactor.',
+    allowedTiles: BUILDING_PLACEMENT.thermal_plant,
+    costs: BUILDING_COSTS.thermal_plant,
+    production: BUILDING_PRODUCTION.thermal_plant
   }
 };
 

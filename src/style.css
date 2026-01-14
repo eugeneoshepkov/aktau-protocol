@@ -315,12 +315,12 @@ html, body {
   color: #ccc;
 }
 
-.tooltip-consumes span {
+.tooltip-consumes > span {
   color: #f87171;
   margin-left: 4px;
 }
 
-.tooltip-produces span {
+.tooltip-produces > span {
   color: #4ade80;
   margin-left: 4px;
 }
@@ -537,6 +537,21 @@ html, body {
   background: rgba(100, 200, 255, 0.2);
   border-color: #4a90a4;
   box-shadow: 0 0 10px rgba(74, 144, 164, 0.5);
+}
+
+.build-button.max-reached {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.build-button.max-reached .build-cost {
+  color: #4ade80;
+}
+
+.cost-maxed {
+  color: #4ade80;
+  font-weight: bold;
+  font-size: 10px;
 }
 
 .build-icon {
@@ -1044,7 +1059,7 @@ html, body {
   background: rgba(0, 0, 0, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 50%;
-  color: #64748b;
+  color: #fafafa;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1087,7 +1102,7 @@ html, body {
   background: rgba(0, 0, 0, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 50%;
-  color: #64748b;
+  color: #fafafa;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1286,7 +1301,7 @@ html, body {
   background: rgba(0, 0, 0, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 50%;
-  color: #64748b;
+  color: #fafafa;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1668,6 +1683,29 @@ html, body {
   padding: 16px 24px;
   max-height: 55vh;
   overflow-y: auto;
+}
+
+.chronicle-archive-footer {
+  padding: 16px 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: center;
+}
+
+.chronicle-reset-btn {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.chronicle-reset-btn:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: rgba(239, 68, 68, 0.5);
 }
 
 .archive-category {
