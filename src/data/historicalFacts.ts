@@ -201,7 +201,7 @@ This multi-stage flash (MSF) process was remarkably efficient. By using 40 or mo
 The plants ran continuously for decades, producing water that met strict Soviet drinking standards. Operators monitored hundreds of valves, pumps, and sensors to keep the delicate balance of temperature and pressure across all stages.`,
     wikiUrls: {
       en: 'https://en.wikipedia.org/wiki/Multi-stage_flash_distillation',
-      ru: 'https://ru.wikipedia.org/wiki/Многоступенчатая_флеш-дистилляция'
+      ru: 'https://en.wikipedia.org/wiki/Multi-stage_flash_distillation'
     },
     trigger: { type: 'building', value: 'distiller' }
   },
@@ -251,8 +251,8 @@ The city layout clustered residential areas near the coast where temperatures we
 
 Buildings were oriented to minimize sun exposure on their longest walls. Light-colored facades reflected heat, and deep balconies provided shade. These passive cooling strategies reduced the enormous energy demand that would otherwise be needed for air conditioning.`,
     wikiUrls: {
-      en: 'https://en.wikipedia.org/wiki/Urban_planning_in_the_Soviet_Union',
-      ru: 'https://ru.wikipedia.org/wiki/Градостроительство_СССР'
+      en: 'https://en.wikipedia.org/wiki/Urban_planning_in_Communist_countries',
+      ru: 'https://ru.wikipedia.org/wiki/Городское_планирование_в_СССР'
     },
     trigger: { type: 'building', value: 5 }
   },

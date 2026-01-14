@@ -37,13 +37,20 @@ export class Chronicle {
     this.createArchiveButton();
     this.setupEventListeners();
 
-    // Check for day 1 trigger on startup (after a short delay to let UI initialize)
-    setTimeout(() => {
+    // Check for day 1 trigger on startup (after intro screen is dismissed)
+    const checkDay1 = () => {
+      // Wait until intro screen is dismissed
+      const introOverlay = document.getElementById('intro-overlay');
+      if (introOverlay) {
+        setTimeout(checkDay1, 500);
+        return;
+      }
       const currentDay = gameState.getDay();
       if (currentDay === 1) {
         this.checkDayTrigger(1);
       }
-    }, 2000);
+    };
+    setTimeout(checkDay1, 2000);
   }
 
   private loadDiscoveredFacts(): void {
@@ -142,6 +149,9 @@ export class Chronicle {
           <button class="chronicle-modal-close">${ICONS.close}</button>
         </div>
         <h2 class="chronicle-modal-title"></h2>
+        <div class="chronicle-modal-image-container hidden">
+          <img class="chronicle-modal-image" src="" alt="" />
+        </div>
         <div class="chronicle-modal-body"></div>
         <div class="chronicle-modal-footer">
           <button class="chronicle-modal-back">
@@ -389,12 +399,27 @@ export class Chronicle {
     const bodyEl = this.modalEl.querySelector('.chronicle-modal-body');
     const wikiEl = this.modalEl.querySelector('.chronicle-modal-wiki') as HTMLAnchorElement;
     const footerEl = this.modalEl.querySelector('.chronicle-modal-footer');
+    const imageContainer = this.modalEl.querySelector('.chronicle-modal-image-container');
+    const imageEl = this.modalEl.querySelector('.chronicle-modal-image') as HTMLImageElement;
 
     if (categoryEl) {
       categoryEl.textContent = td(`chronicle.category.${fact.category}`);
     }
 
     if (titleEl) titleEl.textContent = td(`fact.${fact.id}.title`);
+
+    // Handle image - try to load from /pictures/chronicle/{fact.id}.png
+    if (imageContainer && imageEl) {
+      const imagePath = `/pictures/chronicle/${fact.id}.png`;
+      imageEl.onload = () => {
+        imageContainer.classList.remove('hidden');
+      };
+      imageEl.onerror = () => {
+        imageContainer.classList.add('hidden');
+      };
+      imageEl.src = imagePath;
+      imageEl.alt = td(`fact.${fact.id}.title`);
+    }
 
     if (bodyEl) {
       // Convert paragraphs - use translated text
