@@ -122,27 +122,29 @@ export class PipeManager {
   public showConnectionPreview(buildingType: BuildingType, gridX: number, gridZ: number): void {
     this.hideConnectionPreview();
 
-    const connections = PIPE_CONNECTIONS[buildingType];
-    if (!connections || connections.length === 0) return;
-
     const buildings = gameState.getBuildings();
     const hoverPos = getTileCenter(gridX, gridZ);
     hoverPos.y = 0.3;
 
-    for (const connRule of connections) {
-      const targets = buildings.filter((b) => {
-        if (!connRule.targets.includes(b.type)) return false;
-        const dx = gridX - b.gridX;
-        const dz = gridZ - b.gridZ;
-        const dist = Math.sqrt(dx * dx + dz * dz);
-        return dist > 0 && dist <= MAX_PIPE_DISTANCE;
-      });
+    // Show outgoing connections (from the building being placed to existing buildings)
+    const connections = PIPE_CONNECTIONS[buildingType];
+    if (connections && connections.length > 0) {
+      for (const connRule of connections) {
+        const targets = buildings.filter((b) => {
+          if (!connRule.targets.includes(b.type)) return false;
+          const dx = gridX - b.gridX;
+          const dz = gridZ - b.gridZ;
+          const dist = Math.sqrt(dx * dx + dz * dz);
+          return dist > 0 && dist <= MAX_PIPE_DISTANCE;
+        });
 
-      for (const target of targets) {
-        this.createPreviewPipe(hoverPos, target, connRule.type);
+        for (const target of targets) {
+          this.createPreviewPipe(hoverPos, target, connRule.type);
+        }
       }
     }
 
+    // Show incoming connections (from existing buildings to the building being placed)
     for (const [sourceType, rules] of Object.entries(PIPE_CONNECTIONS)) {
       for (const rule of rules) {
         if (!rule.targets.includes(buildingType)) continue;
