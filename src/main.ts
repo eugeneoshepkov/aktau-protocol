@@ -17,6 +17,7 @@ import { ShortcutsModal } from './ui/ShortcutsModal';
 import { Chronicle } from './ui/Chronicle';
 import { feedbackManager } from './ui/FeedbackManager';
 import { TutorialManager } from './ui/TutorialManager';
+import { DiagnosticManager } from './ui/DiagnosticManager';
 import { tickSystem } from './simulation/TickSystem';
 import { gameState } from './simulation/GameState';
 import { eventSystem } from './simulation/EventSystem';
@@ -190,6 +191,9 @@ async function initGame(): Promise<void> {
 
   const tooltip = new Tooltip();
   tooltip.setPipeManager(pipeManager);
+
+  const diagnosticManager = new DiagnosticManager();
+  diagnosticManager.setPipeManager(pipeManager);
 
   inputManager.setTileHoverCallback((x, z) => {
     tooltip.show(x, z);
