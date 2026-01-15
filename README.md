@@ -51,6 +51,8 @@ You are the city engineer. Balance the impossible:
     Fresh Water ──→ [Microrayon Housing] ──→ Happy Citizens
 ```
 
+> **Tip:** Each building has limited capacity. One distiller can only supply 2 housing blocks. Watch the ghost preview colors when placing—green means connected, gray means no capacity available!
+
 ### Buildings
 
 | Building | What it Does |
@@ -59,7 +61,7 @@ You are the city engineer. Balance the impossible:
 | **BN-350 Reactor** | The heart of the city. Generates heat & power. *Warning: +1°C every tick!* |
 | **Desalination Plant** | Converts seawater → freshwater. Also cools the reactor. |
 | **Microrayon Housing** | Soviet housing blocks. Needs water connection or citizens get angry. |
-| **Water Tank** | Emergency freshwater storage |
+| **Water Tank** | Extends water distribution network. Each tank supplies 2 more housing blocks. |
 
 ### Seasons
 

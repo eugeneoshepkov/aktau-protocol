@@ -1,6 +1,7 @@
 import { gameState, type ResourceTrend, type Season } from '../simulation/GameState';
 import { tickSystem } from '../simulation/TickSystem';
 import { musicManager } from '../managers/MusicManager';
+import { soundManager } from '../managers/SoundManager';
 import { ICONS } from './Icons';
 import type { Resources } from '../types';
 import { t, td } from '../i18n';
@@ -179,6 +180,7 @@ export class HUD {
       volumeIcon.addEventListener('click', () => {
         const muted = !musicManager.isMuted();
         musicManager.setMuted(muted);
+        soundManager.setMuted(muted);
         localStorage.setItem('aktau-muted', muted.toString());
         volumeIcon.innerHTML = muted ? ICONS.volumeOff : ICONS.volumeOn;
       });

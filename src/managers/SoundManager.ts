@@ -61,7 +61,7 @@ class SoundManagerClass {
   private initialized: boolean = false;
 
   constructor() {
-    const savedMuted = localStorage.getItem('aktau-sfx-muted');
+    const savedMuted = localStorage.getItem('aktau-muted');
     if (savedMuted !== null) {
       this.muted = savedMuted === 'true';
     }
@@ -126,7 +126,7 @@ class SoundManagerClass {
 
   public setMuted(muted: boolean): void {
     this.muted = muted;
-    localStorage.setItem('aktau-sfx-muted', muted.toString());
+    localStorage.setItem('aktau-muted', muted.toString());
   }
 
   public isMuted(): boolean {
@@ -135,7 +135,7 @@ class SoundManagerClass {
 
   public toggleMute(): boolean {
     this.muted = !this.muted;
-    localStorage.setItem('aktau-sfx-muted', this.muted.toString());
+    localStorage.setItem('aktau-muted', this.muted.toString());
     return this.muted;
   }
 }

@@ -95,9 +95,7 @@ export class DiagnosticManager {
       }
     }
 
-    const disconnectedHousing = microrayons.filter(
-      (m) => !this.pipeManager!.isFullyOperational(m)
-    );
+    const disconnectedHousing = microrayons.filter((m) => !this.pipeManager!.isFullyOperational(m));
 
     if (disconnectedHousing.length > 0 && microrayons.length > 0) {
       issues.push({

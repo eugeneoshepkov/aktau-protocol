@@ -90,7 +90,7 @@ export const BUILDING_PRODUCTION: Record<BuildingType, ProductionRule> = {
     produces: { happiness: 1 }
   },
   water_tank: { consumes: {}, produces: {} },
-  thermal_plant: { consumes: {}, produces: { heat: 15, electricity: 25 } }
+  thermal_plant: { consumes: { electricity: 10 }, produces: { heat: 15, electricity: 25 } }
 };
 
 export const BUILDING_PLACEMENT: Record<BuildingType, TileType[]> = {
@@ -107,7 +107,59 @@ export const BUILDING_MAX_ALLOWED: Partial<Record<BuildingType, number>> = {
   reactor: 1 // BN-350 is unique - the heart of Aktau
 };
 
+// Building limits based on count of other buildings
+// E.g., thermal_plant requires 5 microrayons per plant (first one free)
+export interface BuildingScalingLimit {
+  requiredBuilding: BuildingType;
+  countPerAllowed: number; // How many of requiredBuilding needed per one of this building
+  freeCount: number; // How many can be built without requirements
+}
+
+export const BUILDING_SCALING_LIMITS: Partial<Record<BuildingType, BuildingScalingLimit>> = {
+  thermal_plant: {
+    requiredBuilding: 'microrayon',
+    countPerAllowed: 5, // Need 5 microrayons per thermal plant (after free ones)
+    freeCount: 1 // First thermal plant is free
+  }
+};
+
 export const WATER_TANK_CAPACITY = 50;
+
+// ============================================
+// Building Capacity System
+// ============================================
+
+// What resource each building provides and how much capacity
+export interface CapacityConfig {
+  resource: 'seawater' | 'freshWater' | 'heat';
+  provides: number;
+}
+
+export const BUILDING_CAPACITY: Partial<Record<BuildingType, CapacityConfig>> = {
+  pump: { resource: 'seawater', provides: 10 },
+  distiller: { resource: 'freshWater', provides: 10 },
+  water_tank: { resource: 'freshWater', provides: 10 }, // Relay capacity (requires distiller supply chain)
+  reactor: { resource: 'heat', provides: 50 },
+  thermal_plant: { resource: 'heat', provides: 15 }
+};
+
+// What resource each building consumes (for capacity allocation)
+export interface ConsumptionConfig {
+  resource: 'seawater' | 'freshWater' | 'heat';
+  amount: number;
+  priority: number; // Lower = higher priority (distillers get heat before microrayons)
+}
+
+export const BUILDING_CONSUMPTION: Partial<Record<BuildingType, ConsumptionConfig[]>> = {
+  distiller: [
+    { resource: 'seawater', amount: 10, priority: 1 },
+    { resource: 'heat', amount: 10, priority: 1 } // Distillers get heat first
+  ],
+  microrayon: [
+    { resource: 'freshWater', amount: 5, priority: 1 },
+    { resource: 'heat', amount: 5, priority: 2 } // Microrayons get heat after distillers
+  ]
+};
 
 // ============================================
 // Reactor State

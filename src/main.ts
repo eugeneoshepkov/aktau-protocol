@@ -108,10 +108,11 @@ async function initGame(): Promise<void> {
       soundManager.play('click');
     }
 
-    // Mute/Unmute music (M)
+    // Mute/Unmute music and sound effects (M)
     if (keyMatches(e.key, 'm')) {
       const muted = !musicManager.isMuted();
       musicManager.setMuted(muted);
+      soundManager.setMuted(muted);
       localStorage.setItem('aktau-muted', muted.toString());
       // Update HUD volume icon
       const volumeIcon = document.querySelector('.volume-icon');
@@ -210,14 +211,20 @@ async function initGame(): Promise<void> {
       const canPlace = buildingManager.canPlaceAt(x, z);
       gridManager.showHighlight(x, z, canPlace);
       pipeManager.showConnectionPreview(selectedType, x, z);
+
+      // Show ghost building preview: green=valid, red=invalid, gray=inefficient
+      const wouldWork = pipeManager.wouldBeOperational(selectedType, x, z);
+      buildingManager.showGhostPreview(selectedType, x, z, canPlace, wouldWork);
     } else {
       pipeManager.hideConnectionPreview();
+      buildingManager.hideGhostPreview();
     }
   });
 
   inputManager.setPointerLeaveCallback(() => {
     tooltip.hide();
     pipeManager.hideConnectionPreview();
+    buildingManager.hideGhostPreview();
   });
 
   gameState.on('reactorWarning', () => {

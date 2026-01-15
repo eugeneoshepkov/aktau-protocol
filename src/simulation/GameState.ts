@@ -3,7 +3,8 @@ import {
   BUILDING_PRODUCTION,
   BUILDING_COSTS,
   BUILDING_PLACEMENT,
-  BUILDING_MAX_ALLOWED
+  BUILDING_MAX_ALLOWED,
+  BUILDING_SCALING_LIMITS
 } from '../types';
 import type {
   Resources,
@@ -14,6 +15,10 @@ import type {
   GameOverReason,
   TileType
 } from '../types';
+import { getCoastlineZ } from '../grid/TileTypes';
+
+// Maximum tiles from coastline where pumps can be placed
+const MAX_PUMP_DISTANCE_FROM_COAST = 2;
 
 // ============================================
 // Event System Types
@@ -170,6 +175,7 @@ export class GameState {
   /**
    * Returns the effective cost for placing a building.
    * First reactor is free to prevent energy deadlock.
+   * Returns null if building limit is reached.
    */
   public getEffectiveCost(type: BuildingType): Partial<Resources> | null {
     const count = this.buildings.filter((b) => b.type === type).length;
@@ -178,6 +184,20 @@ export class GameState {
     // Return null if max limit reached (can't build more)
     if (maxAllowed !== undefined && count >= maxAllowed) {
       return null;
+    }
+
+    // Check scaling limits (e.g., thermal plants require microrayons)
+    const scalingLimit = BUILDING_SCALING_LIMITS[type];
+    if (scalingLimit) {
+      const requiredCount = this.buildings.filter(
+        (b) => b.type === scalingLimit.requiredBuilding
+      ).length;
+      const maxAllowedByScaling =
+        scalingLimit.freeCount + Math.floor(requiredCount / scalingLimit.countPerAllowed);
+
+      if (count >= maxAllowedByScaling) {
+        return null;
+      }
     }
 
     // First reactor is free
@@ -208,6 +228,18 @@ export class GameState {
       };
     }
 
+    // Pumps must be near the coastline
+    if (type === 'pump') {
+      const coastlineZ = getCoastlineZ(gridX);
+      const distanceFromCoast = coastlineZ - gridZ;
+      if (distanceFromCoast > MAX_PUMP_DISTANCE_FROM_COAST) {
+        return {
+          canPlace: false,
+          reason: 'Pump must be placed near the coastline'
+        };
+      }
+    }
+
     // Check if tile is occupied
     const occupied = this.buildings.some((b) => b.gridX === gridX && b.gridZ === gridZ);
     if (occupied) {
@@ -218,6 +250,24 @@ export class GameState {
     const cost = this.getEffectiveCost(type);
     if (cost === null) {
       return { canPlace: false, reason: 'Maximum limit reached' };
+    }
+
+    // Check scaling limits (e.g., thermal plants require microrayons)
+    const scalingLimit = BUILDING_SCALING_LIMITS[type];
+    if (scalingLimit) {
+      const currentCount = this.buildings.filter((b) => b.type === type).length;
+      const requiredCount = this.buildings.filter(
+        (b) => b.type === scalingLimit.requiredBuilding
+      ).length;
+      const maxAllowedByScaling =
+        scalingLimit.freeCount + Math.floor(requiredCount / scalingLimit.countPerAllowed);
+
+      if (currentCount >= maxAllowedByScaling) {
+        return {
+          canPlace: false,
+          reason: `Need ${scalingLimit.countPerAllowed} more ${scalingLimit.requiredBuilding}s`
+        };
+      }
     }
 
     // Check if we have enough resources
@@ -357,8 +407,8 @@ export class GameState {
           buildingCounts[building.type]++;
         } else {
           disconnectedMicrorayons++;
-          // Still count for consumption (they use resources even when unhappy)
-          buildingCounts[building.type]++;
+          // Disconnected microrayons do NOT consume resources - they're not operational
+          // They only cause happiness penalty
         }
       } else {
         buildingCounts[building.type]++;

@@ -1,5 +1,7 @@
 import { ICONS } from './Icons';
 import { t } from '../i18n';
+import { musicManager } from '../managers/MusicManager';
+import { soundManager } from '../managers/SoundManager';
 
 export class IntroScreen {
   private overlay: HTMLDivElement;
@@ -103,6 +105,16 @@ export class IntroScreen {
     localStorage.setItem('aktau-muted', String(this.muted));
     if (this.audio) {
       this.audio.muted = this.muted;
+    }
+    musicManager.setMuted(this.muted);
+    soundManager.setMuted(this.muted);
+    this.updateHUDIcon();
+  }
+
+  private updateHUDIcon(): void {
+    const volumeIcon = document.querySelector('.volume-icon');
+    if (volumeIcon) {
+      volumeIcon.innerHTML = this.muted ? ICONS.volumeOff : ICONS.volumeOn;
     }
   }
 

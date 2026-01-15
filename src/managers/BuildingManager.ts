@@ -14,7 +14,7 @@ import {
 import { gameState } from '../simulation/GameState';
 import { GridManager } from '../grid/GridManager';
 import { getTileCenter } from '../grid/GridCoords';
-import { assetManager } from './AssetManager';
+import { assetManager, type ModelConfig } from './AssetManager';
 import { feedbackManager } from '../ui/FeedbackManager';
 import { soundManager } from './SoundManager';
 import type { Building, BuildingType } from '../types';
@@ -42,6 +42,15 @@ export class BuildingManager {
 
   private selectedBuildingType: BuildingType | null = null;
   private onSelectionChangeCallback: ((type: BuildingType | null) => void) | null = null;
+
+  // Ghost preview properties
+  private ghostMesh: TransformNode | null = null;
+  private ghostMaterials: StandardMaterial[] = [];
+  private ghostType: BuildingType | null = null;
+  private ghostPosition: { x: number; z: number } | null = null;
+  private ghostValidMaterial: StandardMaterial | null = null; // Green - can place & connected
+  private ghostInvalidMaterial: StandardMaterial | null = null; // Red - cannot place
+  private ghostInefficientMaterial: StandardMaterial | null = null; // Gray - can place but not connected
 
   constructor(scene: Scene, gridManager: GridManager) {
     this.scene = scene;
@@ -99,6 +108,9 @@ export class BuildingManager {
       }
       this.materials.set(type, material);
     }
+
+    // Create ghost preview materials
+    this.createGhostMaterials();
   }
 
   private hexToColor3(hex: string): Color3 {
@@ -109,6 +121,260 @@ export class BuildingManager {
       parseInt(result[2], 16) / 255,
       parseInt(result[3], 16) / 255
     );
+  }
+
+  private createGhostMaterials(): void {
+    // Valid (green) - can place AND connected
+    this.ghostValidMaterial = new StandardMaterial('ghost_valid', this.scene);
+    const greenColor = new Color3(0.29, 0.87, 0.5); // #4ADE80
+    this.ghostValidMaterial.diffuseColor = greenColor;
+    this.ghostValidMaterial.emissiveColor = greenColor.scale(0.3);
+    this.ghostValidMaterial.alpha = 0.5;
+    this.ghostValidMaterial.backFaceCulling = false;
+
+    // Invalid (red) - cannot place
+    this.ghostInvalidMaterial = new StandardMaterial('ghost_invalid', this.scene);
+    const redColor = new Color3(0.9, 0.3, 0.3); // Red
+    this.ghostInvalidMaterial.diffuseColor = redColor;
+    this.ghostInvalidMaterial.emissiveColor = redColor.scale(0.3);
+    this.ghostInvalidMaterial.alpha = 0.5;
+    this.ghostInvalidMaterial.backFaceCulling = false;
+
+    // Inefficient (gray) - can place but not connected
+    this.ghostInefficientMaterial = new StandardMaterial('ghost_inefficient', this.scene);
+    const grayColor = new Color3(0.5, 0.5, 0.55); // Gray
+    this.ghostInefficientMaterial.diffuseColor = grayColor;
+    this.ghostInefficientMaterial.emissiveColor = grayColor.scale(0.2);
+    this.ghostInefficientMaterial.alpha = 0.5;
+    this.ghostInefficientMaterial.backFaceCulling = false;
+  }
+
+  public async showGhostPreview(
+    type: BuildingType,
+    gridX: number,
+    gridZ: number,
+    canPlace: boolean,
+    wouldBeOperational: boolean
+  ): Promise<void> {
+    const position = getTileCenter(gridX, gridZ);
+    // Determine ghost state: 'valid' (green), 'invalid' (red), 'inefficient' (gray)
+    const ghostState: 'valid' | 'invalid' | 'inefficient' = !canPlace
+      ? 'invalid'
+      : wouldBeOperational
+        ? 'valid'
+        : 'inefficient';
+
+    // If same type and position, just update color
+    if (
+      this.ghostType === type &&
+      this.ghostPosition?.x === gridX &&
+      this.ghostPosition?.z === gridZ
+    ) {
+      this.updateGhostColor(ghostState);
+      return;
+    }
+
+    // If same type but different position, just move
+    if (this.ghostType === type && this.ghostMesh) {
+      const modelConfig = assetManager.getBuildingModel(type);
+      const yOffset = modelConfig?.yOffset ?? 0;
+      this.ghostMesh.position = new Vector3(position.x, yOffset + GROUND_LEVEL, position.z);
+      this.ghostPosition = { x: gridX, z: gridZ };
+      this.updateGhostColor(ghostState);
+      return;
+    }
+
+    // Different type - recreate ghost
+    this.hideGhostPreview();
+
+    this.ghostType = type;
+    this.ghostPosition = { x: gridX, z: gridZ };
+
+    // Try to create from model
+    if (assetManager.shouldUseModels()) {
+      await this.createGhostFromModel(type, position, ghostState);
+    } else {
+      this.createGhostFromPrimitive(type, position, ghostState);
+    }
+  }
+
+  private async createGhostFromModel(
+    type: BuildingType,
+    position: { x: number; z: number },
+    state: 'valid' | 'invalid' | 'inefficient'
+  ): Promise<void> {
+    // Check for variants (e.g., microrayon housing)
+    if (assetManager.hasVariants(type)) {
+      const modelConfig = assetManager.getRandomVariant(type);
+      if (modelConfig) {
+        await this.createGhostFromSingleModel(type, position, state, modelConfig);
+        return;
+      }
+    }
+
+    // Check for composite models (e.g., thermal_plant, reactor)
+    if (assetManager.hasCompositeModel(type)) {
+      await this.createGhostFromCompositeModel(type, position, state);
+      return;
+    }
+
+    // Check for single model
+    const modelConfig = assetManager.getBuildingModel(type);
+    if (modelConfig) {
+      await this.createGhostFromSingleModel(type, position, state, modelConfig);
+      return;
+    }
+
+    // Fallback to primitive
+    this.createGhostFromPrimitive(type, position, state);
+  }
+
+  private async createGhostFromSingleModel(
+    type: BuildingType,
+    position: { x: number; z: number },
+    state: 'valid' | 'invalid' | 'inefficient',
+    modelConfig: ModelConfig
+  ): Promise<void> {
+    try {
+      const meshes = await assetManager.loadModelFromConfig(modelConfig);
+
+      if (!meshes || meshes.length === 0) {
+        this.createGhostFromPrimitive(type, position, state);
+        return;
+      }
+
+      const parent = new TransformNode(`ghost_${type}`, this.scene);
+      parent.position = new Vector3(position.x, modelConfig.yOffset + GROUND_LEVEL, position.z);
+      parent.scaling = new Vector3(modelConfig.scale, modelConfig.scale, modelConfig.scale);
+      parent.rotation.y = modelConfig.rotation;
+
+      const material = this.getGhostMaterial(state);
+
+      this.ghostMaterials = [];
+      for (const mesh of meshes) {
+        mesh.parent = parent;
+        if (mesh instanceof Mesh && material) {
+          mesh.material = material;
+          this.ghostMaterials.push(material);
+        }
+      }
+
+      this.ghostMesh = parent;
+    } catch {
+      this.createGhostFromPrimitive(type, position, state);
+    }
+  }
+
+  private async createGhostFromCompositeModel(
+    type: BuildingType,
+    position: { x: number; z: number },
+    state: 'valid' | 'invalid' | 'inefficient'
+  ): Promise<void> {
+    const modelConfigs = assetManager.getBuildingModels(type);
+    if (!modelConfigs || modelConfigs.length === 0) {
+      this.createGhostFromPrimitive(type, position, state);
+      return;
+    }
+
+    try {
+      const parent = new TransformNode(`ghost_${type}`, this.scene);
+      parent.position = new Vector3(position.x, GROUND_LEVEL, position.z);
+
+      const material = this.getGhostMaterial(state);
+      this.ghostMaterials = [];
+
+      for (const config of modelConfigs) {
+        const meshes = await assetManager.loadModelFromConfig(config);
+        if (!meshes || meshes.length === 0) continue;
+
+        // Create a sub-parent for this model part with its own offset
+        const subParent = new TransformNode(`ghost_${type}_part`, this.scene);
+        subParent.parent = parent;
+        subParent.scaling = new Vector3(config.scale, config.scale, config.scale);
+        subParent.rotation.y = (config.rotation * Math.PI) / 180;
+        subParent.position = new Vector3(
+          config.offset?.x ?? 0,
+          config.yOffset ?? 0,
+          config.offset?.z ?? 0
+        );
+
+        for (const mesh of meshes) {
+          mesh.parent = subParent;
+          if (mesh instanceof Mesh && material) {
+            mesh.material = material;
+            this.ghostMaterials.push(material);
+          }
+        }
+      }
+
+      this.ghostMesh = parent;
+    } catch {
+      this.createGhostFromPrimitive(type, position, state);
+    }
+  }
+
+  private createGhostFromPrimitive(
+    type: BuildingType,
+    position: { x: number; z: number },
+    state: 'valid' | 'invalid' | 'inefficient'
+  ): void {
+    const primitive = assetManager.getBuildingPrimitive(type);
+
+    const mesh = MeshBuilder.CreateBox(
+      `ghost_${type}`,
+      {
+        width: primitive.width,
+        height: primitive.height,
+        depth: primitive.depth
+      },
+      this.scene
+    );
+
+    mesh.position = new Vector3(position.x, GROUND_LEVEL + primitive.height / 2, position.z);
+
+    mesh.material = this.getGhostMaterial(state);
+    this.ghostMesh = mesh;
+  }
+
+  private updateGhostColor(state: 'valid' | 'invalid' | 'inefficient'): void {
+    const material = this.getGhostMaterial(state);
+
+    if (!material || !this.ghostMesh) return;
+
+    // Apply to all meshes under the ghost
+    const applyMaterial = (node: TransformNode | Mesh) => {
+      if (node instanceof Mesh) {
+        node.material = material;
+      }
+      for (const child of node.getChildMeshes()) {
+        if (child instanceof Mesh) {
+          child.material = material;
+        }
+      }
+    };
+
+    applyMaterial(this.ghostMesh);
+  }
+
+  private getGhostMaterial(state: 'valid' | 'invalid' | 'inefficient'): StandardMaterial | null {
+    switch (state) {
+      case 'valid':
+        return this.ghostValidMaterial;
+      case 'invalid':
+        return this.ghostInvalidMaterial;
+      case 'inefficient':
+        return this.ghostInefficientMaterial;
+    }
+  }
+
+  public hideGhostPreview(): void {
+    if (this.ghostMesh) {
+      this.ghostMesh.dispose();
+      this.ghostMesh = null;
+    }
+    this.ghostType = null;
+    this.ghostPosition = null;
+    this.ghostMaterials = [];
   }
 
   public selectBuildingType(type: BuildingType | null): void {

@@ -185,7 +185,8 @@ export const en = {
   'hint.buildHousing': '🏠 Build Housing on sand to grow population.',
 
   // Diagnostics
-  'diagnostic.waterStuck': '💧 Fresh water not increasing. Check if distillers are connected to pumps and reactors.',
+  'diagnostic.waterStuck':
+    '💧 Fresh water not increasing. Check if distillers are connected to pumps and reactors.',
   'diagnostic.distillerDisconnected': '💧 {count} distiller(s) need water and heat connections.',
   'diagnostic.housingDisconnected': '🏠 {count} housing block(s) need water connections.',
   'diagnostic.freshWaterDeclining': '💧 Fresh water declining. Check distiller connections.',

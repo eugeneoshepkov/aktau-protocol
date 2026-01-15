@@ -106,6 +106,27 @@ Buildings auto-connect with visual pipes when within 5 tiles:
 - **Distiller → Microrayon/Water Tank:** Blue water pipe
 - **Water Tank → Microrayon:** Blue water pipe
 
+### Capacity System
+
+Each producer building has limited capacity based on production/consumption ratios. Connections are allocated by distance (nearest first). Once capacity is exhausted, additional buildings remain disconnected.
+
+| Producer | Capacity | Can Supply |
+|----------|----------|------------|
+| **Pump** | 10 seawater | 1 distiller |
+| **Distiller** | 10 freshWater | 2 microrayons |
+| **Water Tank** | 10 freshWater | 2 microrayons (requires distiller chain) |
+| **Reactor** | 50 heat | 5 distillers OR 10 microrayons |
+| **Thermal Plant** | 15 heat | 1 distiller + 1 microrayon |
+
+**Water Distribution Network:** Water tanks act as capacity relays. They provide 10 freshWater capacity each, but only if connected to a distiller (directly or via other tanks). This allows building extensive housing networks with minimal distillers:
+- 1 distiller = 2 microrayons
+- 1 distiller + 1 tank = 4 microrayons
+- 1 distiller + 2 tanks = 6 microrayons
+
+**Heat Priority:** Distillers receive heat before microrayons. This ensures water production is prioritized—without water, housing is useless anyway.
+
+**Note:** Microrayons consume heat from the global pool (no heat pipes), but require freshWater via pipe connections.
+
 ### Connection Requirements
 
 Buildings must be connected to function properly:
@@ -113,19 +134,23 @@ Buildings must be connected to function properly:
 | Building | Required Connections | Effect if Disconnected |
 |----------|---------------------|------------------------|
 | **Distiller** | Pump (water) + Reactor (heat) | No freshwater production, no reactor cooling |
-| **Microrayon** | Distiller or Water Tank (water) | -2 happiness/tick instead of +1 |
+| **Microrayon** | Distiller or Water Tank (water) | -2 happiness/tick, no resource consumption |
 
-**Important:** Happiness is clamped to 0-100. Disconnected housing actively hurts your city!
+**Important:** Disconnected buildings do NOT consume resources—only connected buildings produce and consume. Disconnected microrayons cause happiness loss but don't drain water/heat.
 
 ### Building Placement Preview
 
 When a building is selected for placement:
 - **Yellow highlight:** Valid placement location
 - **Red highlight:** Invalid placement (wrong tile type, occupied, etc.)
-- **Dashed preview pipes:** Show potential connections to nearby compatible buildings
+- **Ghost building preview:**
+  - **Green:** Valid placement AND would be connected (producer has capacity)
+  - **Gray:** Valid placement but NOT connected (no producer with capacity nearby)
+  - **Red:** Invalid placement (wrong tile type, occupied, etc.)
+- **Dashed preview pipes:** Show connections to buildings with available capacity
   - Blue dashed lines for water connections
   - Orange dashed lines for heat connections
-  - Shows both outgoing connections (what this building connects TO) and incoming connections (what CAN connect to this building)
+  - Only shows pipes to/from producers that have remaining capacity
 
 ---
 
@@ -270,8 +295,9 @@ src/
 | Task | File(s) |
 |------|---------|
 | Add new building type | `types/GameTypes.ts`, `simulation/buildings/Building.ts`, `config/ConnectionRules.ts`, `manifest.json` |
-| Change game balance | `types/GameTypes.ts` (costs, production) |
-| Modify connection rules | `config/ConnectionRules.ts` (pipe connections, building requirements) |
+| Change game balance | `types/GameTypes.ts` (costs, production, capacity) |
+| Modify capacity/connections | `config/ResourceFlow.ts` (single source of truth), `types/GameTypes.ts` (numeric values) |
+| Modify connection rules | `config/ResourceFlow.ts` (resource flows), `config/ConnectionRules.ts` (requirements) |
 | Add new resource | `types/GameTypes.ts`, `simulation/GameState.ts`, `ui/HUD.ts` |
 | New visual effect | `engine/PostProcess.ts`, `effects/ParticleManager.ts` |
 | New sound effect | `managers/SoundManager.ts` |
