@@ -38,6 +38,16 @@ export const en = {
   'gameover.revolt': 'CITIZENS REVOLT',
   'gameover.survived': 'SURVIVED {days} DAYS',
   'gameover.restart': '[ RESTART ]',
+  'gameover.story.meltdown':
+    'The BN-350 reactor core exceeded critical temperature. A cloud of radioactive dust spread across the Mangyshlak Peninsula. Aktau was evacuated and became a ghost town, joining Pripyat in the annals of nuclear disasters.',
+  'gameover.story.drought':
+    'Without fresh water, the desert reclaimed what was never meant to be. The pipes ran dry, the fountains fell silent. One by one, the citizens left for Almaty, leaving behind empty microrayons and rusting infrastructure.',
+  'gameover.story.freeze':
+    'The bitter Kazakh winter showed no mercy. When the heating failed, pipes burst and buildings cracked. By spring, Aktau was a frozen monument to Soviet ambition—beautiful, silent, and utterly lifeless.',
+  'gameover.story.extinction':
+    'The last train departed with the final residents. The great experiment of Aktau ended not with a bang, but with the quiet closing of apartment doors. The camels returned to wander streets that once held 150,000 dreams.',
+  'gameover.story.revolt':
+    'The people had endured enough. Protests erupted in Lenin Square, and soon the Party officials fled. Without central control, the reactor was abandoned. Aktau became a lawless zone, its future uncertain.',
 
   // ============================================
   // Build Panel

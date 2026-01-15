@@ -476,7 +476,9 @@ export class PipeManager {
       if (relays.length === 0) continue;
 
       // BFS from producers to find and draw relay chain connections
+      // Each relay gets exactly ONE upstream pipe (chain topology, not mesh)
       const visited = new Set<string>();
+      const connectedRelays = new Set<string>(); // Relays that already have an upstream pipe
       const queue: Building[] = [...producers];
 
       while (queue.length > 0) {
@@ -484,22 +486,26 @@ export class PipeManager {
         if (visited.has(current.id)) continue;
         visited.add(current.id);
 
-        // Find relays within range and draw pipes to them
-        for (const relay of relays) {
-          const dist = this.getDistance(current, relay);
-          if (dist > 0 && dist <= MAX_PIPE_DISTANCE) {
-            // Draw pipe from current to relay
-            const pipeKey = [current.id, relay.id].sort().join('_') + '_' + pipeType;
-            if (!drawnPipes.has(pipeKey)) {
-              drawnPipes.add(pipeKey);
-              this.createPipe(current, relay, pipeType);
-            }
+        // Find unconnected relays within range, sorted by distance (closest first)
+        const unconnectedRelays = relays
+          .filter((relay) => !connectedRelays.has(relay.id))
+          .map((relay) => ({ relay, dist: this.getDistance(current, relay) }))
+          .filter(({ dist }) => dist > 0 && dist <= MAX_PIPE_DISTANCE)
+          .sort((a, b) => a.dist - b.dist);
 
-            // Add relay to queue to continue chain
-            if (!visited.has(relay.id)) {
-              queue.push(relay);
-            }
+        for (const { relay } of unconnectedRelays) {
+          // Draw pipe from current to relay
+          const pipeKey = [current.id, relay.id].sort().join('_') + '_' + pipeType;
+          if (!drawnPipes.has(pipeKey)) {
+            drawnPipes.add(pipeKey);
+            this.createPipe(current, relay, pipeType);
           }
+
+          // Mark relay as connected (one upstream pipe only)
+          connectedRelays.add(relay.id);
+
+          // Add relay to queue to continue chain
+          queue.push(relay);
         }
       }
     }

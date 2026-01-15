@@ -62,6 +62,7 @@ You are the city engineer. Balance the impossible:
 | **Desalination Plant** | Converts seawater → freshwater. Also cools the reactor. |
 | **Microrayon Housing** | Soviet housing blocks. Needs water connection or citizens get angry. |
 | **Water Tank** | Extends water distribution network. Each tank supplies 2 more housing blocks. |
+| **Thermal Plant** | Supplemental heat & power. Build more as your city grows (1 per 5 housing blocks). |
 
 ### Seasons
 

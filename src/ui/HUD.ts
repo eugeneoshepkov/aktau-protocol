@@ -285,20 +285,35 @@ export class HUD {
 
     const icons: Record<string, string> = {
       meltdown: ICONS.nuclear,
-      drought: ICONS.warning,
+      drought: ICONS.water,
       freeze: ICONS.winter,
-      extinction: ICONS.warning,
-      revolt: ICONS.population
+      extinction: ICONS.population,
+      revolt: ICONS.happiness
+    };
+
+    // Map reasons to image filenames
+    const images: Record<string, string> = {
+      meltdown: 'meltdown.png',
+      drought: 'drought.png',
+      freeze: 'freeze.png',
+      extinction: 'extinction.png',
+      revolt: 'revolt.png'
     };
 
     const icon = icons[data.reason] || ICONS.warning;
     const reasonText = td(`gameover.${data.reason}`);
+    const storyText = td(`gameover.story.${data.reason}`);
+    const imagePath = `/pictures/game-over/${images[data.reason] || 'meltdown.png'}`;
 
     overlay.innerHTML = `
       <div class="game-over-content">
+        <div class="game-over-image-container">
+          <img src="${imagePath}" alt="${reasonText}" class="game-over-image" onerror="this.style.display='none'" />
+        </div>
         <h1>${t('gameover.title')}</h1>
         <h2><span class="icon-wrap go-icon">${icon}</span> ${reasonText}</h2>
-        <p>${t('gameover.survived', { days: data.day })}</p>
+        <p class="game-over-survived">${t('gameover.survived', { days: data.day })}</p>
+        <p class="game-over-story">${storyText}</p>
         <button id="restart-btn">${t('gameover.restart')}</button>
       </div>
     `;

@@ -17,7 +17,7 @@ export const STARTING_RESOURCES: Resources = {
   seawater: 100,
   freshWater: 50,
   heat: 50,
-  electricity: 200,
+  electricity: 100,
   population: 100,
   happiness: 50
 };

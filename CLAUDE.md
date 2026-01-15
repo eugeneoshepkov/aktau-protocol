@@ -38,7 +38,7 @@ bun run build  # Production build
 | Seawater | Raw water from Caspian Sea | 100 |
 | Fresh Water | Desalinated drinking water | 50 |
 | Heat | Thermal energy for heating | 50 |
-| Electricity | Power for buildings | 200 |
+| Electricity | Power for buildings | 100 |
 | Population | City inhabitants | 100 |
 | Happiness | Citizen satisfaction | 50 |
 
@@ -50,7 +50,15 @@ bun run build  # Production build
 | **BN-350 Reactor** | Rock tiles | ⚡50 | — | 🔥50 heat, ⚡20 | +1°C/tick to reactor temp |
 | **Desalination Plant** | Sand/Rock | ⚡30 | 🌊10, 🔥10 | 💧10 freshwater | Cools reactor by 0.8°C/tick |
 | **Microrayon Housing** | Sand tiles | 💧20, 🔥10 | 💧5, 🔥5× season | 😊±1-2 happiness | Soviet housing blocks |
-| **Water Tank** | Sand/Rock | ⚡15 | — | — | Stores up to 50 freshwater |
+| **Water Tank** | Sand/Rock | ⚡15 | — | — | Relays water, adds 💧10 capacity |
+| **Thermal Plant** | Sand/Rock | ⚡40 | ⚡10 | 🔥15 heat, ⚡25 | Requires 5 microrayons per plant |
+
+### Building Limits
+
+| Building | Limit |
+|----------|-------|
+| **Reactor** | 1 (unique) |
+| **Thermal Plant** | 1 free + 1 per 5 microrayons |
 
 ### Tile Types
 
