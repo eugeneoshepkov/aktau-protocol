@@ -4,7 +4,8 @@ import {
   BUILDING_COSTS,
   BUILDING_PLACEMENT,
   BUILDING_MAX_ALLOWED,
-  BUILDING_SCALING_LIMITS
+  BUILDING_SCALING_LIMITS,
+  HOUSING_CAPACITY_PER_MICRORAYON
 } from '../types';
 import type {
   Resources,
@@ -363,18 +364,32 @@ export class GameState {
   }
 
   private processPopulation(): void {
-    const { happiness, freshWater, heat, population } = this.resources;
+    const { happiness, freshWater, population } = this.resources;
 
     if (population <= 0) return;
 
-    const hasMicrorayons = this.buildings.some((b) => b.type === 'microrayon');
-    if (!hasMicrorayons) return;
+    // Count connected microrayons for housing capacity
+    const connectedMicrorayons = this.buildings.filter(
+      (b) =>
+        b.type === 'microrayon' &&
+        this.connectionChecker &&
+        this.connectionChecker(b).isFullyOperational
+    ).length;
 
-    if (happiness > 60 && freshWater > 20 && heat > 20) {
-      const growth = Math.max(1, Math.floor(population * 0.02));
+    if (connectedMicrorayons === 0) return;
+
+    const housingCapacity = connectedMicrorayons * HOUSING_CAPACITY_PER_MICRORAYON;
+
+    // Growth: Only when happy AND have water AND below housing capacity
+    if (happiness > 60 && freshWater > 20 && population < housingCapacity) {
+      const maxGrowth = Math.max(1, Math.floor(population * 0.02));
+      const roomLeft = housingCapacity - population;
+      const growth = Math.min(maxGrowth, roomLeft);
       this.resources.population += growth;
       this.emit('populationChange', { delta: growth, reason: 'growth' });
-    } else if (happiness < 30 || freshWater < 10 || heat < 10) {
+    }
+    // Decline: When unhappy OR low water (heat removed - always abundant)
+    else if (happiness < 40 || freshWater < 15) {
       const decline = Math.max(1, Math.floor(population * 0.05));
       this.resources.population = Math.max(0, population - decline);
       this.emit('populationChange', { delta: -decline, reason: 'decline' });

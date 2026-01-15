@@ -74,6 +74,9 @@ export const BUILDING_COSTS: Record<BuildingType, Partial<Resources>> = {
   thermal_plant: { electricity: 40 }
 };
 
+// Housing capacity: each connected microrayon provides housing for this many people
+export const HOUSING_CAPACITY_PER_MICRORAYON = 50;
+
 export const BUILDING_PRODUCTION: Record<BuildingType, ProductionRule> = {
   pump: { consumes: { electricity: 5 }, produces: { seawater: 10 } },
   reactor: {
