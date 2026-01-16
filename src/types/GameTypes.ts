@@ -129,6 +129,22 @@ export const BUILDING_SCALING_LIMITS: Partial<Record<BuildingType, BuildingScali
 export const WATER_TANK_CAPACITY = 50;
 
 // ============================================
+// Maintenance Costs (per tick)
+// ============================================
+
+export const BUILDING_MAINTENANCE: Record<BuildingType, Partial<Resources>> = {
+  pump: { electricity: 2 },
+  reactor: {}, // Produces power, no maintenance
+  distiller: { electricity: 3 },
+  microrayon: { electricity: 1 },
+  water_tank: { electricity: 1 },
+  thermal_plant: { electricity: 5 }
+};
+
+// Cost scaling: each building costs 15% more than the previous of same type
+export const COST_SCALING_FACTOR = 0.15;
+
+// ============================================
 // Building Capacity System
 // ============================================
 

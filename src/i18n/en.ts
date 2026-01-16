@@ -23,6 +23,16 @@ export const en = {
   'hud.loadFailed': 'LOAD FAILED',
   'hud.daysLeft': '{days} days left',
 
+  // HUD Tooltips
+  'hud.tooltip.day': 'Current game day. Seasons change every 30 days.',
+  'hud.tooltip.population': 'City population. Grows when happy and resources are stable. Fleeing citizens = game over.',
+  'hud.tooltip.freshWater': 'Fresh drinking water. Produced by desalination plants. Consumed by housing.',
+  'hud.tooltip.seawater': 'Raw seawater from Caspian Sea. Extracted by pumps. Used by desalination plants.',
+  'hud.tooltip.heat': 'Thermal energy. Produced by reactor and thermal plants. Consumed by desalination and housing. ×2 in winter!',
+  'hud.tooltip.electricity': 'Electrical power. Produced by reactor. Consumed by all buildings for maintenance.',
+  'hud.tooltip.temp': 'Reactor core temperature. Rises +1°C/tick. Cooled by distillers (-0.8°C each). Meltdown at 100°C!',
+  'hud.tooltip.happiness': 'Citizen happiness. Affected by water supply and housing connections. Zero = revolt!',
+
   // Seasons
   'season.spring': 'Spring (Heat ×{mult})',
   'season.summer': 'Summer (Heat ×{mult})',

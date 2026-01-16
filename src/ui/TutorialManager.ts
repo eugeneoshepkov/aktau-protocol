@@ -208,6 +208,14 @@ export class TutorialManager {
 
     // Update button highlighting
     this.updateHighlight();
+
+    // Check if step is already complete (player built ahead)
+    if (config.target && progress.current >= progress.target) {
+      // Auto-advance after a short delay
+      setTimeout(() => {
+        this.completeStep();
+      }, 500);
+    }
   }
 
   private updateProgressDisplay(progress: { current: number; target: number }): void {

@@ -60,6 +60,35 @@ bun run build  # Production build
 | **Reactor** | 1 (unique) |
 | **Thermal Plant** | 1 free + 1 per 5 microrayons |
 
+### Cost Scaling
+
+Building costs increase by **15% for each building of the same type** already placed:
+
+| Building | Base Cost | 5th Copy | 10th Copy |
+|----------|-----------|----------|-----------|
+| **Water Pump** | ⚡20 | ⚡32 | ⚡47 |
+| **Desalination Plant** | ⚡30 | ⚡48 | ⚡70 |
+| **Microrayon** | 💧20, 🔥10 | 💧32, 🔥16 | 💧47, 🔥23 |
+| **Water Tank** | ⚡15 | ⚡24 | ⚡35 |
+| **Thermal Plant** | ⚡40 | ⚡64 | ⚡94 |
+
+Formula: `baseCost × (1 + count × 0.15)`
+
+### Maintenance Costs
+
+All buildings consume electricity for upkeep each tick:
+
+| Building | Maintenance |
+|----------|-------------|
+| **Water Pump** | ⚡2/tick |
+| **Desalination Plant** | ⚡3/tick |
+| **Microrayon** | ⚡1/tick |
+| **Water Tank** | ⚡1/tick |
+| **Thermal Plant** | ⚡5/tick |
+| **Reactor** | Free (produces power) |
+
+A city with 50 buildings drains ~100⚡/tick in maintenance alone.
+
 ### Tile Types
 
 | Type | Color | Description |

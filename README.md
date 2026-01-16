@@ -75,6 +75,15 @@ Winter is coming. And it wants 2× the heat.
 | Autumn | 1.2× |
 | **Winter** | **2×** |
 
+### Economy
+
+Expansion has a cost:
+
+- **Scaling costs** — Each building costs 15% more than the previous of the same type
+- **Maintenance** — All buildings drain electricity every tick (1-5⚡ depending on type)
+
+You can't build infinitely. Plan carefully.
+
 ---
 
 ## Controls

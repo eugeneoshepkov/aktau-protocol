@@ -5,7 +5,9 @@ import {
   BUILDING_PLACEMENT,
   BUILDING_MAX_ALLOWED,
   BUILDING_SCALING_LIMITS,
-  HOUSING_CAPACITY_PER_MICRORAYON
+  HOUSING_CAPACITY_PER_MICRORAYON,
+  BUILDING_MAINTENANCE,
+  COST_SCALING_FACTOR
 } from '../types';
 import type {
   Resources,
@@ -206,7 +208,18 @@ export class GameState {
       return {};
     }
 
-    return BUILDING_COSTS[type];
+    // Apply scaling: each building costs 15% more than the previous
+    const baseCost = BUILDING_COSTS[type];
+    const scalingMultiplier = 1 + count * COST_SCALING_FACTOR;
+
+    const scaledCost: Partial<Resources> = {};
+    for (const [resource, amount] of Object.entries(baseCost)) {
+      if (amount !== undefined) {
+        scaledCost[resource as keyof Resources] = Math.ceil(amount * scalingMultiplier);
+      }
+    }
+
+    return scaledCost;
   }
 
   public canPlaceBuilding(
@@ -330,6 +343,7 @@ export class GameState {
     const prevSeason = this.getSeason();
 
     this.processBuildings();
+    this.processMaintenanceCosts();
     this.processPopulation();
     this.processReactor();
     this.checkFailStates();
@@ -349,6 +363,18 @@ export class GameState {
       this.emit('dayAdvance', this.day);
       this.emit('resourceChange', this.resources);
       this.emit('resourceTrend', this.resourceTrend);
+    }
+  }
+
+  private processMaintenanceCosts(): void {
+    // All buildings consume maintenance costs (primarily electricity)
+    for (const building of this.buildings) {
+      const maintenance = BUILDING_MAINTENANCE[building.type];
+      for (const [resource, amount] of Object.entries(maintenance)) {
+        if (amount !== undefined) {
+          this.resources[resource as keyof Resources] -= amount;
+        }
+      }
     }
   }
 
