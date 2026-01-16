@@ -1,4 +1,4 @@
-import { ArcRotateCamera, Vector3, Scene } from '@babylonjs/core';
+import { ArcRotateCamera, Vector3, Scene, Animation, EasingFunction, CubicEase } from '@babylonjs/core';
 import {
   ISOMETRIC_ALPHA,
   ISOMETRIC_BETA,
@@ -275,6 +275,40 @@ export class IsometricCamera {
     this.camera.alpha = ISOMETRIC_ALPHA;
     this.camera.beta = ISOMETRIC_BETA;
     this.camera.radius = DEFAULT_ZOOM;
+  }
+
+  public focusOn(target: Vector3, duration: number = 500): void {
+    const startTarget = this.camera.target.clone();
+    const frameRate = 60;
+    const totalFrames = Math.round((duration / 1000) * frameRate);
+
+    // Clamp target to valid bounds
+    const worldSize = GRID_SIZE * TILE_SIZE;
+    const clampedX = Math.max(0, Math.min(worldSize, target.x));
+    const clampedZ = Math.max(0, Math.min(worldSize, target.z));
+
+    // Animate X
+    const animX = new Animation('focusX', 'target.x', frameRate, Animation.ANIMATIONTYPE_FLOAT, Animation.ANIMATIONLOOPMODE_CONSTANT);
+    animX.setKeys([
+      { frame: 0, value: startTarget.x },
+      { frame: totalFrames, value: clampedX }
+    ]);
+
+    // Animate Z
+    const animZ = new Animation('focusZ', 'target.z', frameRate, Animation.ANIMATIONTYPE_FLOAT, Animation.ANIMATIONLOOPMODE_CONSTANT);
+    animZ.setKeys([
+      { frame: 0, value: startTarget.z },
+      { frame: totalFrames, value: clampedZ }
+    ]);
+
+    // Add easing
+    const ease = new CubicEase();
+    ease.setEasingMode(EasingFunction.EASINGMODE_EASEOUT);
+    animX.setEasingFunction(ease);
+    animZ.setEasingFunction(ease);
+
+    this.camera.animations = [animX, animZ];
+    this.scene.beginAnimation(this.camera, 0, totalFrames, false);
   }
 }
 

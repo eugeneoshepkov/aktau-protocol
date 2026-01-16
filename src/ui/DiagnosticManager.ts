@@ -1,14 +1,22 @@
 import { gameState, type ResourceTrend } from '../simulation/GameState';
 import type { PipeManager } from '../managers/PipeManager';
+import type { BuildingManager } from '../managers/BuildingManager';
+import type { Building } from '../types';
+import { getTileCenter } from '../grid/GridCoords';
+import { getCameraInstance } from '../engine/Camera';
+import { Vector3 } from '@babylonjs/core';
 import { t } from '../i18n';
+import { ICONS } from './Icons';
 
 interface DiagnosticIssue {
   priority: number;
   message: string;
+  buildings: Building[];
 }
 
 export class DiagnosticManager {
   private pipeManager: PipeManager | null = null;
+  private buildingManager: BuildingManager | null = null;
   private hintBar: HTMLDivElement | null = null;
   private currentIssue: DiagnosticIssue | null = null;
   private checkInterval: number | null = null;
@@ -23,21 +31,36 @@ export class DiagnosticManager {
     this.startMonitoring();
   }
 
+  public setBuildingManager(buildingManager: BuildingManager): void {
+    this.buildingManager = buildingManager;
+  }
+
   private createHintBar(): void {
     this.hintBar = document.createElement('div');
     this.hintBar.id = 'hint-bar';
     this.hintBar.innerHTML = `
-      <span class="hint-icon">⚠️</span>
+      <span class="hint-icon">${ICONS.warning}</span>
       <span class="hint-text"></span>
-      <button class="hint-dismiss">×</button>
+      <button class="hint-dismiss">${ICONS.close}</button>
     `;
     document.body.appendChild(this.hintBar);
 
     const dismissBtn = this.hintBar.querySelector('.hint-dismiss');
-    dismissBtn?.addEventListener('click', () => {
+    dismissBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
       if (this.currentIssue) {
         this.dismissedIssues.add(this.currentIssue.message);
         this.hideHint();
+      }
+    });
+
+    // Click on hint bar to focus camera on first problematic building
+    this.hintBar.addEventListener('click', () => {
+      if (this.currentIssue?.buildings.length) {
+        const building = this.currentIssue.buildings[0];
+        const worldPos = getTileCenter(building.gridX, building.gridZ);
+        const camera = getCameraInstance();
+        camera?.focusOn(new Vector3(worldPos.x, 0, worldPos.z));
       }
     });
   }
@@ -80,17 +103,20 @@ export class DiagnosticManager {
           priority: 1,
           message: t('diagnostic.distillerDisconnected', {
             count: disconnectedDistillers.length
-          })
+          }),
+          buildings: disconnectedDistillers
         });
       } else if (resources.seawater < 10 * distillers.length) {
         issues.push({
           priority: 2,
-          message: t('diagnostic.waterStuck')
+          message: t('diagnostic.waterStuck'),
+          buildings: []
         });
       } else if (resources.heat < 10 * distillers.length) {
         issues.push({
           priority: 2,
-          message: t('diagnostic.heatStuck')
+          message: t('diagnostic.heatStuck'),
+          buildings: []
         });
       }
     }
@@ -100,21 +126,24 @@ export class DiagnosticManager {
     if (disconnectedHousing.length > 0 && microrayons.length > 0) {
       issues.push({
         priority: 3,
-        message: t('diagnostic.housingDisconnected', { count: disconnectedHousing.length })
+        message: t('diagnostic.housingDisconnected', { count: disconnectedHousing.length }),
+        buildings: disconnectedHousing
       });
     }
 
     if (trends.freshWater < -5 && distillers.length > 0) {
       issues.push({
         priority: 2,
-        message: t('diagnostic.freshWaterDeclining')
+        message: t('diagnostic.freshWaterDeclining'),
+        buildings: []
       });
     }
 
     if (trends.heat < -10 && buildings.filter((b) => b.type === 'reactor').length > 0) {
       issues.push({
         priority: 3,
-        message: t('diagnostic.heatDeclining')
+        message: t('diagnostic.heatDeclining'),
+        buildings: []
       });
     }
 
@@ -141,6 +170,11 @@ export class DiagnosticManager {
     }
 
     this.hintBar.classList.add('show');
+
+    // Highlight problematic buildings
+    if (this.buildingManager && issue.buildings.length > 0) {
+      this.buildingManager.highlightProblematic(issue.buildings);
+    }
   }
 
   private hideHint(): void {
@@ -148,11 +182,19 @@ export class DiagnosticManager {
 
     this.hintBar.classList.remove('show');
     this.currentIssue = null;
+
+    // Clear highlights
+    if (this.buildingManager) {
+      this.buildingManager.clearHighlights();
+    }
   }
 
   public dispose(): void {
     if (this.checkInterval !== null) {
       clearInterval(this.checkInterval);
+    }
+    if (this.buildingManager) {
+      this.buildingManager.clearHighlights();
     }
     this.hintBar?.remove();
   }

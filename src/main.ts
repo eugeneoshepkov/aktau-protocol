@@ -195,6 +195,7 @@ async function initGame(): Promise<void> {
 
   const diagnosticManager = new DiagnosticManager();
   diagnosticManager.setPipeManager(pipeManager);
+  diagnosticManager.setBuildingManager(buildingManager);
 
   inputManager.setTileHoverCallback((x, z) => {
     tooltip.show(x, z);

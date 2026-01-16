@@ -3,6 +3,7 @@ import {
   Mesh,
   MeshBuilder,
   StandardMaterial,
+  PBRMaterial,
   Color3,
   Vector3,
   Observer,
@@ -52,6 +53,10 @@ export class BuildingManager {
   private ghostInvalidMaterial: StandardMaterial | null = null; // Red - cannot place
   private ghostInefficientMaterial: StandardMaterial | null = null; // Gray - can place but not connected
 
+  // Problem highlight properties
+  private highlightedBuildings: Set<string> = new Set();
+  private originalMaterials: Map<string, StandardMaterial[]> = new Map();
+
   constructor(scene: Scene, gridManager: GridManager) {
     this.scene = scene;
     this.gridManager = gridManager;
@@ -84,6 +89,28 @@ export class BuildingManager {
         }
       } else if (anim.type === 'distiller') {
         anim.mesh.scaling.y = 1 + Math.sin(this.animationTime * 2 + anim.phase) * 0.02;
+      }
+    }
+
+    // Pulse red glow on highlighted (problematic) buildings
+    if (this.highlightedBuildings.size > 0) {
+      const pulse = 0.3 + Math.sin(this.animationTime * 4) * 0.3;
+      for (const buildingId of this.highlightedBuildings) {
+        const node = this.meshes.get(buildingId);
+        if (!node) continue;
+
+        const meshes = node instanceof Mesh ? [node] : node.getChildMeshes();
+        for (const mesh of meshes) {
+          if (mesh instanceof Mesh) {
+            const mat = mesh.material;
+            if (mat instanceof StandardMaterial) {
+              mat.emissiveColor.set(pulse, 0, 0);
+            } else if (mat instanceof PBRMaterial) {
+              mat.emissiveColor.set(pulse, 0, 0);
+              mat.emissiveIntensity = 2;
+            }
+          }
+        }
       }
     }
   }
@@ -686,7 +713,62 @@ export class BuildingManager {
     this.animatedBuildings.delete(building.id);
   }
 
+  public highlightProblematic(buildings: Building[]): void {
+    // Clear previous highlights first
+    this.clearHighlights();
+
+    for (const building of buildings) {
+      const node = this.meshes.get(building.id);
+      if (!node) continue;
+
+      // Store original emissive colors
+      const meshes = node instanceof Mesh ? [node] : node.getChildMeshes();
+      const originalEmissives: StandardMaterial[] = [];
+      for (const mesh of meshes) {
+        if (mesh instanceof Mesh && mesh.material instanceof StandardMaterial) {
+          // Clone the material to store original emissive
+          const originalMat = new StandardMaterial(`orig_${mesh.material.name}`, this.scene);
+          originalMat.emissiveColor = mesh.material.emissiveColor.clone();
+          originalEmissives.push(originalMat);
+        }
+      }
+      this.originalMaterials.set(building.id, originalEmissives);
+      this.highlightedBuildings.add(building.id);
+    }
+  }
+
+  public clearHighlights(): void {
+    // Restore original emissive colors
+    for (const buildingId of this.highlightedBuildings) {
+      const node = this.meshes.get(buildingId);
+      if (!node) continue;
+
+      const meshes = node instanceof Mesh ? [node] : node.getChildMeshes();
+      for (const mesh of meshes) {
+        if (mesh instanceof Mesh) {
+          const mat = mesh.material;
+          if (mat instanceof StandardMaterial) {
+            mat.emissiveColor.set(0, 0, 0);
+          } else if (mat instanceof PBRMaterial) {
+            mat.emissiveColor.set(0, 0, 0);
+            mat.emissiveIntensity = 1;
+          }
+        }
+      }
+    }
+
+    // Dispose temporary materials
+    for (const mats of this.originalMaterials.values()) {
+      for (const mat of mats) {
+        mat.dispose();
+      }
+    }
+    this.originalMaterials.clear();
+    this.highlightedBuildings.clear();
+  }
+
   public dispose(): void {
+    this.clearHighlights();
     if (this.renderObserver) {
       this.scene.onBeforeRenderObservable.remove(this.renderObserver);
     }
