@@ -5,14 +5,16 @@ import type { Building } from '../types';
 import { getTileCenter } from '../grid/GridCoords';
 import { getCameraInstance } from '../engine/Camera';
 import { Vector3 } from '@babylonjs/core';
-import { t } from '../i18n';
-import { ICONS } from './Icons';
+import { td } from '../i18n';
+import { ICONS, icon } from './Icons';
 
 interface DiagnosticIssue {
   priority: number;
   message: string;
   buildings: Building[];
 }
+
+type MissingResourceType = 'water' | 'heat' | 'both';
 
 export class DiagnosticManager {
   private pipeManager: PipeManager | null = null;
@@ -100,11 +102,15 @@ export class DiagnosticManager {
       );
 
       if (disconnectedDistillers.length > 0) {
+        // Analyze what distillers are missing
+        const missingType = this.analyzeMissingConnections(disconnectedDistillers);
         issues.push({
           priority: 1,
-          message: t('diagnostic.distillerDisconnected', {
-            count: disconnectedDistillers.length
-          }),
+          message: this.buildConnectionMessage(
+            'distiller',
+            disconnectedDistillers.length,
+            missingType
+          ),
           buildings: disconnectedDistillers
         });
       } else if (trends.freshWater <= 0 && resources.freshWater < 100) {
@@ -112,13 +118,13 @@ export class DiagnosticManager {
         if (resources.seawater < 10 * distillers.length) {
           issues.push({
             priority: 2,
-            message: t('diagnostic.waterStuck'),
+            message: `${icon('water', 14)} ${td('diagnostic.waterStuck.text')}`,
             buildings: []
           });
         } else if (resources.heat < 8 * distillers.length) {
           issues.push({
             priority: 2,
-            message: t('diagnostic.heatStuck'),
+            message: `${icon('heat', 14)} ${td('diagnostic.heatStuck.text')}`,
             buildings: []
           });
         }
@@ -128,9 +134,11 @@ export class DiagnosticManager {
     const disconnectedHousing = microrayons.filter((m) => !this.pipeManager!.isFullyOperational(m));
 
     if (disconnectedHousing.length > 0 && microrayons.length > 0) {
+      // Analyze what housing is missing (water, heat, or both)
+      const missingType = this.analyzeMissingConnections(disconnectedHousing);
       issues.push({
         priority: 3,
-        message: t('diagnostic.housingDisconnected', { count: disconnectedHousing.length }),
+        message: this.buildConnectionMessage('housing', disconnectedHousing.length, missingType),
         buildings: disconnectedHousing
       });
     }
@@ -138,7 +146,7 @@ export class DiagnosticManager {
     if (trends.freshWater < -5 && distillers.length > 0) {
       issues.push({
         priority: 2,
-        message: t('diagnostic.freshWaterDeclining'),
+        message: `${icon('water', 14)} ${td('diagnostic.freshWaterDeclining.text')}`,
         buildings: []
       });
     }
@@ -146,7 +154,7 @@ export class DiagnosticManager {
     if (trends.heat < -10 && buildings.filter((b) => b.type === 'reactor').length > 0) {
       issues.push({
         priority: 3,
-        message: t('diagnostic.heatDeclining'),
+        message: `${icon('heat', 14)} ${td('diagnostic.heatDeclining.text')}`,
         buildings: []
       });
     }
@@ -164,13 +172,73 @@ export class DiagnosticManager {
     }
   }
 
+  /**
+   * Analyze disconnected buildings to determine what resource type(s) they're missing
+   */
+  private analyzeMissingConnections(buildings: Building[]): MissingResourceType {
+    if (!this.pipeManager) return 'both';
+
+    let needsWater = false;
+    let needsHeat = false;
+
+    for (const building of buildings) {
+      const missing = this.pipeManager.getMissingConnections(building);
+      for (const m of missing) {
+        if (m.resourceType === 'water') needsWater = true;
+        if (m.resourceType === 'heat') needsHeat = true;
+      }
+    }
+
+    if (needsWater && needsHeat) return 'both';
+    if (needsWater) return 'water';
+    if (needsHeat) return 'heat';
+    return 'both'; // fallback
+  }
+
+  /**
+   * Build a diagnostic message with appropriate icon based on missing resource type
+   */
+  private buildConnectionMessage(
+    buildingType: 'distiller' | 'housing',
+    count: number,
+    missingType: MissingResourceType
+  ): string {
+    const buildingIcon = buildingType === 'distiller' ? icon('distiller', 14) : icon('microrayon', 14);
+
+    let resourceIcon: string;
+    let messageKey: string;
+
+    if (missingType === 'water') {
+      resourceIcon = icon('water', 14);
+      messageKey =
+        buildingType === 'distiller'
+          ? 'diagnostic.distillerNeedsWater'
+          : 'diagnostic.housingNeedsWater';
+    } else if (missingType === 'heat') {
+      resourceIcon = icon('heat', 14);
+      messageKey =
+        buildingType === 'distiller'
+          ? 'diagnostic.distillerNeedsHeat'
+          : 'diagnostic.housingNeedsHeat';
+    } else {
+      // Both
+      resourceIcon = `${icon('water', 14)}${icon('heat', 14)}`;
+      messageKey =
+        buildingType === 'distiller'
+          ? 'diagnostic.distillerNeedsBoth'
+          : 'diagnostic.housingNeedsBoth';
+    }
+
+    return `${buildingIcon} ${td(messageKey, { count })} ${resourceIcon}`;
+  }
+
   private showHint(issue: DiagnosticIssue): void {
     if (!this.hintBar) return;
 
     this.currentIssue = issue;
     const textEl = this.hintBar.querySelector('.hint-text');
     if (textEl) {
-      textEl.textContent = issue.message;
+      textEl.innerHTML = issue.message;
     }
 
     this.hintBar.classList.add('show');

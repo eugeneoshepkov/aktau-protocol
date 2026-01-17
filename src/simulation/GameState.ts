@@ -209,7 +209,30 @@ export class GameState {
   }
 
   public getSeasonMultiplier(): number {
-    return SEASON_HEAT_MULTIPLIER[this.getSeason()];
+    const baseMult = SEASON_HEAT_MULTIPLIER[this.getSeason()];
+    
+    // Each year (120 days), winter gets 10% harder
+    const yearsElapsed = Math.floor(this.day / 120);
+    const winterEscalation = this.getSeason() === 'winter' ? yearsElapsed * 0.1 : 0;
+    
+    return baseMult + winterEscalation;
+  }
+
+  /**
+   * Calculate population-based consumption penalty.
+   * More people = higher per-capita consumption, creating pressure as population grows.
+   * Every 50 people above 100 adds 3% consumption.
+   * At 100 pop: 1.0× (baseline)
+   * At 200 pop: 1.06× consumption
+   * At 500 pop: 1.24× consumption
+   * At 1000 pop: 1.54× consumption
+   */
+  public getPopulationEfficiencyPenalty(): number {
+    const pop = this.resources.population;
+    if (pop <= 100) return 1.0;
+    
+    const excessPop = pop - 100;
+    return 1 + (excessPop / 50) * 0.03;
   }
 
   // ============================================
@@ -520,6 +543,8 @@ export class GameState {
     const eventModifiers = this.getEventModifiers();
     // Combine season and event heat multipliers
     const totalHeatMultiplier = seasonMultiplier * eventModifiers.heatMultiplier;
+    // Population-based consumption penalty for microrayons
+    const populationPenalty = this.getPopulationEfficiencyPenalty();
 
     for (const [type, count] of Object.entries(buildingCounts)) {
       if (count === 0) continue;
@@ -533,6 +558,10 @@ export class GameState {
         if (resource === 'heat' && (type === 'microrayon' || type === 'distiller')) {
           required = Math.ceil(required * totalHeatMultiplier);
         }
+        // Apply population penalty to microrayon consumption (all resources)
+        if (type === 'microrayon') {
+          required = Math.ceil(required * populationPenalty);
+        }
         if (this.resources[resource as keyof Resources] < required) {
           canProduce = false;
           break;
@@ -545,6 +574,10 @@ export class GameState {
           // Apply total heat multiplier (season + events) to heat consumption
           if (resource === 'heat' && (type === 'microrayon' || type === 'distiller')) {
             consumed = Math.ceil(consumed * totalHeatMultiplier);
+          }
+          // Apply population penalty to microrayon consumption (all resources)
+          if (type === 'microrayon') {
+            consumed = Math.ceil(consumed * populationPenalty);
           }
           this.resources[resource as keyof Resources] -= consumed;
         }

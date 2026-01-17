@@ -25,10 +25,10 @@ export const en = {
 
   // HUD Tooltips
   'hud.tooltip.day': 'Current game day. Seasons change every 30 days.',
-  'hud.tooltip.population': 'City population. Grows when happy and resources are stable. Fleeing citizens = game over.',
+  'hud.tooltip.population': 'City population. Grows when happy and resources are stable. Larger populations consume more per person. Fleeing citizens = game over.',
   'hud.tooltip.freshWater': 'Fresh drinking water. Produced by desalination plants. Consumed by housing.',
   'hud.tooltip.seawater': 'Raw seawater from Caspian Sea. Extracted by pumps. Used by desalination plants.',
-  'hud.tooltip.heat': 'Thermal energy. Produced by reactor and thermal plants. Consumed by desalination and housing. ×2 in winter!',
+  'hud.tooltip.heat': 'Thermal energy. Produced by reactor and thermal plants. Consumed by desalination and housing. ×2 in winter! Winters grow harsher each year.',
   'hud.tooltip.electricity': 'Electrical power. Produced by reactor. Consumed by all buildings for maintenance.',
   'hud.tooltip.temp': 'Reactor core temperature. Rises +1°C/tick. Cooled by distillers (-0.8°C each). Meltdown at 100°C!',
   'hud.tooltip.happiness': 'Citizen happiness. Affected by water supply and housing connections. Zero = revolt!',
@@ -241,13 +241,18 @@ export const en = {
   'hint.buildHousing': '🏠 Build Housing on sand to grow population.',
 
   // Diagnostics
-  'diagnostic.waterStuck':
-    '💧 Fresh water not increasing. Check if distillers are connected to pumps and reactors.',
-  'diagnostic.distillerDisconnected': '💧 {count} distiller(s) need water and heat connections.',
-  'diagnostic.housingDisconnected': '🏠 {count} housing block(s) need water connections.',
-  'diagnostic.freshWaterDeclining': '💧 Fresh water declining. Check distiller connections.',
-  'diagnostic.heatStuck': '🔥 Heat not increasing. Check reactor connections.',
-  'diagnostic.heatDeclining': '🔥 Heat declining. Check reactor connections.',
+  'diagnostic.waterStuck.text': 'Fresh water not increasing. Check distiller connections.',
+  'diagnostic.heatStuck.text': 'Heat not increasing. Check reactor connections.',
+  'diagnostic.freshWaterDeclining.text': 'Fresh water declining. Check distiller connections.',
+  'diagnostic.heatDeclining.text': 'Heat declining. Check reactor connections.',
+  // Distiller connection messages
+  'diagnostic.distillerNeedsWater': '{count} distiller(s) need water supply.',
+  'diagnostic.distillerNeedsHeat': '{count} distiller(s) need heat supply.',
+  'diagnostic.distillerNeedsBoth': '{count} distiller(s) need connections.',
+  // Housing connection messages
+  'diagnostic.housingNeedsWater': '{count} housing block(s) need water.',
+  'diagnostic.housingNeedsHeat': '{count} housing block(s) need heat.',
+  'diagnostic.housingNeedsBoth': '{count} housing block(s) need connections.',
 
   // ============================================
   // Shortcuts Modal

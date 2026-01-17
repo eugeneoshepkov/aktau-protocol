@@ -110,6 +110,18 @@ Seasons cycle every 30 days and affect heat consumption for **both microrayons a
 
 **Note:** In winter, distillers consume 16 heat (8 × 2) instead of 8.
 
+#### Escalating Winters
+
+Each year (120 days), winter severity increases by 10%, simulating aging infrastructure and climate stress:
+
+| Year | Winter Multiplier | Effect |
+|------|-------------------|--------|
+| Year 1 | ×2.0 | Normal winter |
+| Year 2 | ×2.1 | Slightly harder |
+| Year 3 | ×2.2 | Noticeably harder |
+| Year 5 | ×2.4 | Challenging |
+| Year 10 | ×3.0 | Very challenging |
+
 ### Random Events
 
 Random events create unpredictability and prevent the game from becoming trivial at equilibrium. Events are checked each day with varying chances.
@@ -143,6 +155,18 @@ Random events create unpredictability and prevent the game from becoming trivial
 
 **Note:** Only one event of each type can be active at a time. Dramatic events like Reactor SCRAM and Water Contamination have instant effects plus ongoing modifiers.
 
+#### Guaranteed Event Cadence
+
+To prevent long stretches of quiet gameplay, the event system ensures regular disruption:
+
+| Days Since Last Event | Effect |
+|-----------------------|--------|
+| 0-15 days | Normal event chances |
+| 15-20 days | Event chances scale up to ×3 |
+| 20+ days | Random eligible event is forced |
+
+This ensures at least one event triggers every 20 days maximum.
+
 ### Reactor Temperature
 
 - Each reactor adds **+1°C per tick**
@@ -159,6 +183,21 @@ Population grows/declines based on conditions (requires at least one Microrayon)
 |-----------|--------|
 | Happiness > 60, Water > 20, Heat > 20 | +2% population growth |
 | Happiness < 30 OR Water < 10 OR Heat < 10 | -5% population decline |
+
+#### Population Consumption Scaling
+
+Larger populations consume more resources per person, creating pressure as the city grows:
+
+| Population | Consumption Multiplier |
+|------------|------------------------|
+| ≤100 | ×1.0 (baseline) |
+| 200 | ×1.06 |
+| 500 | ×1.24 |
+| 1000 | ×1.54 |
+
+Formula: `1 + ((population - 100) / 50) × 0.03` (for population > 100)
+
+This affects all microrayon resource consumption (water and heat).
 
 ### Fail States
 

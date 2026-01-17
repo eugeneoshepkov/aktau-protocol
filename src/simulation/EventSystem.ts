@@ -159,6 +159,11 @@ class EventSystemClass {
     happinessBonus: 0,
     waterMultiplier: 1
   };
+  
+  // Guaranteed event cadence tracking
+  private daysSinceLastEvent: number = 0;
+  private readonly MIN_EVENT_INTERVAL = 15; // Events become more likely after this many days
+  private readonly FORCED_EVENT_INTERVAL = 20; // Force event after this many days
 
   constructor() {
     gameState.on('dayAdvance', this.onDayAdvance.bind(this) as GameEventCallback);
@@ -166,7 +171,17 @@ class EventSystemClass {
 
   private onDayAdvance(): void {
     this.tickActiveEvents();
-    this.tryTriggerNewEvent();
+    this.daysSinceLastEvent++;
+    
+    // Scale event chances based on time since last event
+    const urgencyMultiplier = Math.min(3, 1 + (this.daysSinceLastEvent / this.MIN_EVENT_INTERVAL));
+    
+    if (!this.tryTriggerNewEvent(urgencyMultiplier)) {
+      // Force an event if it's been too long
+      if (this.daysSinceLastEvent >= this.FORCED_EVENT_INTERVAL) {
+        this.forceRandomEvent();
+      }
+    }
     this.applyModifiers();
   }
 
@@ -181,7 +196,7 @@ class EventSystemClass {
     this.notifyListeners();
   }
 
-  private tryTriggerNewEvent(): void {
+  private tryTriggerNewEvent(urgencyMultiplier: number = 1): boolean {
     const currentSeason = gameState.getSeason();
 
     for (const event of EVENTS) {
@@ -191,16 +206,45 @@ class EventSystemClass {
       // Skip events restricted to a different season
       if (event.seasonRestriction && event.seasonRestriction !== currentSeason) continue;
 
-      if (Math.random() < event.chance) {
+      // Apply urgency multiplier to increase chance over time
+      const adjustedChance = event.chance * urgencyMultiplier;
+      
+      if (Math.random() < adjustedChance) {
         this.activeEvents.push({
           event,
           remainingDays: event.duration
         });
         event.effect();
+        this.daysSinceLastEvent = 0; // Reset counter on successful trigger
         this.notifyListeners();
-        break;
+        return true;
       }
     }
+    return false;
+  }
+
+  private forceRandomEvent(): void {
+    const currentSeason = gameState.getSeason();
+    
+    // Get eligible events (not active, correct season)
+    const eligibleEvents = EVENTS.filter(event => {
+      if (this.activeEvents.some(a => a.event.id === event.id)) return false;
+      if (event.seasonRestriction && event.seasonRestriction !== currentSeason) return false;
+      return true;
+    });
+    
+    if (eligibleEvents.length === 0) return;
+    
+    // Pick a random eligible event
+    const event = eligibleEvents[Math.floor(Math.random() * eligibleEvents.length)];
+    
+    this.activeEvents.push({
+      event,
+      remainingDays: event.duration
+    });
+    event.effect();
+    this.daysSinceLastEvent = 0; // Reset counter
+    this.notifyListeners();
   }
 
   private applyModifiers(): void {
@@ -270,6 +314,10 @@ class EventSystemClass {
   public getActiveEvents(): readonly ActiveEvent[] {
     return this.activeEvents;
   }
+  
+  public getDaysSinceLastEvent(): number {
+    return this.daysSinceLastEvent;
+  }
 
   public onEventsChange(callback: (events: ActiveEvent[]) => void): void {
     this.listeners.add(callback);
@@ -287,6 +335,7 @@ class EventSystemClass {
 
   public reset(): void {
     this.activeEvents = [];
+    this.daysSinceLastEvent = 0;
     this.modifiers = {
       pumpEfficiency: 1,
       heatMultiplier: 1,
