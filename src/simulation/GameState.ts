@@ -1,5 +1,6 @@
 import {
   STARTING_RESOURCES,
+  RESOURCE_CAPS,
   BUILDING_PRODUCTION,
   BUILDING_COSTS,
   BUILDING_PLACEMENT,
@@ -38,6 +39,7 @@ export type GameEventType =
   | 'gameOver'
   | 'dayAdvance'
   | 'reactorWarning'
+  | 'reactorTempChange'
   | 'populationChange'
   | 'seasonChange';
 
@@ -163,6 +165,11 @@ export class GameState {
 
   public getReactorState(): Readonly<ReactorState> {
     return this.reactor;
+  }
+
+  public adjustReactorTemp(delta: number): void {
+    this.reactor.temperature = Math.max(0, this.reactor.temperature + delta);
+    this.emit('reactorTempChange', this.reactor.temperature);
   }
 
   public getDay(): number {
@@ -391,8 +398,13 @@ export class GameState {
     this.processPopulation();
     this.processReactor();
 
-    // Cap seawater to prevent unbounded accumulation
-    this.resources.seawater = Math.min(this.resources.seawater, 200);
+    // Apply resource caps to prevent unbounded accumulation
+    for (const [resource, cap] of Object.entries(RESOURCE_CAPS)) {
+      if (cap !== undefined) {
+        const key = resource as keyof Resources;
+        this.resources[key] = Math.min(this.resources[key], cap);
+      }
+    }
 
     this.checkFailStates();
 

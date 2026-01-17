@@ -36,10 +36,10 @@ bun run build  # Production build
 | Resource | Description | Starting Value | Cap |
 |----------|-------------|----------------|-----|
 | Seawater | Raw water from Caspian Sea | 100 | 200 |
-| Fresh Water | Desalinated drinking water | 50 | — |
-| Heat | Thermal energy for heating | 100 | — |
-| Electricity | Power for buildings | 150 | — |
-| Population | City inhabitants | 100 | — |
+| Fresh Water | Desalinated drinking water | 50 | 200 |
+| Heat | Thermal energy for heating | 100 | 200 |
+| Electricity | Power for buildings | 150 | 200 |
+| Population | City inhabitants | 100 | — (housing limited) |
 | Happiness | Citizen satisfaction | 50 | 100 |
 
 ### Buildings
@@ -109,6 +109,39 @@ Seasons cycle every 30 days and affect heat consumption for **both microrayons a
 | Winter | ×2.0 | Double heat needed |
 
 **Note:** In winter, distillers consume 16 heat (8 × 2) instead of 8.
+
+### Random Events
+
+Random events create unpredictability and prevent the game from becoming trivial at equilibrium. Events are checked each day with varying chances.
+
+#### Year-Round Events
+
+| Event | Icon | Chance | Duration | Effect |
+|-------|------|--------|----------|--------|
+| **Sandstorm** | 🌪️ | 4% | 5 days | Pump efficiency -50% |
+| **Cold Snap** | 🥶 | 4% | 3 days | Heat consumption +50% |
+| **Equipment Failure** | ⚠️ | 3% | 2 days | Electricity production -30% |
+| **Population Surge** | 📈 | 3% | 7 days | Happiness +10 |
+| **Reactor SCRAM** | ☢️ | 1.5% | 3 days | Instant +15°C, power -50% |
+| **Water Contamination** | ☣️ | 2% | 4 days | Instant -30% water, production -50% |
+| **Favorable Winds** | 💨 | 2% | 5 days | Pump efficiency +20% |
+
+#### Summer Events (June-August)
+
+| Event | Icon | Chance | Duration | Effect |
+|-------|------|--------|----------|--------|
+| **Heat Wave** | 🌡️ | 5% | 4 days | Electricity production -30% |
+| **Algae Bloom** | 🦠 | 4% | 5 days | Pump efficiency -60% |
+
+#### Winter Events (December-February)
+
+| Event | Icon | Chance | Duration | Effect |
+|-------|------|--------|----------|--------|
+| **Blizzard** | 🌨️ | 6% | 4 days | Heat consumption ×2 |
+| **Arctic Front** | ❄️ | 4% | 5 days | Heat consumption +80% |
+| **Pipe Freeze** | 🧊 | 4% | 2 days | Water production -50% |
+
+**Note:** Only one event of each type can be active at a time. Dramatic events like Reactor SCRAM and Water Contamination have instant effects plus ongoing modifiers.
 
 ### Reactor Temperature
 

@@ -9,7 +9,7 @@ export interface GameEvent {
   effect: () => void;
   onEnd?: () => void;
   seasonRestriction?: 'spring' | 'summer' | 'autumn' | 'winter';
-  visualEffect?: 'snow' | 'frost' | 'sandstorm';
+  visualEffect?: 'snow' | 'frost' | 'sandstorm' | 'heat';
 }
 
 interface ActiveEvent {
@@ -23,7 +23,7 @@ const EVENTS: GameEvent[] = [
     id: 'sandstorm',
     name: 'Sandstorm',
     icon: '🌪️',
-    chance: 0.02,
+    chance: 0.04,
     duration: 5,
     effect: () => {},
     onEnd: () => {},
@@ -33,7 +33,7 @@ const EVENTS: GameEvent[] = [
     id: 'cold_snap',
     name: 'Cold Snap',
     icon: '🥶',
-    chance: 0.02,
+    chance: 0.04,
     duration: 3,
     effect: () => {},
     onEnd: () => {},
@@ -43,7 +43,7 @@ const EVENTS: GameEvent[] = [
     id: 'equipment_failure',
     name: 'Equipment Failure',
     icon: '⚠️',
-    chance: 0.01,
+    chance: 0.03,
     duration: 2,
     effect: () => {},
     onEnd: () => {}
@@ -52,17 +52,74 @@ const EVENTS: GameEvent[] = [
     id: 'population_surge',
     name: 'Population Surge',
     icon: '📈',
-    chance: 0.015,
+    chance: 0.03,
     duration: 7,
     effect: () => {},
     onEnd: () => {}
+  },
+  {
+    id: 'reactor_scram',
+    name: 'Reactor SCRAM',
+    icon: '☢️',
+    chance: 0.015,
+    duration: 3,
+    effect: () => {
+      // Instant: spike reactor temp by 15°C
+      gameState.adjustReactorTemp(15);
+    },
+    onEnd: () => {}
+  },
+  {
+    id: 'water_contamination',
+    name: 'Water Contamination',
+    icon: '☣️',
+    chance: 0.02,
+    duration: 4,
+    effect: () => {
+      // Instant: lose 30% of freshwater
+      const resources = gameState.getResources();
+      const loss = Math.floor(resources.freshWater * 0.3);
+      gameState.addResources({ freshWater: -loss });
+    },
+    onEnd: () => {}
+  },
+  {
+    id: 'favorable_winds',
+    name: 'Favorable Winds',
+    icon: '💨',
+    chance: 0.02,
+    duration: 5,
+    effect: () => {},
+    onEnd: () => {}
+  },
+  // Summer-only events
+  {
+    id: 'heat_wave',
+    name: 'Heat Wave',
+    icon: '🌡️',
+    chance: 0.05,
+    duration: 4,
+    effect: () => {},
+    onEnd: () => {},
+    seasonRestriction: 'summer',
+    visualEffect: 'heat'
+  },
+  {
+    id: 'algae_bloom',
+    name: 'Algae Bloom',
+    icon: '🦠',
+    chance: 0.04,
+    duration: 5,
+    effect: () => {},
+    onEnd: () => {},
+    seasonRestriction: 'summer'
   },
   // Winter-only events
   {
     id: 'blizzard',
     name: 'Blizzard',
     icon: '🌨️',
-    chance: 0.04,
+    chance: 0.06,
     duration: 4,
     effect: () => {},
     onEnd: () => {},
@@ -73,7 +130,7 @@ const EVENTS: GameEvent[] = [
     id: 'arctic_front',
     name: 'Arctic Front',
     icon: '❄️',
-    chance: 0.02,
+    chance: 0.04,
     duration: 5,
     effect: () => {},
     onEnd: () => {},
@@ -84,7 +141,7 @@ const EVENTS: GameEvent[] = [
     id: 'pipe_freeze',
     name: 'Pipe Freeze',
     icon: '🧊',
-    chance: 0.02,
+    chance: 0.04,
     duration: 2,
     effect: () => {},
     onEnd: () => {},
@@ -181,6 +238,26 @@ class EventSystemClass {
         case 'pipe_freeze':
           // Pipe freeze: 50% water production
           this.modifiers.waterMultiplier = 0.5;
+          break;
+        case 'heat_wave':
+          // Heat wave: pumps work harder, 30% less electricity production
+          this.modifiers.electricityMultiplier = Math.min(this.modifiers.electricityMultiplier, 0.7);
+          break;
+        case 'algae_bloom':
+          // Algae clogs intake: 40% pump efficiency
+          this.modifiers.pumpEfficiency = Math.min(this.modifiers.pumpEfficiency, 0.6);
+          break;
+        case 'reactor_scram':
+          // Emergency shutdown: reactor produces less power, 50% electricity
+          this.modifiers.electricityMultiplier = Math.min(this.modifiers.electricityMultiplier, 0.5);
+          break;
+        case 'water_contamination':
+          // Contaminated: 50% water production
+          this.modifiers.waterMultiplier = Math.min(this.modifiers.waterMultiplier, 0.5);
+          break;
+        case 'favorable_winds':
+          // Good cooling: +20% pump efficiency
+          this.modifiers.pumpEfficiency = Math.max(this.modifiers.pumpEfficiency, 1.2);
           break;
       }
     }

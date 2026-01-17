@@ -22,6 +22,15 @@ export const STARTING_RESOURCES: Resources = {
   happiness: 50
 };
 
+export const RESOURCE_CAPS: Partial<Resources> = {
+  seawater: 200,    // storage limit
+  freshWater: 200,  // water storage limit
+  heat: 200,        // thermal storage limit
+  electricity: 200, // battery/grid limit
+  happiness: 100    // satisfaction cap
+  // population: no cap (limited by housing)
+};
+
 // ============================================
 // Tile Types
 // ============================================

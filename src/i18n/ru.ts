@@ -54,6 +54,16 @@ export const ru = {
   'event.arctic_front.desc': 'Полярный воздух увеличивает потребление тепла на 80%',
   'event.pipe_freeze.name': 'Замёрзшие трубы',
   'event.pipe_freeze.desc': 'Водопроводы замёрзли, производство воды сокращено вдвое',
+  'event.heat_wave.name': 'Жара',
+  'event.heat_wave.desc': 'Экстремальные температуры снижают выработку электричества на 30%',
+  'event.algae_bloom.name': 'Цветение водорослей',
+  'event.algae_bloom.desc': 'Каспийские водоросли забивают насосы, эффективность 40%',
+  'event.reactor_scram.name': 'Аварийный останов',
+  'event.reactor_scram.desc': 'Аварийное отключение! Температура +15°C, мощность снижена вдвое',
+  'event.water_contamination.name': 'Загрязнение воды',
+  'event.water_contamination.desc': 'Обнаружено загрязнение! Потеряно 30% воды, производство снижено вдвое',
+  'event.favorable_winds.name': 'Попутный ветер',
+  'event.favorable_winds.desc': 'Хорошие условия повышают эффективность насосов на 20%',
 
   // Конец игры
   'gameover.title': 'ИГРА ОКОНЧЕНА',

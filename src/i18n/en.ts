@@ -54,6 +54,16 @@ export const en = {
   'event.arctic_front.desc': 'Polar air mass increases heat consumption by 80%',
   'event.pipe_freeze.name': 'Pipe Freeze',
   'event.pipe_freeze.desc': 'Water pipes frozen, fresh water production halved',
+  'event.heat_wave.name': 'Heat Wave',
+  'event.heat_wave.desc': 'Extreme temperatures reduce electricity production by 30%',
+  'event.algae_bloom.name': 'Algae Bloom',
+  'event.algae_bloom.desc': 'Caspian algae clogs pump intakes, 40% efficiency',
+  'event.reactor_scram.name': 'Reactor SCRAM',
+  'event.reactor_scram.desc': 'Emergency shutdown! Temperature spikes +15°C, power output halved',
+  'event.water_contamination.name': 'Water Contamination',
+  'event.water_contamination.desc': 'Contamination detected! 30% freshwater lost, production halved',
+  'event.favorable_winds.name': 'Favorable Winds',
+  'event.favorable_winds.desc': 'Good conditions boost pump efficiency by 20%',
 
   // Game Over
   'gameover.title': 'GAME OVER',
