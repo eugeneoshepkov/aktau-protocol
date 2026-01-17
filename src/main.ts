@@ -182,6 +182,12 @@ async function initGame(): Promise<void> {
   const inputManager = new InputManager(scene, gridManager);
 
   inputManager.setTileClickCallback((x, z) => {
+    // Handle demolish mode first
+    if (buildingManager.isDemolishMode()) {
+      buildingManager.tryDemolishBuilding(x, z);
+      return;
+    }
+    // Handle building placement
     if (buildingManager.getSelectedBuildingType()) {
       const placed = buildingManager.tryPlaceBuilding(x, z);
       if (placed) {

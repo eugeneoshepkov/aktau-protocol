@@ -33,25 +33,25 @@ bun run build  # Production build
 
 ### Resources
 
-| Resource | Description | Starting Value |
-|----------|-------------|----------------|
-| Seawater | Raw water from Caspian Sea | 100 |
-| Fresh Water | Desalinated drinking water | 50 |
-| Heat | Thermal energy for heating | 50 |
-| Electricity | Power for buildings | 100 |
-| Population | City inhabitants | 100 |
-| Happiness | Citizen satisfaction | 50 |
+| Resource | Description | Starting Value | Cap |
+|----------|-------------|----------------|-----|
+| Seawater | Raw water from Caspian Sea | 100 | 200 |
+| Fresh Water | Desalinated drinking water | 50 | — |
+| Heat | Thermal energy for heating | 100 | — |
+| Electricity | Power for buildings | 150 | — |
+| Population | City inhabitants | 100 | — |
+| Happiness | Citizen satisfaction | 50 | 100 |
 
 ### Buildings
 
 | Building | Placement | Cost | Consumes/tick | Produces/tick | Special |
 |----------|-----------|------|---------------|---------------|---------|
 | **Water Pump** | Sea tiles | ⚡20 | ⚡5 | 🌊10 seawater | Extracts from Caspian |
-| **BN-350 Reactor** | Rock tiles | ⚡50 | — | 🔥50 heat, ⚡20 | +1°C/tick to reactor temp |
-| **Desalination Plant** | Sand/Rock | ⚡30 | 🌊10, 🔥10 | 💧10 freshwater | Cools reactor by 0.8°C/tick |
+| **BN-350 Reactor** | Rock tiles | ⚡50 | — | 🔥70 heat, ⚡20 | +1°C/tick to reactor temp |
+| **Desalination Plant** | Sand/Rock | ⚡30 | 🌊10, 🔥8 | 💧10 freshwater | Cools reactor by 0.8°C/tick |
 | **Microrayon Housing** | Sand tiles | 💧20, 🔥10 | 💧5, 🔥5× season | 😊±1-2 happiness | Soviet housing blocks |
 | **Water Tank** | Sand/Rock | ⚡15 | — | — | Relays water, adds 💧10 capacity |
-| **Thermal Plant** | Sand/Rock | ⚡40 | ⚡10 | 🔥15 heat, ⚡25 | Requires 5 microrayons per plant |
+| **Thermal Plant** | Sand/Rock | ⚡40 | ⚡10 | 🔥20 heat, ⚡25 | Requires 5 microrayons per plant |
 
 ### Building Limits
 
@@ -76,18 +76,18 @@ Formula: `baseCost × (1 + count × 0.15)`
 
 ### Maintenance Costs
 
-All buildings consume electricity for upkeep each tick:
+Active buildings consume electricity for upkeep each tick:
 
 | Building | Maintenance |
 |----------|-------------|
-| **Water Pump** | ⚡2/tick |
-| **Desalination Plant** | ⚡3/tick |
-| **Microrayon** | ⚡1/tick |
-| **Water Tank** | ⚡1/tick |
-| **Thermal Plant** | ⚡5/tick |
+| **Water Pump** | ⚡1/tick |
+| **Desalination Plant** | ⚡1/tick |
+| **Thermal Plant** | ⚡2/tick |
+| **Microrayon** | Free (housing) |
+| **Water Tank** | Free (passive) |
 | **Reactor** | Free (produces power) |
 
-A city with 50 buildings drains ~100⚡/tick in maintenance alone.
+Maintenance is intentionally light to avoid death spirals.
 
 ### Tile Types
 
@@ -99,7 +99,7 @@ A city with 50 buildings drains ~100⚡/tick in maintenance alone.
 
 ### Seasons
 
-Seasons cycle every 30 days and affect heat consumption:
+Seasons cycle every 30 days and affect heat consumption for **both microrayons and distillers**:
 
 | Season | Heat Multiplier | Effect |
 |--------|-----------------|--------|
@@ -107,6 +107,8 @@ Seasons cycle every 30 days and affect heat consumption:
 | Summer | ×0.5 | Half heat needed |
 | Autumn | ×1.2 | 20% more heat |
 | Winter | ×2.0 | Double heat needed |
+
+**Note:** In winter, distillers consume 16 heat (8 × 2) instead of 8.
 
 ### Reactor Temperature
 
@@ -152,8 +154,8 @@ Each producer building has limited capacity based on production/consumption rati
 | **Pump** | 10 seawater | 1 distiller |
 | **Distiller** | 10 freshWater | 2 microrayons |
 | **Water Tank** | 10 freshWater | 2 microrayons (requires distiller chain) |
-| **Reactor** | 50 heat | 5 distillers OR 10 microrayons |
-| **Thermal Plant** | 15 heat | 1 distiller + 1 microrayon |
+| **Reactor** | 70 heat | 8 distillers OR 14 microrayons |
+| **Thermal Plant** | 20 heat | 2 distillers OR 4 microrayons |
 
 **Water Distribution Network:** Water tanks act as capacity relays. They provide 10 freshWater capacity each, but only if connected to a distiller (directly or via other tanks). This allows building extensive housing networks with minimal distillers:
 - 1 distiller = 2 microrayons
@@ -191,6 +193,18 @@ When a building is selected for placement:
 
 ---
 
+## Demolish Mode
+
+Press **X** (or **Ч** on Russian keyboard) to toggle demolish mode:
+
+- Click any building to demolish it
+- **50% refund** of base cost (not scaled cost)
+- **Reactor cannot be demolished** (shows error)
+- Press X again or select a building to exit demolish mode
+- Visual feedback: red-themed button, panel border glows red
+
+---
+
 ## Controls
 
 | Input | Action |
@@ -201,8 +215,9 @@ When a building is selected for placement:
 | **Shift+Drag** | Pan camera (mouse) |
 | **Drag** | Rotate camera |
 | **1-5** | Building hotkeys |
-| **Esc** | Cancel building placement |
-| **Click** | Place building / Select |
+| **X** | Toggle demolish mode |
+| **Esc** | Cancel building placement / Exit demolish mode |
+| **Click** | Place building / Select / Demolish (in demolish mode) |
 
 ---
 
@@ -336,17 +351,19 @@ src/
 | Modify capacity/connections | `config/ResourceFlow.ts` (single source of truth), `types/GameTypes.ts` (numeric values) |
 | Modify connection rules | `config/ResourceFlow.ts` (resource flows), `config/ConnectionRules.ts` (requirements) |
 | Add new resource | `types/GameTypes.ts`, `simulation/GameState.ts`, `ui/HUD.ts` |
+| Demolish feature | `managers/BuildingManager.ts` (demolish mode), `ui/BuildPanel.ts` (button), `simulation/GameState.ts` (removeBuilding, addResources) |
 | New visual effect | `engine/PostProcess.ts`, `effects/ParticleManager.ts` |
 | New sound effect | `managers/SoundManager.ts` |
 | UI changes | `ui/*.ts`, `style.css` |
 | Switch to primitives | `manifest.json` (set `useModels: false`) |
 | Add new 3D model | `public/models/`, `manifest.json` |
 | Change tick speed | `simulation/TickSystem.ts` |
-| Modify seasons | `simulation/GameState.ts` (SEASON_* constants) |
+| Modify seasons | `simulation/GameState.ts` (SEASON_* constants, season multiplier logic) |
 | Modify terrain visuals | `grid/GridManager.ts` (createLandMesh, createWaterMesh) |
 | Camera constraints | `engine/Camera.ts` (clampCameraTarget) |
 | Scene effects (fog) | `engine/Engine.ts` |
 | Modify tutorial objectives | `ui/TutorialManager.ts` (STEP_CONFIGS) |
+| Modify diagnostics | `ui/DiagnosticManager.ts` (checkIssues, building highlighting) |
 | Add/modify translations | `i18n/en.ts`, `i18n/ru.ts` |
 | Add keyboard shortcut | `utils/keyboard.ts` (add Russian mapping), relevant handler file |
 
@@ -364,13 +381,14 @@ src/
 - [x] Fail states and game over
 
 ### Features
-- [x] Seasons affecting heat consumption
+- [x] Seasons affecting heat consumption (microrayons AND distillers)
 - [x] Population growth/decline
 - [x] Auto-connecting pipes
 - [x] Save/Load to localStorage
 - [x] Speed controls (1×, 2×, 4×)
 - [x] Pause/Resume
 - [x] Resource trend indicators (+/-)
+- [x] Demolish mode (X key, 50% refund)
 
 ### Visuals
 - [x] 3D models from asset packs

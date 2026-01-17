@@ -28,6 +28,7 @@ export class BuildPanel {
   private container: HTMLDivElement;
   private buildingManager: BuildingManager;
   private buttons: Map<BuildingType, HTMLButtonElement> = new Map();
+  private demolishButton: HTMLButtonElement | null = null;
 
   constructor(buildingManager: BuildingManager) {
     this.buildingManager = buildingManager;
@@ -39,6 +40,24 @@ export class BuildPanel {
     gameState.on('buildingPlaced', () => {
       this.updateButtonStates();
     });
+
+    // Update demolish button state when buildings are removed
+    gameState.on('buildingRemoved', () => {
+      this.updateButtonStates();
+    });
+
+    // Update demolish button visual state when mode changes
+    this.buildingManager.onDemolishModeChange((enabled) => {
+      if (this.demolishButton) {
+        if (enabled) {
+          this.demolishButton.classList.add('selected', 'demolish-active');
+          this.container.classList.add('demolish-mode');
+        } else {
+          this.demolishButton.classList.remove('selected', 'demolish-active');
+          this.container.classList.remove('demolish-mode');
+        }
+      }
+    });
   }
 
   private setupKeyboardShortcuts(): void {
@@ -49,6 +68,13 @@ export class BuildPanel {
       if (type) {
         e.preventDefault();
         this.toggleBuilding(type);
+        soundManager.play('click');
+      }
+
+      // X key (or Ч on Russian keyboard) toggles demolish mode
+      if (e.key === 'x' || e.key === 'X' || e.key === 'ч' || e.key === 'Ч') {
+        e.preventDefault();
+        this.toggleDemolishMode();
         soundManager.play('click');
       }
 
@@ -101,6 +127,28 @@ export class BuildPanel {
       buttonContainer.appendChild(button);
       this.buttons.set(type, button);
     });
+
+    // Add separator
+    const separator = document.createElement('div');
+    separator.className = 'build-separator';
+    buttonContainer.appendChild(separator);
+
+    // Add demolish button
+    const demolishButton = document.createElement('button');
+    demolishButton.className = 'build-button demolish-button';
+    demolishButton.innerHTML = `
+      <span class="build-icon icon-wrap" style="color: #ef4444">${ICONS.demolish}</span>
+      <span class="build-name">${t('build.demolish')}</span>
+      <span class="build-cost"><span class="cost-item">50%</span></span>
+      <span class="build-hotkey">X</span>
+    `;
+    demolishButton.title = t('build.demolish.desc') + ' [X]';
+    demolishButton.addEventListener('click', () => {
+      this.toggleDemolishMode();
+      soundManager.play('click');
+    });
+    buttonContainer.appendChild(demolishButton);
+    this.demolishButton = demolishButton;
 
     container.appendChild(buttonContainer);
 
@@ -169,6 +217,11 @@ export class BuildPanel {
   }
 
   private toggleBuilding(type: BuildingType): void {
+    // Exit demolish mode when selecting a building
+    if (this.buildingManager.isDemolishMode()) {
+      this.buildingManager.setDemolishMode(false);
+    }
+
     const currentSelection = this.buildingManager.getSelectedBuildingType();
 
     // Only change selection if a different building type is clicked
@@ -178,6 +231,11 @@ export class BuildPanel {
   }
 
   private selectBuilding(type: BuildingType): void {
+    // Exit demolish mode when selecting a building
+    if (this.buildingManager.isDemolishMode()) {
+      this.buildingManager.setDemolishMode(false);
+    }
+
     for (const [t, btn] of this.buttons) {
       if (t === type) {
         btn.classList.add('selected');
@@ -190,11 +248,25 @@ export class BuildPanel {
     this.container.classList.add('building-selected');
   }
 
+  private toggleDemolishMode(): void {
+    const isCurrentlyDemolish = this.buildingManager.isDemolishMode();
+
+    if (isCurrentlyDemolish) {
+      // Exit demolish mode
+      this.buildingManager.setDemolishMode(false);
+    } else {
+      // Enter demolish mode, clear any building selection
+      this.cancelSelection();
+      this.buildingManager.setDemolishMode(true);
+    }
+  }
+
   private cancelSelection(): void {
     for (const btn of this.buttons.values()) {
       btn.classList.remove('selected');
     }
     this.buildingManager.selectBuildingType(null);
+    this.buildingManager.setDemolishMode(false);
     this.container.classList.remove('building-selected');
   }
 

@@ -65,6 +65,11 @@ export const ru = {
   'build.title': 'СТРОИТЬ',
   'build.free': 'Бесплатно',
   'build.maxed': 'ПОСТРОЕНО',
+  'build.demolish': 'СНЕСТИ',
+  'build.demolish.desc': 'Нажмите на здание, чтобы снести его и вернуть 50% стоимости.',
+  'build.demolish.refund': 'Возврат: {amount}',
+  'build.demolish.confirm': 'Снесено: {building}',
+  'build.demolish.reactor': 'Нельзя снести реактор!',
 
   // Названия зданий
   'building.pump.name': 'Водозабор',

@@ -72,6 +72,9 @@ export class PipeManager {
   private suppliedBuildings: Map<string, Set<string>> = new Map();
   // Detailed allocation info for pipe visualization
   private supplyAllocations: SupplyAllocation[] = [];
+  // Track relay upstream connections: relayId -> { upstream building, pipe type }
+  private relayUpstreamConnections: Map<string, { upstream: Building; pipeType: 'water' | 'heat' }> =
+    new Map();
 
   constructor(scene: Scene) {
     this.scene = scene;
@@ -433,6 +436,7 @@ export class PipeManager {
     // Reset supply tracking
     this.suppliedBuildings.clear();
     this.supplyAllocations = [];
+    this.relayUpstreamConnections.clear();
 
     const buildings = gameState.getBuildings();
 
@@ -500,6 +504,9 @@ export class PipeManager {
             drawnPipes.add(pipeKey);
             this.createPipe(current, relay, pipeType);
           }
+
+          // Track relay's upstream connection for getConnectionsForBuilding
+          this.relayUpstreamConnections.set(relay.id, { upstream: current, pipeType });
 
           // Mark relay as connected (one upstream pipe only)
           connectedRelays.add(relay.id);
@@ -842,6 +849,30 @@ export class PipeManager {
         type: pipeType,
         direction: 'incoming'
       });
+    }
+
+    // Check relay infrastructure connections (for water tanks and other relays)
+    const relayConnection = this.relayUpstreamConnections.get(building.id);
+    if (relayConnection) {
+      connections.push({
+        building: relayConnection.upstream,
+        type: relayConnection.pipeType,
+        direction: 'incoming'
+      });
+    }
+
+    // Check if this building is upstream of any relay (outgoing relay connection)
+    for (const [relayId, conn] of this.relayUpstreamConnections.entries()) {
+      if (conn.upstream.id === building.id) {
+        const relay = buildings.find((b) => b.id === relayId);
+        if (relay) {
+          connections.push({
+            building: relay,
+            type: conn.pipeType,
+            direction: 'outgoing'
+          });
+        }
+      }
     }
 
     // For virtual buildings (preview), use proximity-based logic

@@ -16,8 +16,8 @@ export interface Resources {
 export const STARTING_RESOURCES: Resources = {
   seawater: 100,
   freshWater: 50,
-  heat: 50,
-  electricity: 100,
+  heat: 100, // Increased from 50 to give more bootstrap room
+  electricity: 150, // Increased from 100 to allow more early building
   population: 100,
   happiness: 50
 };
@@ -81,11 +81,11 @@ export const BUILDING_PRODUCTION: Record<BuildingType, ProductionRule> = {
   pump: { consumes: { electricity: 5 }, produces: { seawater: 10 } },
   reactor: {
     consumes: {},
-    produces: { heat: 50, electricity: 20 },
+    produces: { heat: 70, electricity: 20 }, // Heat increased from 50 to 70 for better balance
     special: 'tempIncrease'
   },
   distiller: {
-    consumes: { seawater: 10, heat: 10 },
+    consumes: { seawater: 10, heat: 8 }, // Heat reduced from 10 to 8 for better efficiency
     produces: { freshWater: 10 }
   },
   microrayon: {
@@ -93,7 +93,7 @@ export const BUILDING_PRODUCTION: Record<BuildingType, ProductionRule> = {
     produces: { happiness: 1 }
   },
   water_tank: { consumes: {}, produces: {} },
-  thermal_plant: { consumes: { electricity: 10 }, produces: { heat: 15, electricity: 25 } }
+  thermal_plant: { consumes: { electricity: 10 }, produces: { heat: 20, electricity: 25 } } // Heat increased from 15 to 20
 };
 
 export const BUILDING_PLACEMENT: Record<BuildingType, TileType[]> = {
@@ -133,12 +133,12 @@ export const WATER_TANK_CAPACITY = 50;
 // ============================================
 
 export const BUILDING_MAINTENANCE: Record<BuildingType, Partial<Resources>> = {
-  pump: { electricity: 2 },
+  pump: { electricity: 1 },
   reactor: {}, // Produces power, no maintenance
-  distiller: { electricity: 3 },
-  microrayon: { electricity: 1 },
-  water_tank: { electricity: 1 },
-  thermal_plant: { electricity: 5 }
+  distiller: { electricity: 1 },
+  microrayon: {}, // Housing has no electricity maintenance
+  water_tank: {}, // Passive storage, no maintenance
+  thermal_plant: { electricity: 2 }
 };
 
 // Cost scaling: each building costs 15% more than the previous of same type
@@ -158,8 +158,8 @@ export const BUILDING_CAPACITY: Partial<Record<BuildingType, CapacityConfig>> = 
   pump: { resource: 'seawater', provides: 10 },
   distiller: { resource: 'freshWater', provides: 10 },
   water_tank: { resource: 'freshWater', provides: 10 }, // Relay capacity (requires distiller supply chain)
-  reactor: { resource: 'heat', provides: 50 },
-  thermal_plant: { resource: 'heat', provides: 15 }
+  reactor: { resource: 'heat', provides: 70 }, // Increased from 50 to match production
+  thermal_plant: { resource: 'heat', provides: 20 } // Increased from 15 to match production
 };
 
 // What resource each building consumes (for capacity allocation)
@@ -172,7 +172,7 @@ export interface ConsumptionConfig {
 export const BUILDING_CONSUMPTION: Partial<Record<BuildingType, ConsumptionConfig[]>> = {
   distiller: [
     { resource: 'seawater', amount: 10, priority: 1 },
-    { resource: 'heat', amount: 10, priority: 1 } // Distillers get heat first
+    { resource: 'heat', amount: 8, priority: 1 } // Distillers get heat first (reduced from 10 to 8)
   ],
   microrayon: [
     { resource: 'freshWater', amount: 5, priority: 1 },

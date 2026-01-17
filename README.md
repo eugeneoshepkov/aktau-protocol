@@ -80,7 +80,7 @@ Winter is coming. And it wants 2× the heat.
 Expansion has a cost:
 
 - **Scaling costs** — Each building costs 15% more than the previous of the same type
-- **Maintenance** — All buildings drain electricity every tick (1-5⚡ depending on type)
+- **Maintenance** — Pumps, distillers, and thermal plants drain 1-2⚡/tick each
 
 You can't build infinitely. Plan carefully.
 

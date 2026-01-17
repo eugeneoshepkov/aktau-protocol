@@ -18,8 +18,9 @@ import { getTileCenter } from '../grid/GridCoords';
 import { assetManager, type ModelConfig } from './AssetManager';
 import { feedbackManager } from '../ui/FeedbackManager';
 import { soundManager } from './SoundManager';
-import type { Building, BuildingType } from '../types';
+import { BUILDING_COSTS, type Building, type BuildingType, type Resources } from '../types';
 import type { ParticleManager } from '../effects/ParticleManager';
+import { t, td } from '../i18n';
 
 // Ground level offset - buildings sit on top of terrain
 const GROUND_LEVEL = 0.15;
@@ -43,6 +44,8 @@ export class BuildingManager {
 
   private selectedBuildingType: BuildingType | null = null;
   private onSelectionChangeCallback: ((type: BuildingType | null) => void) | null = null;
+  private demolishMode: boolean = false;
+  private onDemolishModeChangeCallback: ((enabled: boolean) => void) | null = null;
 
   // Ghost preview properties
   private ghostMesh: TransformNode | null = null;
@@ -418,6 +421,23 @@ export class BuildingManager {
     return this.selectedBuildingType;
   }
 
+  public setDemolishMode(enabled: boolean): void {
+    this.demolishMode = enabled;
+    // Exit building selection when entering demolish mode
+    if (enabled && this.selectedBuildingType) {
+      this.selectBuildingType(null);
+    }
+    this.onDemolishModeChangeCallback?.(enabled);
+  }
+
+  public isDemolishMode(): boolean {
+    return this.demolishMode;
+  }
+
+  public onDemolishModeChange(callback: (enabled: boolean) => void): void {
+    this.onDemolishModeChangeCallback = callback;
+  }
+
   public tryPlaceBuilding(gridX: number, gridZ: number): boolean {
     if (!this.selectedBuildingType) {
       console.log('No building type selected');
@@ -450,6 +470,48 @@ export class BuildingManager {
 
     console.log(`Placed ${this.selectedBuildingType} at (${gridX}, ${gridZ})`);
     return true;
+  }
+
+  public tryDemolishBuilding(gridX: number, gridZ: number): boolean {
+    if (!this.demolishMode) {
+      return false;
+    }
+
+    const building = gameState.getBuildingAt(gridX, gridZ);
+    if (!building) {
+      soundManager.play('error');
+      return false;
+    }
+
+    // Cannot demolish the reactor
+    if (building.type === 'reactor') {
+      feedbackManager.showToast(t('build.demolish.reactor'), 'error');
+      soundManager.play('error');
+      return false;
+    }
+
+    // Calculate 50% refund of base cost
+    const baseCost = BUILDING_COSTS[building.type];
+    const refund: Partial<Resources> = {};
+    for (const [resource, amount] of Object.entries(baseCost)) {
+      if (amount) {
+        refund[resource as keyof Resources] = Math.floor(amount * 0.5);
+      }
+    }
+
+    // Apply refund
+    gameState.addResources(refund);
+
+    // Remove the building
+    const success = gameState.removeBuilding(building.id);
+    if (success) {
+      const buildingName = td(`building.${building.type}.name`);
+      feedbackManager.showToast(t('build.demolish.confirm', { building: buildingName }), 'success');
+      soundManager.play('success');
+      console.log(`Demolished ${building.type} at (${gridX}, ${gridZ}), refund:`, refund);
+    }
+
+    return success;
   }
 
   public canPlaceAt(gridX: number, gridZ: number): boolean {

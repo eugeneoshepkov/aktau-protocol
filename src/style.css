@@ -692,6 +692,47 @@ body {
   font-size: 10px;
 }
 
+/* Separator between building buttons and demolish */
+.build-separator {
+  width: 1px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.15);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+/* Demolish button styles */
+.build-button.demolish-button {
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.build-button.demolish-button:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+.build-button.demolish-button.selected,
+.build-button.demolish-button.demolish-active {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: #ef4444;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+}
+
+/* Demolish mode indicator */
+#build-panel.demolish-mode {
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+#build-panel.demolish-mode::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #ef4444, transparent);
+}
+
 .cancel-button {
   background: rgba(255, 100, 100, 0.1);
   border: 1px solid rgba(255, 100, 100, 0.3);

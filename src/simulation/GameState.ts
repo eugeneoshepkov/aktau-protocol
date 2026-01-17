@@ -127,6 +127,14 @@ export class GameState {
     return this.resources;
   }
 
+  public addResources(toAdd: Partial<Resources>): void {
+    for (const [resource, amount] of Object.entries(toAdd)) {
+      if (amount) {
+        this.resources[resource as keyof Resources] += amount;
+      }
+    }
+  }
+
   public getReactorState(): Readonly<ReactorState> {
     return this.reactor;
   }
@@ -346,6 +354,10 @@ export class GameState {
     this.processMaintenanceCosts();
     this.processPopulation();
     this.processReactor();
+
+    // Cap seawater to prevent unbounded accumulation
+    this.resources.seawater = Math.min(this.resources.seawater, 200);
+
     this.checkFailStates();
 
     if (!this.gameOver) {
@@ -466,7 +478,8 @@ export class GameState {
       let canProduce = true;
       for (const [resource, amount] of Object.entries(production.consumes)) {
         let required = (amount ?? 0) * count;
-        if (resource === 'heat' && type === 'microrayon') {
+        // Apply season multiplier to heat consumption for both microrayons and distillers
+        if (resource === 'heat' && (type === 'microrayon' || type === 'distiller')) {
           required = Math.ceil(required * seasonMultiplier);
         }
         if (this.resources[resource as keyof Resources] < required) {
@@ -478,7 +491,8 @@ export class GameState {
       if (canProduce) {
         for (const [resource, amount] of Object.entries(production.consumes)) {
           let consumed = (amount ?? 0) * count;
-          if (resource === 'heat' && type === 'microrayon') {
+          // Apply season multiplier to heat consumption for both microrayons and distillers
+          if (resource === 'heat' && (type === 'microrayon' || type === 'distiller')) {
             consumed = Math.ceil(consumed * seasonMultiplier);
           }
           this.resources[resource as keyof Resources] -= consumed;

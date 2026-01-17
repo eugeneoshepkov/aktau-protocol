@@ -93,7 +93,8 @@ export class DiagnosticManager {
     const distillers = buildings.filter((b) => b.type === 'distiller');
     const microrayons = buildings.filter((b) => b.type === 'microrayon');
 
-    if (distillers.length > 0 && trends.freshWater <= 0 && resources.freshWater < 100) {
+    // Always check for disconnected distillers - they should always be highlighted
+    if (distillers.length > 0) {
       const disconnectedDistillers = distillers.filter(
         (d) => !this.pipeManager!.isFullyOperational(d)
       );
@@ -106,18 +107,21 @@ export class DiagnosticManager {
           }),
           buildings: disconnectedDistillers
         });
-      } else if (resources.seawater < 10 * distillers.length) {
-        issues.push({
-          priority: 2,
-          message: t('diagnostic.waterStuck'),
-          buildings: []
-        });
-      } else if (resources.heat < 10 * distillers.length) {
-        issues.push({
-          priority: 2,
-          message: t('diagnostic.heatStuck'),
-          buildings: []
-        });
+      } else if (trends.freshWater <= 0 && resources.freshWater < 100) {
+        // Only show resource-related warnings if no disconnection issues
+        if (resources.seawater < 10 * distillers.length) {
+          issues.push({
+            priority: 2,
+            message: t('diagnostic.waterStuck'),
+            buildings: []
+          });
+        } else if (resources.heat < 8 * distillers.length) {
+          issues.push({
+            priority: 2,
+            message: t('diagnostic.heatStuck'),
+            buildings: []
+          });
+        }
       }
     }
 

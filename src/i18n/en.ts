@@ -65,6 +65,11 @@ export const en = {
   'build.title': 'BUILD',
   'build.free': 'Free',
   'build.maxed': 'BUILT',
+  'build.demolish': 'DEMOLISH',
+  'build.demolish.desc': 'Click a building to demolish it and recover 50% of its cost.',
+  'build.demolish.refund': 'Refund: {amount}',
+  'build.demolish.confirm': 'Demolished {building}',
+  'build.demolish.reactor': 'Cannot demolish the reactor!',
 
   // Building Names
   'building.pump.name': 'Water Pump',
