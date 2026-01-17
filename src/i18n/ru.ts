@@ -39,6 +39,22 @@ export const ru = {
   'season.autumn': 'Осень (Тепло ×{mult})',
   'season.winter': 'Зима (Тепло ×{mult})',
 
+  // События
+  'event.sandstorm.name': 'Песчаная буря',
+  'event.sandstorm.desc': 'Пустынные ветра снижают эффективность насосов на 50%',
+  'event.cold_snap.name': 'Заморозки',
+  'event.cold_snap.desc': 'Резкое похолодание увеличивает потребление тепла на 50%',
+  'event.equipment_failure.name': 'Поломка оборудования',
+  'event.equipment_failure.desc': 'Повреждены электросистемы, выработка энергии снижена на 30%',
+  'event.population_surge.name': 'Приток населения',
+  'event.population_surge.desc': 'Прибыли новые рабочие, бонус к счастью +10',
+  'event.blizzard.name': 'Метель',
+  'event.blizzard.desc': 'Сильная зимняя буря удваивает потребление тепла',
+  'event.arctic_front.name': 'Арктический фронт',
+  'event.arctic_front.desc': 'Полярный воздух увеличивает потребление тепла на 80%',
+  'event.pipe_freeze.name': 'Замёрзшие трубы',
+  'event.pipe_freeze.desc': 'Водопроводы замёрзли, производство воды сокращено вдвое',
+
   // Конец игры
   'gameover.title': 'ИГРА ОКОНЧЕНА',
   'gameover.meltdown': 'ЯДЕРНАЯ КАТАСТРОФА',
@@ -160,7 +176,11 @@ export const ru = {
   'tooltip.cooling': 'Охлаждает реактор: -0.8°C/такт',
   'tooltip.needs': 'Требуется: {missing}',
   'tooltip.noWater': 'Нет воды — жители несчастны!',
+  'tooltip.noHeat': 'Нет тепла — жители несчастны!',
+  'tooltip.noConnection': 'Нет подключения — жители несчастны!',
   'tooltip.disconnected': 'Не подключено к сети',
+  'tooltip.heatSource': 'Источник тепла',
+  'tooltip.waterSource': 'Источник воды',
   'tooltip.receiving': '← Получает: {sources}',
   'tooltip.sending': '→ Передаёт: {targets}',
 

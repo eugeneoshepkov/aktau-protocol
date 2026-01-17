@@ -21,7 +21,7 @@ import { DiagnosticManager } from './ui/DiagnosticManager';
 import { tickSystem } from './simulation/TickSystem';
 import { gameState } from './simulation/GameState';
 import { eventSystem } from './simulation/EventSystem';
-import { FilmGrainEffect, HeatHazeEffect } from './engine/PostProcess';
+import { FilmGrainEffect, HeatHazeEffect, FrostVignetteEffect } from './engine/PostProcess';
 import { ParticleManager } from './effects/ParticleManager';
 import { ICONS } from './ui/Icons';
 import { keyMatches } from './utils/keyboard';
@@ -65,6 +65,7 @@ async function initGame(): Promise<void> {
   const camera = new IsometricCamera(scene, canvas);
   new FilmGrainEffect(scene, camera.getCamera());
   new HeatHazeEffect(scene, camera.getCamera());
+  const frostEffect = new FrostVignetteEffect(scene, camera.getCamera());
 
   // Create reset view button
   const resetBtn = document.createElement('button');
@@ -153,6 +154,9 @@ async function initGame(): Promise<void> {
   gameState.setConnectionChecker((building) => ({
     isFullyOperational: pipeManager.isFullyOperational(building)
   }));
+
+  // Wire up event system modifiers for weather effects
+  gameState.setEventModifiersGetter(() => eventSystem.getModifiers());
 
   buildingManager.setParticleManager(particleManager);
   buildingManager.onSelectionChange(() => {
@@ -274,6 +278,31 @@ async function initGame(): Promise<void> {
 
   eventSystem.onEventsChange((events) => {
     hud.updateActiveEvents(events);
+
+    // Check for visual effects based on active events
+    const hasSnow = events.some(
+      (e) => e.event.visualEffect === 'snow'
+    );
+    const hasFrost = events.some(
+      (e) => e.event.visualEffect === 'frost'
+    );
+
+    // Control snow particles
+    if (hasSnow) {
+      particleManager.startSnow();
+    } else {
+      particleManager.stopSnow();
+    }
+
+    // Control frost vignette
+    frostEffect.setIntensity(hasFrost ? 0.6 : 0);
+
+    // Control blizzard wind sounds
+    if (hasSnow) {
+      soundManager.playLoop('blizzard');
+    } else {
+      soundManager.stopLoop('blizzard');
+    }
   });
 
   musicManager.initialize();

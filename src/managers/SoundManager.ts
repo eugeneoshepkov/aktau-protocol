@@ -51,7 +51,13 @@ const SOUNDS: Record<string, ZzFXParams> = {
   gameover: [1, 0, 80, 0.3, 1.2, 0.8, 1, 0.8, -50, -5, 0, 0, 0, 0.6, 0, 0.2, 0.15, 0.2, 0.4],
 
   // Meltdown siren - alarming nuclear warning
-  meltdown: [0.9, 0, 400, 0.1, 0.4, 0.2, 2, 0, 200, 0, -200, 0.15, 0.3, 0.3, 0, 0, 0.05, 0.6, 0.1]
+  meltdown: [0.9, 0, 400, 0.1, 0.4, 0.2, 2, 0, 200, 0, -200, 0.15, 0.3, 0.3, 0, 0, 0.05, 0.6, 0.1],
+
+  // Wind gust - low rumbling atmospheric sound
+  wind: [0.3, 0.5, 80, 0.5, 2.0, 1.0, 3, 0, 0, 0, 0, 0, 0, 0.8, 0, 0, 0, 0.2, 0.5],
+
+  // Blizzard howl - intense wind with higher frequency
+  blizzard: [0.4, 0.6, 60, 0.3, 3.0, 1.5, 3, 0, 10, 0, 0, 0, 0, 0.9, 0, 0, 0, 0.15, 0.6]
 };
 
 class SoundManagerClass {
@@ -59,6 +65,7 @@ class SoundManagerClass {
   private muted: boolean = false;
   private zzfx: ((...args: number[]) => AudioBufferSourceNode) | null = null;
   private initialized: boolean = false;
+  private loopIntervals: Map<string, number> = new Map();
 
   constructor() {
     const savedMuted = localStorage.getItem('aktau-muted');
@@ -137,6 +144,54 @@ class SoundManagerClass {
     this.muted = !this.muted;
     localStorage.setItem('aktau-muted', this.muted.toString());
     return this.muted;
+  }
+
+  /**
+   * Start playing a sound effect in a loop.
+   * The sound will repeat at random intervals to create ambient effect.
+   */
+  public playLoop(soundName: keyof typeof SOUNDS): void {
+    // Already looping this sound
+    if (this.loopIntervals.has(soundName)) return;
+
+    // Play immediately
+    this.play(soundName);
+
+    // Set up interval with some randomness for natural feel
+    const baseInterval = 2500; // 2.5 seconds base
+    const playWithVariation = () => {
+      if (!this.loopIntervals.has(soundName)) return;
+      this.play(soundName);
+
+      // Schedule next play with random variation (±500ms)
+      const nextInterval = baseInterval + (Math.random() - 0.5) * 1000;
+      const intervalId = window.setTimeout(playWithVariation, nextInterval);
+      this.loopIntervals.set(soundName, intervalId);
+    };
+
+    const initialDelay = baseInterval + (Math.random() - 0.5) * 1000;
+    const intervalId = window.setTimeout(playWithVariation, initialDelay);
+    this.loopIntervals.set(soundName, intervalId);
+  }
+
+  /**
+   * Stop a looping sound effect.
+   */
+  public stopLoop(soundName: string): void {
+    const intervalId = this.loopIntervals.get(soundName);
+    if (intervalId !== undefined) {
+      window.clearTimeout(intervalId);
+      this.loopIntervals.delete(soundName);
+    }
+  }
+
+  /**
+   * Stop all looping sounds.
+   */
+  public stopAllLoops(): void {
+    for (const [soundName] of this.loopIntervals) {
+      this.stopLoop(soundName);
+    }
   }
 }
 

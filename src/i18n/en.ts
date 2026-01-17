@@ -39,6 +39,22 @@ export const en = {
   'season.autumn': 'Autumn (Heat ×{mult})',
   'season.winter': 'Winter (Heat ×{mult})',
 
+  // Events
+  'event.sandstorm.name': 'Sandstorm',
+  'event.sandstorm.desc': 'Desert winds reduce pump efficiency by 50%',
+  'event.cold_snap.name': 'Cold Snap',
+  'event.cold_snap.desc': 'Sudden temperature drop increases heat consumption by 50%',
+  'event.equipment_failure.name': 'Equipment Failure',
+  'event.equipment_failure.desc': 'Electrical systems damaged, power output reduced by 30%',
+  'event.population_surge.name': 'Population Surge',
+  'event.population_surge.desc': 'New workers arrive, happiness bonus +10',
+  'event.blizzard.name': 'Blizzard',
+  'event.blizzard.desc': 'Severe winter storm doubles heat consumption',
+  'event.arctic_front.name': 'Arctic Front',
+  'event.arctic_front.desc': 'Polar air mass increases heat consumption by 80%',
+  'event.pipe_freeze.name': 'Pipe Freeze',
+  'event.pipe_freeze.desc': 'Water pipes frozen, fresh water production halved',
+
   // Game Over
   'gameover.title': 'GAME OVER',
   'gameover.meltdown': 'NUCLEAR MELTDOWN',
@@ -160,7 +176,11 @@ export const en = {
   'tooltip.cooling': 'Cooling reactor: -0.8°C/tick',
   'tooltip.needs': 'Needs: {missing}',
   'tooltip.noWater': 'No water supply - residents unhappy!',
+  'tooltip.noHeat': 'No heat supply - residents unhappy!',
+  'tooltip.noConnection': 'Not connected - residents unhappy!',
   'tooltip.disconnected': 'Not connected to network',
+  'tooltip.heatSource': 'Heat Source',
+  'tooltip.waterSource': 'Water Source',
   'tooltip.receiving': '← Receiving: {sources}',
   'tooltip.sending': '→ Sending: {targets}',
 

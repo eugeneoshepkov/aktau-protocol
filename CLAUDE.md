@@ -141,7 +141,8 @@ Population grows/declines based on conditions (requires at least one Microrayon)
 
 Buildings auto-connect with visual pipes when within 5 tiles:
 - **Pump → Distiller/Water Tank:** Blue water pipe
-- **Reactor → Distiller:** Orange heat pipe
+- **Reactor → Distiller/Microrayon:** Orange heat pipe
+- **Thermal Plant → Distiller/Microrayon:** Orange heat pipe
 - **Distiller → Microrayon/Water Tank:** Blue water pipe
 - **Water Tank → Microrayon:** Blue water pipe
 
@@ -162,9 +163,7 @@ Each producer building has limited capacity based on production/consumption rati
 - 1 distiller + 1 tank = 4 microrayons
 - 1 distiller + 2 tanks = 6 microrayons
 
-**Heat Priority:** Distillers receive heat before microrayons. This ensures water production is prioritized—without water, housing is useless anyway.
-
-**Note:** Microrayons consume heat from the global pool (no heat pipes), but require freshWater via pipe connections.
+**Heat Priority:** Distillers receive heat before microrayons (priority 1 vs 2). This ensures water production and reactor cooling are prioritized—without water, housing is useless anyway.
 
 ### Connection Requirements
 
@@ -172,8 +171,8 @@ Buildings must be connected to function properly:
 
 | Building | Required Connections | Effect if Disconnected |
 |----------|---------------------|------------------------|
-| **Distiller** | Pump (water) + Reactor (heat) | No freshwater production, no reactor cooling |
-| **Microrayon** | Distiller or Water Tank (water) | -2 happiness/tick, no resource consumption |
+| **Distiller** | Pump (water) + Reactor/Thermal Plant (heat) | No freshwater production, no reactor cooling |
+| **Microrayon** | Distiller/Water Tank (water) + Reactor/Thermal Plant (heat) | -2 happiness/tick, no resource consumption |
 
 **Important:** Disconnected buildings do NOT consume resources—only connected buildings produce and consume. Disconnected microrayons cause happiness loss but don't drain water/heat.
 
@@ -190,6 +189,8 @@ When a building is selected for placement:
   - Blue dashed lines for water connections
   - Orange dashed lines for heat connections
   - Only shows pipes to/from producers that have remaining capacity
+
+**Building Spacing:** Buildings must be at least 1 tile apart from each other (diagonal counts). This prevents cramped placement and ensures visual clarity.
 
 ---
 

@@ -1,6 +1,6 @@
 import { Scene, ParticleSystem, Texture, Vector3, Color4, AbstractMesh } from '@babylonjs/core';
 import { gameState } from '../simulation/GameState';
-import { TILE_SIZE } from '../types';
+import { TILE_SIZE, GRID_SIZE } from '../types';
 import type { Building, BuildingType } from '../types';
 
 interface BuildingParticles {
@@ -21,6 +21,7 @@ export class ParticleManager {
   private dustSystems: ParticleSystem[] = [];
   private smokeTexture: Texture | null = null;
   private dustTexture: Texture | null = null;
+  private snowSystem: ParticleSystem | null = null;
 
   constructor(scene: Scene) {
     this.scene = scene;
@@ -227,6 +228,71 @@ export class ParticleManager {
     }
   }
 
+  /**
+   * Start snow particle effect for blizzard/arctic front events.
+   * Creates a wide emitter covering the whole map with falling snow.
+   */
+  public startSnow(): void {
+    // Already snowing
+    if (this.snowSystem) return;
+
+    const system = new ParticleSystem('snow', 600, this.scene);
+
+    // Use smoke texture tinted white for snow particles
+    system.particleTexture = this.smokeTexture;
+
+    // Emitter covering the whole map from above
+    const mapSize = GRID_SIZE * TILE_SIZE;
+    const mapCenter = mapSize / 2;
+    system.emitter = new Vector3(mapCenter, 15, mapCenter);
+
+    // Wide emission area covering the grid
+    system.minEmitBox = new Vector3(-mapCenter, 0, -mapCenter);
+    system.maxEmitBox = new Vector3(mapCenter, 0, mapCenter);
+
+    // White with slight blue tint for snow
+    system.color1 = new Color4(1, 1, 1, 0.9);
+    system.color2 = new Color4(0.9, 0.95, 1, 0.7);
+    system.colorDead = new Color4(1, 1, 1, 0);
+
+    // Small particles for snowflakes
+    system.minSize = 0.08;
+    system.maxSize = 0.15;
+
+    system.minLifeTime = 3;
+    system.maxLifeTime = 5;
+
+    system.emitRate = 400;
+
+    // Falling downward with diagonal drift (wind effect)
+    system.direction1 = new Vector3(-0.3, -1, 0.1);
+    system.direction2 = new Vector3(0.1, -1, 0.3);
+
+    system.minEmitPower = 2;
+    system.maxEmitPower = 4;
+
+    system.updateSpeed = 0.01;
+
+    // Slight gravity to ensure falling
+    system.gravity = new Vector3(0.2, -0.5, 0.1);
+
+    system.blendMode = ParticleSystem.BLENDMODE_ADD;
+
+    system.start();
+    this.snowSystem = system;
+  }
+
+  /**
+   * Stop snow particle effect.
+   */
+  public stopSnow(): void {
+    if (this.snowSystem) {
+      this.snowSystem.stop();
+      this.snowSystem.dispose();
+      this.snowSystem = null;
+    }
+  }
+
   public dispose(): void {
     for (const [, particles] of this.particles) {
       for (const system of particles.systems) {
@@ -239,6 +305,8 @@ export class ParticleManager {
       system.dispose();
     }
     this.dustSystems = [];
+
+    this.stopSnow();
 
     this.smokeTexture?.dispose();
     this.dustTexture?.dispose();

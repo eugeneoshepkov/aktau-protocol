@@ -8,6 +8,8 @@ export interface GameEvent {
   duration: number;
   effect: () => void;
   onEnd?: () => void;
+  seasonRestriction?: 'spring' | 'summer' | 'autumn' | 'winter';
+  visualEffect?: 'snow' | 'frost' | 'sandstorm';
 }
 
 interface ActiveEvent {
@@ -16,6 +18,7 @@ interface ActiveEvent {
 }
 
 const EVENTS: GameEvent[] = [
+  // Year-round events
   {
     id: 'sandstorm',
     name: 'Sandstorm',
@@ -23,7 +26,8 @@ const EVENTS: GameEvent[] = [
     chance: 0.02,
     duration: 5,
     effect: () => {},
-    onEnd: () => {}
+    onEnd: () => {},
+    visualEffect: 'sandstorm'
   },
   {
     id: 'cold_snap',
@@ -32,7 +36,8 @@ const EVENTS: GameEvent[] = [
     chance: 0.02,
     duration: 3,
     effect: () => {},
-    onEnd: () => {}
+    onEnd: () => {},
+    visualEffect: 'frost'
   },
   {
     id: 'equipment_failure',
@@ -51,6 +56,39 @@ const EVENTS: GameEvent[] = [
     duration: 7,
     effect: () => {},
     onEnd: () => {}
+  },
+  // Winter-only events
+  {
+    id: 'blizzard',
+    name: 'Blizzard',
+    icon: '🌨️',
+    chance: 0.04,
+    duration: 4,
+    effect: () => {},
+    onEnd: () => {},
+    seasonRestriction: 'winter',
+    visualEffect: 'snow'
+  },
+  {
+    id: 'arctic_front',
+    name: 'Arctic Front',
+    icon: '❄️',
+    chance: 0.02,
+    duration: 5,
+    effect: () => {},
+    onEnd: () => {},
+    seasonRestriction: 'winter',
+    visualEffect: 'frost'
+  },
+  {
+    id: 'pipe_freeze',
+    name: 'Pipe Freeze',
+    icon: '🧊',
+    chance: 0.02,
+    duration: 2,
+    effect: () => {},
+    onEnd: () => {},
+    seasonRestriction: 'winter'
   }
 ];
 
@@ -61,7 +99,8 @@ class EventSystemClass {
     pumpEfficiency: 1,
     heatMultiplier: 1,
     electricityMultiplier: 1,
-    happinessBonus: 0
+    happinessBonus: 0,
+    waterMultiplier: 1
   };
 
   constructor() {
@@ -86,8 +125,14 @@ class EventSystemClass {
   }
 
   private tryTriggerNewEvent(): void {
+    const currentSeason = gameState.getSeason();
+
     for (const event of EVENTS) {
+      // Skip events already active
       if (this.activeEvents.some((a) => a.event.id === event.id)) continue;
+
+      // Skip events restricted to a different season
+      if (event.seasonRestriction && event.seasonRestriction !== currentSeason) continue;
 
       if (Math.random() < event.chance) {
         this.activeEvents.push({
@@ -106,7 +151,8 @@ class EventSystemClass {
       pumpEfficiency: 1,
       heatMultiplier: 1,
       electricityMultiplier: 1,
-      happinessBonus: 0
+      happinessBonus: 0,
+      waterMultiplier: 1
     };
 
     for (const active of this.activeEvents) {
@@ -115,13 +161,26 @@ class EventSystemClass {
           this.modifiers.pumpEfficiency = 0.5;
           break;
         case 'cold_snap':
-          this.modifiers.heatMultiplier = 1.5;
+          // Cold snap: +50% heat consumption
+          this.modifiers.heatMultiplier = Math.max(this.modifiers.heatMultiplier, 1.5);
           break;
         case 'equipment_failure':
           this.modifiers.electricityMultiplier = 0.7;
           break;
         case 'population_surge':
           this.modifiers.happinessBonus = 10;
+          break;
+        case 'blizzard':
+          // Blizzard: +100% heat consumption (doubles it)
+          this.modifiers.heatMultiplier = Math.max(this.modifiers.heatMultiplier, 2.0);
+          break;
+        case 'arctic_front':
+          // Arctic front: +80% heat consumption
+          this.modifiers.heatMultiplier = Math.max(this.modifiers.heatMultiplier, 1.8);
+          break;
+        case 'pipe_freeze':
+          // Pipe freeze: 50% water production
+          this.modifiers.waterMultiplier = 0.5;
           break;
       }
     }
@@ -155,7 +214,8 @@ class EventSystemClass {
       pumpEfficiency: 1,
       heatMultiplier: 1,
       electricityMultiplier: 1,
-      happinessBonus: 0
+      happinessBonus: 0,
+      waterMultiplier: 1
     };
     this.notifyListeners();
   }

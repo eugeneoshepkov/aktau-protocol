@@ -733,6 +733,12 @@ body {
   background: linear-gradient(90deg, transparent, #ef4444, transparent);
 }
 
+/* Demolish cursor - red X icon */
+body.demolish-cursor,
+body.demolish-cursor #gameCanvas {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='10' fill='%23dc2626' stroke='%23fff' stroke-width='1.5'/%3E%3Cpath d='M8 8l8 8M16 8l-8 8' stroke='%23fff' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E") 12 12, crosshair !important;
+}
+
 .cancel-button {
   background: rgba(255, 100, 100, 0.1);
   border: 1px solid rgba(255, 100, 100, 0.3);

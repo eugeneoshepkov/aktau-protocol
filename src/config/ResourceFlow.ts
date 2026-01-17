@@ -70,10 +70,10 @@ export const RESOURCE_FLOWS: ResourceFlowConfig[] = [
     pipeColor: '#FF6B35',
     producers: ['reactor', 'thermal_plant'],
     relays: [], // heat doesn't relay through pipes
-    consumers: ['distiller'], // microrayons use global heat pool, not pipes
-    consumerPriority: { distiller: 1 }
+    consumers: ['distiller', 'microrayon'],
+    consumerPriority: { distiller: 1, microrayon: 2 }
   }
-];
+];;
 
 // ============================================
 // Helper Functions

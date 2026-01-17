@@ -41,23 +41,58 @@ uniform float hazeIntensity;
 
 void main(void) {
     vec2 uv = vUV;
-    
+
     float horizonY = 0.7;
     float distFromHorizon = abs(uv.y - horizonY);
     float hazeMask = smoothstep(0.0, 0.4, 1.0 - distFromHorizon);
     hazeMask *= smoothstep(0.3, 0.7, uv.y);
-    
+
     float wave1 = sin(uv.x * 30.0 + time * 2.0) * 0.002;
     float wave2 = sin(uv.x * 50.0 - time * 1.5) * 0.001;
     float wave3 = sin(uv.y * 20.0 + time * 1.0) * 0.0015;
-    
+
     float distortion = (wave1 + wave2 + wave3) * hazeMask * hazeIntensity;
-    
+
     uv.x += distortion;
     uv.y += distortion * 0.5;
-    
+
     vec4 color = texture2D(textureSampler, uv);
-    
+
+    gl_FragColor = color;
+}
+`;
+
+const FROST_VIGNETTE_FRAGMENT_SHADER = `
+precision highp float;
+
+varying vec2 vUV;
+uniform sampler2D textureSampler;
+uniform float frostIntensity;
+uniform float time;
+
+float noise(vec2 p) {
+    return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
+void main(void) {
+    vec4 color = texture2D(textureSampler, vUV);
+
+    // Vignette from edges - frost creeps in from screen borders
+    float dist = distance(vUV, vec2(0.5));
+    float frost = smoothstep(0.3, 0.7, dist) * frostIntensity;
+
+    // Add some subtle animation/texture to the frost edge
+    float frostNoise = noise(vUV * 50.0 + time * 0.5) * 0.1;
+    frost += frostNoise * frostIntensity * 0.3;
+
+    // Blue-white frost tint
+    vec3 frostColor = vec3(0.8, 0.9, 1.0);
+    color.rgb = mix(color.rgb, frostColor, frost * 0.4);
+
+    // Slight desaturation in frosted areas
+    float gray = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+    color.rgb = mix(color.rgb, vec3(gray) * frostColor, frost * 0.2);
+
     gl_FragColor = color;
 }
 `;
@@ -127,6 +162,46 @@ export class HeatHazeEffect {
       this.time += 0.016;
       effect.setFloat('time', this.time);
       effect.setFloat('hazeIntensity', this.intensity);
+    };
+  }
+
+  public setIntensity(intensity: number): void {
+    this.intensity = intensity;
+  }
+
+  public dispose(): void {
+    this.postProcess?.dispose();
+  }
+}
+
+export class FrostVignetteEffect {
+  private postProcess: PostProcess | null = null;
+  private time: number = 0;
+  private intensity: number = 0;
+
+  constructor(scene: Scene, camera: Camera) {
+    this.createEffect(scene, camera);
+  }
+
+  private createEffect(scene: Scene, camera: Camera): void {
+    Effect.ShadersStore['frostVignetteFragmentShader'] = FROST_VIGNETTE_FRAGMENT_SHADER;
+
+    this.postProcess = new PostProcess(
+      'frostVignette',
+      'frostVignette',
+      ['time', 'frostIntensity'],
+      null,
+      1.0,
+      camera,
+      0,
+      scene.getEngine(),
+      false
+    );
+
+    this.postProcess.onApply = (effect) => {
+      this.time += 0.016;
+      effect.setFloat('time', this.time);
+      effect.setFloat('frostIntensity', this.intensity);
     };
   }
 

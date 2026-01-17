@@ -47,14 +47,21 @@ export class BuildPanel {
     });
 
     // Update demolish button visual state when mode changes
+    const demolishCursor = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='10' fill='%23dc2626' stroke='%23fff' stroke-width='1.5'/%3E%3Cpath d='M8 8l8 8M16 8l-8 8' stroke='%23fff' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E") 12 12, crosshair`;
+    const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement | null;
+
     this.buildingManager.onDemolishModeChange((enabled) => {
       if (this.demolishButton) {
         if (enabled) {
           this.demolishButton.classList.add('selected', 'demolish-active');
           this.container.classList.add('demolish-mode');
+          document.body.classList.add('demolish-cursor');
+          if (canvas) canvas.style.cursor = demolishCursor;
         } else {
           this.demolishButton.classList.remove('selected', 'demolish-active');
           this.container.classList.remove('demolish-mode');
+          document.body.classList.remove('demolish-cursor');
+          if (canvas) canvas.style.cursor = '';
         }
       }
     });

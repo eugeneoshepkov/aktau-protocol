@@ -134,7 +134,16 @@ export class Tooltip {
 
     if (building.type === 'microrayon') {
       if (!this.pipeManager?.isFullyOperational(building)) {
-        specialHtml = `<div class="tooltip-special">${coloredIcon('warning')} ${t('tooltip.noWater')}</div>`;
+        const missing = this.pipeManager?.getMissingConnections(building) || [];
+        const missingWater = missing.some((m) => m.resourceType === 'water');
+        const missingHeat = missing.some((m) => m.resourceType === 'heat');
+        if (missingWater && missingHeat) {
+          specialHtml = `<div class="tooltip-special">${coloredIcon('warning')} ${t('tooltip.noConnection')}</div>`;
+        } else if (missingWater) {
+          specialHtml = `<div class="tooltip-special">${coloredIcon('warning')} ${t('tooltip.noWater')}</div>`;
+        } else if (missingHeat) {
+          specialHtml = `<div class="tooltip-special">${coloredIcon('warning')} ${t('tooltip.noHeat')}</div>`;
+        }
       }
     }
 
@@ -197,7 +206,13 @@ export class Tooltip {
     if (!isOperational && missing.length > 0 && building.type !== 'distiller') {
       const missingNames = missing
         .map((m) => {
-          const name = td(`building.${m.type}.name`);
+          // Use generic names for resources with multiple providers
+          const name =
+            m.resourceType === 'heat'
+              ? t('tooltip.heatSource')
+              : m.resourceType === 'water'
+                ? t('tooltip.waterSource')
+                : td(`building.${m.type}.name`);
           const resourceIcon =
             m.resourceType === 'water' ? coloredIcon('water') : coloredIcon('heat');
           return `${resourceIcon} ${name}`;

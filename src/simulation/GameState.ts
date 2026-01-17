@@ -23,6 +23,9 @@ import { getCoastlineZ } from '../grid/TileTypes';
 // Maximum tiles from coastline where pumps can be placed
 const MAX_PUMP_DISTANCE_FROM_COAST = 2;
 
+// Minimum spacing between buildings (in tiles) - prevents cramped placement
+const MIN_BUILDING_SPACING = 1;
+
 // ============================================
 // Event System Types
 // ============================================
@@ -64,6 +67,14 @@ export type ConnectionChecker = (building: Building) => {
   isFullyOperational: boolean;
 };
 
+export interface EventModifiers {
+  pumpEfficiency: number;
+  heatMultiplier: number;
+  electricityMultiplier: number;
+  happinessBonus: number;
+  waterMultiplier?: number;
+}
+
 export class GameState {
   private resources: Resources;
   private previousResources: Resources;
@@ -75,6 +86,7 @@ export class GameState {
   private gameOverReason?: GameOverReason;
   private buildingIdCounter: number = 0;
   private connectionChecker: ConnectionChecker | null = null;
+  private eventModifiersGetter: (() => EventModifiers) | null = null;
 
   private listeners: Map<GameEventType, Set<GameEventCallback>> = new Map();
 
@@ -117,6 +129,20 @@ export class GameState {
 
   public setConnectionChecker(checker: ConnectionChecker): void {
     this.connectionChecker = checker;
+  }
+
+  public setEventModifiersGetter(getter: () => EventModifiers): void {
+    this.eventModifiersGetter = getter;
+  }
+
+  private getEventModifiers(): EventModifiers {
+    return this.eventModifiersGetter?.() ?? {
+      pumpEfficiency: 1,
+      heatMultiplier: 1,
+      electricityMultiplier: 1,
+      happinessBonus: 0,
+      waterMultiplier: 1
+    };
   }
 
   // ============================================
@@ -266,6 +292,16 @@ export class GameState {
     const occupied = this.buildings.some((b) => b.gridX === gridX && b.gridZ === gridZ);
     if (occupied) {
       return { canPlace: false, reason: 'Tile is already occupied' };
+    }
+
+    // Check minimum spacing between buildings
+    const tooClose = this.buildings.some((b) => {
+      const dx = Math.abs(b.gridX - gridX);
+      const dz = Math.abs(b.gridZ - gridZ);
+      return dx <= MIN_BUILDING_SPACING && dz <= MIN_BUILDING_SPACING && !(dx === 0 && dz === 0);
+    });
+    if (tooClose) {
+      return { canPlace: false, reason: 'Too close to another building' };
     }
 
     // Check if max limit reached
@@ -469,6 +505,9 @@ export class GameState {
     }
 
     const seasonMultiplier = this.getSeasonMultiplier();
+    const eventModifiers = this.getEventModifiers();
+    // Combine season and event heat multipliers
+    const totalHeatMultiplier = seasonMultiplier * eventModifiers.heatMultiplier;
 
     for (const [type, count] of Object.entries(buildingCounts)) {
       if (count === 0) continue;
@@ -478,9 +517,9 @@ export class GameState {
       let canProduce = true;
       for (const [resource, amount] of Object.entries(production.consumes)) {
         let required = (amount ?? 0) * count;
-        // Apply season multiplier to heat consumption for both microrayons and distillers
+        // Apply total heat multiplier (season + events) to heat consumption
         if (resource === 'heat' && (type === 'microrayon' || type === 'distiller')) {
-          required = Math.ceil(required * seasonMultiplier);
+          required = Math.ceil(required * totalHeatMultiplier);
         }
         if (this.resources[resource as keyof Resources] < required) {
           canProduce = false;
@@ -491,9 +530,9 @@ export class GameState {
       if (canProduce) {
         for (const [resource, amount] of Object.entries(production.consumes)) {
           let consumed = (amount ?? 0) * count;
-          // Apply season multiplier to heat consumption for both microrayons and distillers
+          // Apply total heat multiplier (season + events) to heat consumption
           if (resource === 'heat' && (type === 'microrayon' || type === 'distiller')) {
-            consumed = Math.ceil(consumed * seasonMultiplier);
+            consumed = Math.ceil(consumed * totalHeatMultiplier);
           }
           this.resources[resource as keyof Resources] -= consumed;
         }
@@ -501,7 +540,22 @@ export class GameState {
         for (const [resource, amount] of Object.entries(production.produces)) {
           // Skip happiness for microrayons - handled separately below
           if (type === 'microrayon' && resource === 'happiness') continue;
-          this.resources[resource as keyof Resources] += (amount ?? 0) * count;
+
+          let produced = (amount ?? 0) * count;
+
+          // Apply event modifiers to production
+          if (type === 'pump' && resource === 'seawater') {
+            produced = Math.floor(produced * eventModifiers.pumpEfficiency);
+          }
+          if (resource === 'electricity' && (type === 'reactor' || type === 'thermal_plant')) {
+            produced = Math.floor(produced * eventModifiers.electricityMultiplier);
+          }
+          if (type === 'distiller' && resource === 'freshWater') {
+            const waterMult = eventModifiers.waterMultiplier ?? 1;
+            produced = Math.floor(produced * waterMult);
+          }
+
+          this.resources[resource as keyof Resources] += produced;
         }
       }
     }
@@ -510,7 +564,7 @@ export class GameState {
     // Connected microrayons produce happiness, disconnected ones deduct it
     const happinessGain = connectedMicrorayons * 1;
     const happinessLoss = disconnectedMicrorayons * 2;
-    this.resources.happiness += happinessGain - happinessLoss;
+    this.resources.happiness += happinessGain - happinessLoss + eventModifiers.happinessBonus;
 
     // Clamp happiness to 0-100 range
     this.resources.happiness = Math.max(0, Math.min(100, this.resources.happiness));
