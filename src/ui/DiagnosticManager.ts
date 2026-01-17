@@ -175,9 +175,13 @@ export class DiagnosticManager {
 
     this.hintBar.classList.add('show');
 
-    // Highlight problematic buildings
-    if (this.buildingManager && issue.buildings.length > 0) {
-      this.buildingManager.highlightProblematic(issue.buildings);
+    // Always clear previous highlights first, then highlight new buildings if any
+    if (this.buildingManager) {
+      if (issue.buildings.length > 0) {
+        this.buildingManager.highlightProblematic(issue.buildings);
+      } else {
+        this.buildingManager.clearHighlights();
+      }
     }
   }
 
