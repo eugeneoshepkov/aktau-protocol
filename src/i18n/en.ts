@@ -107,6 +107,7 @@ export const en = {
   'intro.start': '[ INITIALIZE PROTOCOL ]',
   'intro.controls': 'WASD: move │ QE: rotate │ Scroll: zoom │ Shift+Drag: pan',
   'intro.mute': 'Toggle music',
+  'intro.language': 'Switch language',
 
   // ============================================
   // Tutorial / Mission Panel

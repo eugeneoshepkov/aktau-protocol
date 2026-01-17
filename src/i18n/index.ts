@@ -6,6 +6,8 @@ export type Locale = 'en' | 'ru';
 type TranslationKey = keyof typeof en;
 type Translations = Record<TranslationKey, string>;
 
+const LOCALE_STORAGE_KEY = 'aktau-locale';
+
 class I18n {
   private locale: Locale;
   private translations: Translations;
@@ -16,6 +18,13 @@ class I18n {
   }
 
   private detectLocale(): Locale {
+    // Check localStorage first for user preference
+    const saved = localStorage.getItem(LOCALE_STORAGE_KEY) as Locale | null;
+    if (saved === 'en' || saved === 'ru') {
+      return saved;
+    }
+
+    // Fall back to browser locale
     const lang = navigator.language.toLowerCase();
     // Russian for RU or KZ (Kazakhstan) locales
     return lang.startsWith('ru') || lang.startsWith('kk') ? 'ru' : 'en';
@@ -23,6 +32,21 @@ class I18n {
 
   private loadTranslations(): Translations {
     return this.locale === 'ru' ? ru : en;
+  }
+
+  /**
+   * Switch locale and reload the page
+   */
+  setLocale(locale: Locale): void {
+    localStorage.setItem(LOCALE_STORAGE_KEY, locale);
+    window.location.reload();
+  }
+
+  /**
+   * Toggle between locales
+   */
+  toggleLocale(): void {
+    this.setLocale(this.locale === 'en' ? 'ru' : 'en');
   }
 
   /**

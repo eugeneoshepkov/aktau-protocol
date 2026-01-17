@@ -1,5 +1,5 @@
 import { ICONS } from './Icons';
-import { t } from '../i18n';
+import { t, i18n } from '../i18n';
 import { musicManager } from '../managers/MusicManager';
 import { soundManager } from '../managers/SoundManager';
 
@@ -81,6 +81,10 @@ export class IntroScreen {
         <button class="intro-mute-btn" title="${t('intro.mute')}">
           <span class="icon-wrap">${this.muted ? ICONS.volumeOff : ICONS.volumeOn}</span>
         </button>
+
+        <button class="intro-lang-btn" title="${t('intro.language')}">
+          ${i18n.getLocale() === 'en' ? 'EN' : 'RU'}
+        </button>
       </div>
     `;
 
@@ -95,6 +99,12 @@ export class IntroScreen {
       if (iconWrap) {
         iconWrap.innerHTML = this.muted ? ICONS.volumeOff : ICONS.volumeOn;
       }
+    });
+
+    const langBtn = overlay.querySelector('.intro-lang-btn');
+    langBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      i18n.toggleLocale();
     });
 
     return overlay;

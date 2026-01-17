@@ -1268,6 +1268,32 @@ body {
   height: 20px;
 }
 
+.intro-lang-btn {
+  position: absolute;
+  top: 20px;
+  right: 70px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #64748b;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 0;
+}
+
+.intro-lang-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+}
+
 /* Mobile intro screen adjustments */
 @media (max-height: 700px) {
   .intro-emblem {
