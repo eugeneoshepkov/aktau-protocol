@@ -252,19 +252,19 @@
       "models": [
         {
           "basePath": "industrial",
-          "file": "building-f.glb",
+          "file": "building-p.glb",
           "scale": 1.0,
           "rotation": 0,
           "yOffset": 0,
-          "offset": { "x": 0, "y": 0, "z": 0 }
+          "offset": { "x": -0.3, "y": 0, "z": 0 }
         },
         {
           "basePath": "industrial",
-          "file": "chimney-small.glb",
-          "scale": 0.8,
+          "file": "building-l.glb",
+          "scale": 1.0,
           "rotation": 0,
           "yOffset": 0,
-          "offset": { "x": 0.6, "y": 0, "z": 0.4 }
+          "offset": { "x": 0.5, "y": 0, "z": 0 }
         }
       ]
     }

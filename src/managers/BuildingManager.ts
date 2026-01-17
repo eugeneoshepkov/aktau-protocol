@@ -10,7 +10,8 @@ import {
   TransformNode,
   Animation,
   EasingFunction,
-  BackEase
+  BackEase,
+  Node
 } from '@babylonjs/core';
 import { gameState } from '../simulation/GameState';
 import { GridManager } from '../grid/GridManager';
@@ -151,6 +152,22 @@ export class BuildingManager {
       parseInt(result[2], 16) / 255,
       parseInt(result[3], 16) / 255
     );
+  }
+
+  /**
+   * Recursively clone materials for a node and all its children
+   * This prevents shared material state between building instances
+   */
+  private cloneMaterialsRecursive(node: Node, buildingId: string): void {
+    // Clone material if this is a mesh with a material
+    if (node instanceof Mesh && node.material) {
+      node.material = node.material.clone(`${node.material.name}_${buildingId}`);
+    }
+
+    // Recursively process all children
+    for (const child of node.getChildren()) {
+      this.cloneMaterialsRecursive(child, buildingId);
+    }
   }
 
   private createGhostMaterials(): void {
@@ -677,6 +694,8 @@ export class BuildingManager {
 
       for (const mesh of meshes) {
         mesh.parent = parent;
+        // Clone materials for this mesh and all children to avoid shared state
+        this.cloneMaterialsRecursive(mesh, building.id);
       }
 
       this.meshes.set(building.id, parent);
@@ -728,6 +747,8 @@ export class BuildingManager {
 
         for (const mesh of meshes) {
           mesh.parent = subParent;
+          // Clone materials for this mesh and all children to avoid shared state
+          this.cloneMaterialsRecursive(mesh, building.id);
         }
       }
 
