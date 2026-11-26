@@ -28,11 +28,17 @@ The **BN-350 fast breeder reactor** wasn't just generating power. It was *desali
 
 ## Gameplay
 
-You are the city engineer. Balance the impossible:
+You take charge of a working waterfront with 50 residents. Your first order is to connect a second housing block to water and heat. Click the suggested lot, or pick a building from the construction menu and choose your own site.
+
+![The waterfront with four housing blocks, a second desalination line and the district plan open](public/pictures/screenshots/waterfront.webp)
+
+Earn the district charter by expanding both supply lines, housing 180 residents, and reaching spring on day 121. Once four blocks are connected, emergency shifts let you spend surplus power on water or heat. After the charter, choose a waterfront reed garden to save household water or district heating works to cut heat demand. Connect a fifth housing block and settle 250 residents to complete the waterfront. You can keep building in free play.
+
+Open the pipe network to check water and heat coverage independently. Select the day in the top bar to see current heat demand and the next season’s arrival.
 
 | Challenge | Consequence |
 |-----------|-------------|
-| Reactor overheats | ☢️ **Meltdown** — Game Over |
+| Reactor strain reaches 100% | ☢️ **Meltdown** — Game Over |
 | Fresh water depleted | 🏜️ **Drought** — Game Over |
 | Heat runs out in winter | ❄️ **Frozen City** — Game Over |
 | Citizens unhappy | 👥 **Exodus** — Population flees |
@@ -58,7 +64,7 @@ You are the city engineer. Balance the impossible:
 | Building | What it Does |
 |----------|--------------|
 | **Water Pump** | Extracts seawater from the Caspian |
-| **BN-350 Reactor** | The heart of the city. Generates heat & power. *Warning: +1°C every tick!* |
+| **BN-350 Reactor** | The heart of the city. Generates heat & power. Working desalination plants relieve core strain. |
 | **Desalination Plant** | Converts seawater → freshwater. Also cools the reactor. |
 | **Microrayon Housing** | Soviet housing blocks. Needs water connection or citizens get angry. |
 | **Water Tank** | Extends water distribution network. Each tank supplies 2 more housing blocks. |
@@ -92,7 +98,8 @@ You can't build infinitely. Plan carefully.
 |-----|--------|
 | `WASD` (or `ЦФЫВ`) | Pan camera |
 | `Q` / `E` (or `Й` / `У`) | Rotate camera |
-| `Scroll` | Zoom |
+| Drag | Pan the map |
+| Scroll or pinch | Zoom |
 | `1-5` | Select building |
 | `Space` | Pause/Resume |
 | `M` (or `Ь`) | Mute/unmute |
@@ -120,20 +127,20 @@ bun run dev    # http://localhost:5173
 | Build | Vite + TypeScript |
 | Rendering | Babylon.js (WebGPU/WebGL) |
 | Audio | ZzFX (procedural SFX) + HTML5 Audio |
-| Assets | Kenney asset packs |
+| Assets | Procedural city architecture and harbor scenery, GLB ambient models |
 
 ---
 
 ## Features
 
-- Isometric 3D graphics with film grain & heat haze effects
-- Dynamic pipe networks with connection preview
-- Four seasons affecting resource consumption
+- Original isometric models for the BN-350 complex, desalination lines, housing and harbor
+- Separate water and heat overlays with live housing coverage
+- Four seasons with changing foliage, coastal light, winter snow and heat demand
 - Population growth/decline based on happiness
 - Roaming camels and tumbleweeds
-- Guided mission objectives for new players
+- Six district orders, emergency supplies and a choice of two permanent civic projects
 - Historical facts about the real Aktau (20 discoverable entries)
-- Save/load to browser storage
+- Save from the city controls menu and resume from the title screen
 - Time controls (pause, 1×, 2×, 4×)
 - **Russian & English languages** (auto-detected from browser)
 - Russian keyboard layout support (WASD works as ЦФЫВ)

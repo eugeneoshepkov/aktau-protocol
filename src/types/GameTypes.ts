@@ -15,11 +15,11 @@ export interface Resources {
 
 export const STARTING_RESOURCES: Resources = {
   seawater: 100,
-  freshWater: 50,
+  freshWater: 90,
   heat: 100, // Increased from 50 to give more bootstrap room
-  electricity: 150, // Increased from 100 to allow more early building
-  population: 100,
-  happiness: 50
+  electricity: 200,
+  population: 50,
+  happiness: 60
 };
 
 export const RESOURCE_CAPS: Partial<Resources> = {
@@ -87,22 +87,22 @@ export const BUILDING_COSTS: Record<BuildingType, Partial<Resources>> = {
 export const HOUSING_CAPACITY_PER_MICRORAYON = 50;
 
 export const BUILDING_PRODUCTION: Record<BuildingType, ProductionRule> = {
-  pump: { consumes: { electricity: 5 }, produces: { seawater: 10 } },
+  pump: { consumes: { electricity: 5 }, produces: { seawater: 12 } },
   reactor: {
     consumes: {},
     produces: { heat: 70, electricity: 20 }, // Heat increased from 50 to 70 for better balance
     special: 'tempIncrease'
   },
   distiller: {
-    consumes: { seawater: 10, heat: 8 }, // Heat reduced from 10 to 8 for better efficiency
-    produces: { freshWater: 10 }
+    consumes: { seawater: 12, heat: 8 }, // Heat reduced from 10 to 8 for better efficiency
+    produces: { freshWater: 12 }
   },
   microrayon: {
     consumes: { freshWater: 5, heat: 5 },
     produces: { happiness: 1 }
   },
   water_tank: { consumes: {}, produces: {} },
-  thermal_plant: { consumes: { electricity: 10 }, produces: { heat: 20, electricity: 25 } } // Heat increased from 15 to 20
+  thermal_plant: { consumes: { electricity: 10 }, produces: { heat: 30, electricity: 25 } }
 };
 
 export const BUILDING_PLACEMENT: Record<BuildingType, TileType[]> = {
@@ -164,11 +164,11 @@ export interface CapacityConfig {
 }
 
 export const BUILDING_CAPACITY: Partial<Record<BuildingType, CapacityConfig>> = {
-  pump: { resource: 'seawater', provides: 10 },
+  pump: { resource: 'seawater', provides: 12 },
   distiller: { resource: 'freshWater', provides: 10 },
   water_tank: { resource: 'freshWater', provides: 10 }, // Relay capacity (requires distiller supply chain)
   reactor: { resource: 'heat', provides: 70 }, // Increased from 50 to match production
-  thermal_plant: { resource: 'heat', provides: 20 } // Increased from 15 to match production
+  thermal_plant: { resource: 'heat', provides: 30 }
 };
 
 // What resource each building consumes (for capacity allocation)
@@ -180,7 +180,7 @@ export interface ConsumptionConfig {
 
 export const BUILDING_CONSUMPTION: Partial<Record<BuildingType, ConsumptionConfig[]>> = {
   distiller: [
-    { resource: 'seawater', amount: 10, priority: 1 },
+    { resource: 'seawater', amount: 12, priority: 1 },
     { resource: 'heat', amount: 8, priority: 1 } // Distillers get heat first (reduced from 10 to 8)
   ],
   microrayon: [
@@ -225,8 +225,8 @@ export const SEA_ROWS = 10; // First 10 rows are sea
 // Camera Constants
 // ============================================
 
-export const ISOMETRIC_ALPHA = Math.PI / 4; // 45 degrees
-export const ISOMETRIC_BETA = Math.PI / 3; // ~60 degrees
-export const MIN_ZOOM = 15;
+export const ISOMETRIC_ALPHA = Math.PI * 0.73;
+export const ISOMETRIC_BETA = 0.91;
+export const MIN_ZOOM = 5;
 export const MAX_ZOOM = 55; // Reduced to keep map in view
-export const DEFAULT_ZOOM = 35;
+export const DEFAULT_ZOOM = 17;

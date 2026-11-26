@@ -1,0 +1,178 @@
+import { expect, spyOn, test } from 'bun:test';
+import { NullEngine, Scene } from '@babylonjs/core';
+import { getTileTypeAt } from '../src/grid/TileTypes';
+import { PipeManager } from '../src/managers/PipeManager';
+import {
+  CIVIC_PROJECTS,
+  DISTRICT_ORDERS,
+  STARTER_DISTRICT,
+  type CivicProjectKind
+} from '../src/simulation/DistrictPlan';
+import { gameState } from '../src/simulation/GameState';
+import { eventSystem } from '../src/simulation/EventSystem';
+import type { BuildingType } from '../src/types';
+
+test('the suggested district can earn its charter, with real utility connections and one-time grants', () => {
+  using random = spyOn(Math, 'random').mockReturnValue(0.9999);
+  const storage = new Map<string, string>();
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: {
+      getItem: (key: string) => storage.get(key) ?? null,
+      setItem: (key: string, value: string) => storage.set(key, value)
+    }
+  });
+  const engine = new NullEngine();
+  const scene = new Scene(engine);
+  const pipes = new PipeManager(scene);
+  gameState.setConnectionChecker((building) => ({
+    isFullyOperational: pipes.isFullyOperational(building)
+  }));
+  const place = (type: BuildingType, x: number, z: number) => {
+    expect(gameState.canPlaceBuilding(type, x, z, getTileTypeAt(x, z)).canPlace).toBe(true);
+    return gameState.placeBuilding(type, x, z)!;
+  };
+
+  for (const { type, x, z } of STARTER_DISTRICT) place(type, x, z);
+  expect(gameState.getCompletedOrders()).toBe(0);
+  expect(gameState.commissionCivicProject('public_garden')).toBe(false);
+  expect(gameState.getOrderProgress(DISTRICT_ORDERS[0])).toBe(1);
+  const offGridHouse = place('microrayon', 25, 25);
+  expect(gameState.getCompletedOrders()).toBe(0);
+  gameState.removeBuilding(offGridHouse.id);
+  const before = gameState.getResources().population;
+
+  for (const [i, order] of DISTRICT_ORDERS.entries()) {
+    if (!order.sites || order.measure === 'day' || order.measure === 'population') continue;
+    for (const [x, z] of order.sites) {
+      expect(pipes.wouldBeOperational(order.measure, x, z)).toBe(true);
+      place(order.measure, x, z);
+    }
+    expect(gameState.getCompletedOrders()).toBe(i + 1);
+    if (i === 0) {
+      expect(gameState.getResources().population).toBe(before + 25);
+      expect(gameState.save()).toBe(true);
+      expect(gameState.load()).toBe(true);
+      expect(gameState.getResources().population).toBe(before + 25);
+      expect(gameState.getCompletedOrders()).toBe(1);
+    }
+  }
+  const balance = { ...gameState.getResources() };
+  expect(gameState.dispatchSupply('freshWater')).toBe(true);
+  expect(gameState.getResources().electricity).toBe(balance.electricity - 60);
+  expect(gameState.getResources().freshWater).toBe(balance.freshWater + 50);
+  expect(gameState.dispatchSupply('heat')).toBe(false);
+  expect(gameState.save()).toBe(true);
+  expect(gameState.load()).toBe(true);
+  expect(gameState.getNextDispatchDay()).toBe(11);
+  expect(gameState.dispatchSupply('freshWater')).toBe(false);
+  for (let i = 0; i < 120; i++) gameState.tick();
+  expect(gameState.getDay()).toBe(121);
+  expect(gameState.isGameOver()).toBe(false);
+  expect(gameState.getResources().population).toBeGreaterThanOrEqual(180);
+  expect(gameState.getCompletedOrders()).toBe(DISTRICT_ORDERS.length);
+
+  expect(gameState.save()).toBe(true);
+  const city = JSON.parse(storage.get('aktau-save')!);
+  const charter = JSON.stringify(city);
+  for (const kind of Object.keys(CIVIC_PROJECTS) as CivicProjectKind[]) {
+    const material = CIVIC_PROJECTS[kind].resource;
+    storage.set(
+      'aktau-save',
+      JSON.stringify({ ...city, resources: { ...city.resources, [material]: 39 } })
+    );
+    expect(gameState.load()).toBe(true);
+    expect(gameState.commissionCivicProject(kind)).toBe(false);
+
+    storage.set('aktau-save', charter);
+    expect(gameState.load()).toBe(true);
+    expect(gameState.commissionCivicProject(kind)).toBe(true);
+    expect(gameState.getResources().electricity).toBe(city.resources.electricity - 80);
+    expect(gameState.getResources()[material]).toBe(city.resources[material] - 40);
+    expect(
+      gameState.commissionCivicProject(
+        kind === 'public_garden' ? 'district_heating' : 'public_garden'
+      )
+    ).toBe(false);
+    const project = gameState.getCivicProject()!;
+    expect(
+      gameState.canPlaceBuilding('microrayon', project.gridX, project.gridZ, 'sand').canPlace
+    ).toBe(false);
+    expect(gameState.save()).toBe(true);
+    expect(gameState.load()).toBe(true);
+    expect(gameState.getCivicProject()).toEqual(project);
+    expect(pipes.wouldBeOperational('microrayon', 37, 10)).toBe(true);
+    place('microrayon', 37, 10);
+    for (let day = 0; day < 30 && !gameState.isDistrictEstablished(); day++) {
+      if (gameState.getResources().freshWater < 50) gameState.dispatchSupply('freshWater');
+      gameState.tick();
+    }
+    expect(gameState.getResources().population).toBe(250);
+    expect(gameState.isDistrictEstablished()).toBe(true);
+    gameState.save();
+    gameState.load();
+    expect(gameState.isDistrictEstablished()).toBe(true);
+
+    // Compare one day of operation on identical uncapped reserves.
+    const starting = { ...city.resources, freshWater: 90, heat: 60 };
+    const use = (withProject: boolean) => {
+      storage.set(
+        'aktau-save',
+        JSON.stringify({ ...city, resources: starting, civicProject: withProject ? project : null })
+      );
+      expect(gameState.load()).toBe(true);
+      gameState.tick();
+      return gameState.getResources()[material];
+    };
+    expect(use(true)).toBeGreaterThan(use(false));
+  }
+  storage.set('aktau-save', charter);
+  gameState.load();
+  place('microrayon', 31, 12);
+  expect(gameState.commissionCivicProject('public_garden')).toBe(true);
+  expect(gameState.getCivicProject()).not.toMatchObject({ gridX: 31, gridZ: 12 });
+  city.day = 98;
+  city.weather = { daysSinceLastEvent: 2, activeEvents: [{ id: 'blizzard', remainingDays: 3 }] };
+  storage.set('aktau-save', JSON.stringify(city));
+  expect(gameState.load()).toBe(true);
+  expect(eventSystem.getActiveEvents()[0].remainingDays).toBe(3);
+  expect(eventSystem.getDaysSinceLastEvent()).toBe(2);
+  expect(eventSystem.getModifiers().heatMultiplier).toBe(2);
+  expect(gameState.save()).toBe(true);
+  expect(JSON.parse(storage.get('aktau-save')!).weather).toEqual(city.weather);
+
+  const preserved = gameState.getState();
+  const malformedBuildings = [null, ...city.buildings];
+  for (const invalid of [
+    { ...city, resources: {} },
+    { ...city, civicProject: { kind: 'other', gridX: 33, gridZ: 12 } },
+    { ...city, civicProject: { kind: 'public_garden', gridX: 38, gridZ: 12 } },
+    { ...city, districtEstablished: true, civicProject: null },
+    { ...city, day: 1, buildings: malformedBuildings },
+    { ...city, day: 1, weather: { daysSinceLastEvent: 2, activeEvents: [{ id: 'unknown' }] } }
+  ]) {
+    storage.set('aktau-save', JSON.stringify(invalid));
+    expect(gameState.load()).toBe(false);
+    expect(gameState.getState()).toEqual(preserved);
+    expect(eventSystem.getActiveEvents()[0].remainingDays).toBe(3);
+  }
+  // Older saves predate the district plan, civic project and weather state.
+  delete city.weather;
+  delete city.completedOrders;
+  delete city.nextDispatchDay;
+  delete city.civicProject;
+  delete city.districtEstablished;
+  storage.set('aktau-save', JSON.stringify(city));
+  expect(gameState.load()).toBe(true);
+  expect(eventSystem.getActiveEvents()).toHaveLength(0);
+  expect(gameState.getNextDispatchDay()).toBe(0);
+  expect(gameState.getResources()).toEqual(city.resources);
+
+  for (const building of [...gameState.getBuildings()]) {
+    if (building.type === 'pump') gameState.removeBuilding(building.id);
+  }
+  expect(gameState.getOrderProgress(DISTRICT_ORDERS[0])).toBe(0);
+  expect(gameState.getOrderProgress(DISTRICT_ORDERS[2])).toBe(0);
+  pipes.dispose();
+  engine.dispose();
+});

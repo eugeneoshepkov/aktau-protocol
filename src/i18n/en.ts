@@ -6,13 +6,13 @@ export const en = {
   // HUD (Header)
   // ============================================
   'hud.day': 'DAY',
-  'hud.pop': 'POP',
-  'hud.water': 'H<sup>2</sup>O',
-  'hud.sea': 'SEA',
-  'hud.heat': 'HEAT',
-  'hud.power': 'PWR',
-  'hud.temp': 'TEMP',
-  'hud.mood': 'MOOD',
+  'hud.pop': 'Residents',
+  'hud.water': 'Water',
+  'hud.sea': 'Seawater',
+  'hud.heat': 'Heat',
+  'hud.power': 'Power',
+  'hud.temp': "Core strain",
+  'hud.mood': 'Morale',
   'hud.save': 'Save Game',
   'hud.load': 'Load Game',
   'hud.volume': 'Music volume',
@@ -30,7 +30,7 @@ export const en = {
   'hud.tooltip.seawater': 'Raw seawater from Caspian Sea. Extracted by pumps. Used by desalination plants.',
   'hud.tooltip.heat': 'Thermal energy. Produced by reactor and thermal plants. Consumed by desalination and housing. ×2 in winter! Winters grow harsher each year.',
   'hud.tooltip.electricity': 'Electrical power. Produced by reactor. Consumed by all buildings for maintenance.',
-  'hud.tooltip.temp': 'Reactor core temperature. Rises +1°C/tick. Cooled by distillers (-0.8°C each). Meltdown at 100°C!',
+  'hud.tooltip.temp': "Reactor strain rises one point per day. Each working desalination plant offsets 0.8 points. At 100% the reactor fails.",
   'hud.tooltip.happiness': 'Citizen happiness. Affected by water supply and housing connections. Zero = revolt!',
 
   // Seasons
@@ -57,9 +57,9 @@ export const en = {
   'event.heat_wave.name': 'Heat Wave',
   'event.heat_wave.desc': 'Extreme temperatures reduce electricity production by 30%',
   'event.algae_bloom.name': 'Algae Bloom',
-  'event.algae_bloom.desc': 'Caspian algae clogs pump intakes, 40% efficiency',
+  'event.algae_bloom.desc': 'Algae clogs the intakes. Pumps deliver 60% of normal output.',
   'event.reactor_scram.name': 'Reactor SCRAM',
-  'event.reactor_scram.desc': 'Emergency shutdown! Temperature spikes +15°C, power output halved',
+  'event.reactor_scram.desc': "Core strain rises 15 points and power output falls by half.",
   'event.water_contamination.name': 'Water Contamination',
   'event.water_contamination.desc': 'Contamination detected! 30% freshwater lost, production halved',
   'event.favorable_winds.name': 'Favorable Winds',
@@ -73,7 +73,7 @@ export const en = {
   'gameover.extinction': 'POPULATION EXTINCT',
   'gameover.revolt': 'CITIZENS REVOLT',
   'gameover.survived': 'SURVIVED {days} DAYS',
-  'gameover.restart': '[ RESTART ]',
+  'gameover.restart': "Return to title",
   'gameover.story.meltdown':
     'The BN-350 reactor core exceeded critical temperature. A cloud of radioactive dust spread across the Mangyshlak Peninsula. Aktau was evacuated and became a ghost town, joining Pripyat in the annals of nuclear disasters.',
   'gameover.story.drought':
@@ -88,10 +88,10 @@ export const en = {
   // ============================================
   // Build Panel
   // ============================================
-  'build.title': 'BUILD',
+  'build.title': 'Construction',
   'build.free': 'Free',
-  'build.maxed': 'BUILT',
-  'build.demolish': 'DEMOLISH',
+  'build.maxed': "At limit",
+  'build.demolish': "Demolish",
   'build.demolish.desc': 'Click a building to demolish it and recover 50% of its cost.',
   'build.demolish.refund': 'Refund: {amount}',
   'build.demolish.confirm': 'Demolished {building}',
@@ -99,18 +99,16 @@ export const en = {
 
   // Building Names
   'building.pump.name': 'Water Pump',
-  'building.pump.desc': 'Extracts seawater from the Caspian Sea. Build on SEA tiles (teal).',
+  'building.pump.desc': "Draws seawater. Place in shallow water within two tiles of shore.",
   'building.reactor.name': 'BN-350 Reactor',
-  'building.reactor.desc':
-    'Nuclear reactor providing heat and electricity. Build on ROCK tiles (gray). Warning: +1°C/tick!',
+  'building.reactor.desc': "Supplies heat and power to the city. Working desalination plants keep core strain under control.",
   'building.distiller.name': 'Desalination Plant',
-  'building.distiller.desc':
-    'Converts seawater to freshwater using heat. Also cools the reactor by -0.8°C/tick.',
+  'building.distiller.desc': "Turns seawater into drinking water. Needs a seawater intake and a heat connection.",
   'building.microrayon.name': 'Microrayon Housing',
   'building.microrayon.desc':
     'Soviet-style housing block. Consumes water and heat, generates happiness. Build on SAND tiles.',
   'building.water_tank.name': 'Water Tank',
-  'building.water_tank.desc': 'Stores up to 50 freshwater. Buffers supply/demand fluctuations.',
+  'building.water_tank.desc': "Relays water from a working supply line to nearby housing.",
   'building.thermal_plant.name': 'Thermal Plant',
   'building.thermal_plant.desc':
     'Fossil fuel power plant. Provides electricity and heat, but less than the reactor.',
@@ -118,57 +116,97 @@ export const en = {
   // ============================================
   // Intro Screen (keep title in English)
   // ============================================
-  'intro.subtitle': 'Mangyshlak Atomic Energy Complex',
-  'intro.year': '1958 — KAZAKH SSR',
-  'intro.lore1':
-    'In the barren Mangyshlak Peninsula, where the Caspian Sea meets endless desert, Soviet engineers attempted the impossible: building a city where no city should exist.',
-  'intro.lore2':
-    "<strong>Shevchenko</strong> — a closed nuclear city, hidden from maps. Its beating heart: the <em>BN-350</em>, the world's first fast breeder reactor designed not just for power, but to turn seawater into drinking water.",
-  'intro.lore3':
-    'For decades, the reactor sustained 150,000 souls in this hostile land. Fresh water flowed. Lights never dimmed. The desert bloomed.',
-  'intro.lore4':
-    'Then came 1991. The Union fell. The reactor aged. Now renamed <strong>Aktau</strong>, the city faces an uncertain future.',
-  'intro.mission':
-    'Your mission: manage the delicate balance of water, power, and heat. Keep the reactor stable. Keep the people alive. One miscalculation, and the desert reclaims what was never meant to be.',
-  'intro.start': '[ INITIALIZE PROTOCOL ]',
-  'intro.controls': 'WASD: move │ QE: rotate │ Scroll: zoom │ Shift+Drag: pan',
+  'map.network': 'Pipe network',
+  'map.served': 'Housing blocks served',
+  'calendar.spring': 'Spring',
+  'calendar.summer': 'Summer',
+  'calendar.autumn': 'Autumn',
+  'calendar.winter': 'Winter',
+  'calendar.next': '{season} begins on day {day}',
+  'menu.genre': "City-building survival game",
+  'menu.premise': "Build a city on the edge of the Caspian Sea. Turn seawater into drinking water, settle the coast, and keep the heat on through winter.",
+  'menu.start': "Start game",
+  'menu.continue': "Continue city",
+  'menu.new': "New city",
+  'menu.guide': "Field manual",
+  'menu.close': "Close",
+  'menu.loading': "Opening district…",
+  'menu.saveUnavailable': 'Could not open the save. A fresh district is ready.',
+  'menu.retry': "Reload game",
+  'menu.loadFailed': "The 3D district could not start. Check that WebGL is enabled, then reload.",
+  'menu.soundOn': "Sound on",
+  'menu.soundOff': "Sound off",
+  'menu.place': "Mangyshlak Peninsula, Kazakh SSR",
+  'guide.water': "Bring the sea inland",
+  'guide.water.info': "A pump draws seawater. A desalination plant needs both a nearby pump and heat from a reactor or thermal plant to produce drinking water.",
+  'guide.housing': "Settle the waterfront",
+  'guide.housing.info': "Choose housing from the construction menu and place it within reach of water and heat. The marked plot offers a connected site for your current order.",
+  'guide.winter': "Plan for winter",
+  'guide.winter.info': "Winter doubles heat demand. Complete district orders to earn supplies and use the pause control whenever you need time to plan.",
+  'guide.controls': "Drag to pan. Scroll or pinch to zoom. Use Q and E to rotate.",
+  'hud.options': "City controls",
+  'hud.pause': "Pause or resume",
+  'build.site.pump': "Sea pump · Place in water within two tiles of shore",
+  'build.site.distiller': "Desalination · Place near a pump and a heat source",
+  'build.site.microrayon': "Housing · Place on sand within reach of water and heat",
+  'build.site.water_tank': "Water tank · Extend a working water line",
+  'build.site.thermal_plant': "Thermal plant · Supply heat to nearby buildings",
+  'build.site.demolish': "Demolish · Choose a building for a 50% base-cost refund",
+  'build.pump': "Sea pump",
+  'build.distiller': "Desalination",
+  'build.microrayon': "Housing",
+  'build.water_tank': "Water tank",
+  'build.thermal_plant': "Thermal plant",
   'intro.mute': 'Toggle music',
   'intro.language': 'Switch language',
 
   // ============================================
   // Tutorial / Mission Panel
   // ============================================
-  'tutorial.welcome.header': 'MISSION LOG: AKTAU PROTOCOL',
-  'tutorial.welcome.title': 'Welcome, Comrade Engineer',
-  'tutorial.welcome.desc':
-    'The BN-350 reactor has been established. Your mission: build a self-sustaining city around it.',
-  'tutorial.welcome.note': 'Begin by connecting the reactor to the Caspian Sea.',
 
-  'tutorial.pump.header': 'MISSION LOG: STEP 1',
-  'tutorial.pump.title': 'Extract Seawater',
-  'tutorial.pump.desc':
-    'Build a Water Pump in the Caspian Sea to extract seawater for the desalination plant.',
-  'tutorial.pump.note': 'Pumps must be placed on sea tiles (teal). Place it near the reactor.',
+  'plan.dispatch': 'Emergency shift · {cost} power',
+  'plan.nextDispatch': 'Next shift available on day {day}',
+  'plan.dispatchHelp': 'Run emergency pumps or boilers. Crews return in 10 days.',
+  'plan.label': 'District plan',
+  'plan.homes.title': 'House the next shift',
+  'plan.homes.desc': 'Tap the marked lot to connect a second housing block to water and heat.',
+  'plan.intake.title': 'Expand the seawater intake',
+  'plan.intake.desc': 'Build a second pump in the shallows. One pump feeds one desalination plant.',
+  'plan.water.title': 'Commission the second line',
+  'plan.water.desc': 'A second desalination plant needs a pump and a heat source within five tiles.',
+  'plan.district.title': 'Finish the waterfront district',
+  'plan.district.desc': 'Bring four housing blocks online. Keep each close to fresh water and heat.',
+  'plan.residents.title': 'Welcome 180 residents',
+  'plan.residents.desc': 'Keep water above 20 and morale above 60 so families move into the empty homes.',
+  'plan.winter.title': 'See the first winter through',
+  'plan.winter.desc': 'Reach spring on day 121. Winter doubles heat demand. Watch the reserves.',
+  'plan.complete.title': 'District charter signed',
+  'plan.complete.desc': 'The city can commission one public work. Choose a service for the waterfront.',
+  'plan.fifth.title': 'Open the fifth block',
+  'plan.fifth.desc': 'Connect a fifth housing block to fresh water and heat to make room for 250 residents.',
+  'plan.settle.title': 'Settle the waterfront',
+  'plan.settle.desc': 'Welcome 250 residents. Keep water above 20 and morale above 60 to fill the new homes.',
+  'plan.established.title': 'Waterfront district complete',
+  'plan.established.desc': 'Five blocks have housed 250 residents. The waterfront is yours to develop.',
+  'civic.stage': 'Civic works',
+  'civic.public_garden.name': 'Waterfront reed garden',
+  'civic.public_garden.benefit': '{percent}% less household water use',
+  'civic.district_heating.name': 'District heating works',
+  'civic.district_heating.benefit': '{percent}% less city heat demand',
+  'civic.cost.heat': '{power} power + {amount} heat',
+  'civic.cost.freshWater': '{power} power + {amount} water',
+  'civic.opened': '{project} commissioned',
+  'civic.noSite': 'Clear a parcel with one tile of space around it.',
+  'plan.reward.population': '+{amount} residents',
+  'plan.reward.electricity': '+{amount} power',
+  'plan.reward.freshWater': '+{amount} water',
+  'plan.count.microrayon': '{count}/{target} blocks',
+  'plan.count.pump': '{count}/{target} pumps',
+  'plan.count.distiller': '{count}/{target} plants',
+  'plan.count.population': '{count}/{target} residents',
+  'plan.count.day': 'Day {count}/{target}',
+  'plan.build': 'Build on this lot · {building}',
 
-  'tutorial.desal.header': 'MISSION LOG: STEP 2',
-  'tutorial.desal.title': 'Secure Water Supply',
-  'tutorial.desal.desc':
-    'Build a Desalination Plant to convert seawater into fresh drinking water.',
-  'tutorial.desal.note': 'Connect it to both the Water Pump and the Reactor.',
-
-  'tutorial.housing.header': 'MISSION LOG: STEP 3',
-  'tutorial.housing.title': 'Prepare for Residents',
-  'tutorial.housing.desc':
-    'Build Microrayon housing blocks to accommodate workers and their families.',
-  'tutorial.housing.note': 'Housing requires water and heat connections.',
-
-  'tutorial.complete.header': 'MISSION LOG: COMPLETE',
-  'tutorial.complete.title': 'Mission Successful!',
-  'tutorial.complete.desc':
-    'Basic infrastructure established. The city of Aktau is ready to grow. Manage your resources wisely.',
-  'tutorial.complete.note': 'Good luck, Comrade.',
-
-  'tutorial.progress': 'Progress: {current}/{target} Built',
 
   // Welcome Overlay
   'welcome.title': 'Welcome, Comrade Engineer',
@@ -182,8 +220,8 @@ export const en = {
   // ============================================
   'tooltip.uses': 'Uses:',
   'tooltip.makes': 'Makes:',
-  'tooltip.temp': 'Temp: {temp}°C (+1/tick)',
-  'tooltip.cooling': 'Cooling reactor: -0.8°C/tick',
+  'tooltip.temp': "Core strain {temp}%",
+  'tooltip.cooling': "Relieves 0.8 points of core strain per day",
   'tooltip.needs': 'Needs: {missing}',
   'tooltip.noWater': 'No water supply - residents unhappy!',
   'tooltip.noHeat': 'No heat supply - residents unhappy!',
@@ -265,6 +303,7 @@ export const en = {
   'shortcuts.panDrag': 'Pan camera (drag-style)',
   'shortcuts.rotate': 'Rotate camera',
   'shortcuts.zoom': 'Zoom in/out',
+  'shortcuts.drag': 'Drag',
   'shortcuts.panMouse': 'Pan camera (mouse)',
   'shortcuts.center': 'Center map',
   'shortcuts.reset': 'Reset view',

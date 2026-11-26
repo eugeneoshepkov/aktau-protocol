@@ -8,7 +8,8 @@ import {
   BUILDING_SCALING_LIMITS,
   HOUSING_CAPACITY_PER_MICRORAYON,
   BUILDING_MAINTENANCE,
-  COST_SCALING_FACTOR
+  COST_SCALING_FACTOR,
+  GRID_SIZE
 } from '../types';
 import type {
   Resources,
@@ -19,13 +20,31 @@ import type {
   GameOverReason,
   TileType
 } from '../types';
-import { getCoastlineZ } from '../grid/TileTypes';
+import {
+  DISTRICT_ORDERS,
+  CIVIC_PROJECTS,
+  CIVIC_POWER_COST,
+  CIVIC_MATERIAL_COST,
+  CIVIC_SAVINGS,
+  WATERFRONT_EXPANSION,
+  type DistrictOrder,
+  type CivicProject,
+  type CivicProjectKind
+} from './DistrictPlan';
+import { getCoastlineZ, getTileTypeAt } from '../grid/TileTypes';
 
 // Maximum tiles from coastline where pumps can be placed
 const MAX_PUMP_DISTANCE_FROM_COAST = 2;
 
 // Minimum spacing between buildings (in tiles) - prevents cramped placement
 const MIN_BUILDING_SPACING = 1;
+
+function overlapsSite(site: { gridX: number; gridZ: number }, x: number, z: number): boolean {
+  return (
+    Math.abs(site.gridX - x) <= MIN_BUILDING_SPACING &&
+    Math.abs(site.gridZ - z) <= MIN_BUILDING_SPACING
+  );
+}
 
 // ============================================
 // Event System Types
@@ -41,7 +60,10 @@ export type GameEventType =
   | 'reactorWarning'
   | 'reactorTempChange'
   | 'populationChange'
-  | 'seasonChange';
+  | 'seasonChange'
+  | 'orderComplete'
+  | 'civicProjectChange'
+  | 'districtEstablished';
 
 export type GameEventCallback = (data: unknown) => void;
 
@@ -77,6 +99,94 @@ export interface EventModifiers {
   waterMultiplier?: number;
 }
 
+export const RESERVE_POWER_COST = 60;
+export const RESERVE_SUPPLIES = { freshWater: 50, heat: 75 };
+export type ReserveSupply = keyof typeof RESERVE_SUPPLIES;
+
+interface WeatherPersistence {
+  save: () => unknown;
+  restore: (snapshot: unknown) => boolean;
+}
+
+interface CitySave {
+  resources: Resources;
+  reactor: ReactorState;
+  buildings: Building[];
+  day: number;
+  buildingIdCounter?: number;
+  completedOrders?: number;
+  nextDispatchDay?: number;
+  weather?: unknown;
+  civicProject?: CivicProject | null;
+  districtEstablished?: boolean;
+}
+
+function isCitySave(value: unknown): value is CitySave {
+  const record = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null;
+  const whole = (v: unknown): v is number =>
+    typeof v === 'number' && Number.isSafeInteger(v) && v >= 0;
+  if (!record(value) || !record(value.resources) || !record(value.reactor)) return false;
+  const {
+    resources,
+    reactor,
+    buildings,
+    day,
+    completedOrders,
+    buildingIdCounter,
+    nextDispatchDay
+  } = value;
+  if (
+    !whole(day) ||
+    day < 1 ||
+    !Number.isFinite(reactor.temperature) ||
+    typeof reactor.coolingActive !== 'boolean'
+  )
+    return false;
+  if (!Object.keys(STARTING_RESOURCES).every((key) => Number.isFinite(resources[key])))
+    return false;
+  if (
+    completedOrders !== undefined &&
+    (!whole(completedOrders) || completedOrders > DISTRICT_ORDERS.length)
+  )
+    return false;
+  if (buildingIdCounter !== undefined && !whole(buildingIdCounter)) return false;
+  if (nextDispatchDay !== undefined && !whole(nextDispatchDay)) return false;
+  if (!Array.isArray(buildings) || buildings.length > GRID_SIZE * GRID_SIZE) return false;
+  const ids = new Set<string>();
+  const lots = new Set<number>();
+  for (const building of buildings) {
+    if (!record(building)) return false;
+    const { id, type, gridX, gridZ } = building;
+    if (typeof id !== 'string' || !id || ids.has(id)) return false;
+    const suffix = /^building_(\d+)$/.exec(id)?.[1];
+    if (suffix && !Number.isSafeInteger(Number(suffix) + 1)) return false;
+    if (typeof type !== 'string' || !Object.hasOwn(BUILDING_COSTS, type)) return false;
+    if (!whole(gridX) || !whole(gridZ) || gridX >= GRID_SIZE || gridZ >= GRID_SIZE) return false;
+    const lot = gridX + gridZ * GRID_SIZE;
+    if (lots.has(lot)) return false;
+    ids.add(id);
+    lots.add(lot);
+  }
+  const project = value.civicProject;
+  if (project !== undefined && project !== null) {
+    if (
+      !record(project) ||
+      typeof project.kind !== 'string' ||
+      !Object.hasOwn(CIVIC_PROJECTS, project.kind)
+    )
+      return false;
+    const { gridX, gridZ } = project;
+    if (!whole(gridX) || !whole(gridZ) || gridX >= GRID_SIZE || gridZ >= GRID_SIZE) return false;
+    if (completedOrders !== DISTRICT_ORDERS.length || getTileTypeAt(gridX, gridZ) === 'sea')
+      return false;
+    if (buildings.some((b) => overlapsSite(b, gridX, gridZ))) return false;
+  }
+  if (value.districtEstablished !== undefined && typeof value.districtEstablished !== 'boolean')
+    return false;
+  if (value.districtEstablished && !project) return false;
+  return true;
+}
+
 export class GameState {
   private resources: Resources;
   private previousResources: Resources;
@@ -84,6 +194,11 @@ export class GameState {
   private reactor: ReactorState;
   private buildings: Building[] = [];
   private day: number = 1;
+  private completedOrders = 0;
+  private nextDispatchDay = 0;
+  private civicProject: CivicProject | null = null;
+  private districtEstablished = false;
+  private weatherPersistence?: WeatherPersistence;
   private gameOver: boolean = false;
   private gameOverReason?: GameOverReason;
   private buildingIdCounter: number = 0;
@@ -138,13 +253,15 @@ export class GameState {
   }
 
   private getEventModifiers(): EventModifiers {
-    return this.eventModifiersGetter?.() ?? {
-      pumpEfficiency: 1,
-      heatMultiplier: 1,
-      electricityMultiplier: 1,
-      happinessBonus: 0,
-      waterMultiplier: 1
-    };
+    return (
+      this.eventModifiersGetter?.() ?? {
+        pumpEfficiency: 1,
+        heatMultiplier: 1,
+        electricityMultiplier: 1,
+        happinessBonus: 0,
+        waterMultiplier: 1
+      }
+    );
   }
 
   // ============================================
@@ -174,6 +291,120 @@ export class GameState {
 
   public getDay(): number {
     return this.day;
+  }
+
+  public getCompletedOrders(): number {
+    return this.completedOrders;
+  }
+
+  public setWeatherPersistence(persistence: WeatherPersistence): void {
+    this.weatherPersistence = persistence;
+  }
+
+  public getNextDispatchDay(): number {
+    return this.nextDispatchDay;
+  }
+
+  public dispatchSupply(resource: ReserveSupply): boolean {
+    if (this.gameOver || this.completedOrders < 4 || this.day < this.nextDispatchDay) return false;
+    const amount = Math.min(
+      RESERVE_SUPPLIES[resource],
+      RESOURCE_CAPS[resource]! - this.resources[resource]
+    );
+    if (amount <= 0 || this.resources.electricity < RESERVE_POWER_COST) return false;
+    this.resources.electricity -= RESERVE_POWER_COST;
+    this.resources[resource] += amount;
+    this.nextDispatchDay = this.day + 10;
+    this.emit('resourceChange', this.resources);
+    return true;
+  }
+
+  public getCivicProject(): Readonly<CivicProject> | null {
+    return this.civicProject;
+  }
+
+  public isDistrictEstablished(): boolean {
+    return this.districtEstablished;
+  }
+
+  public commissionCivicProject(kind: CivicProjectKind): boolean {
+    if (this.gameOver || this.completedOrders < DISTRICT_ORDERS.length || this.civicProject)
+      return false;
+    const project = CIVIC_PROJECTS[kind];
+    if (
+      this.resources.electricity < CIVIC_POWER_COST ||
+      this.resources[project.resource] < CIVIC_MATERIAL_COST
+    )
+      return false;
+    const reactor = this.buildings.find((b) => b.type === 'reactor');
+    if (!reactor) return false;
+
+    // Existing cities can already occupy the designated lot. Find its closest clear alternative.
+    const preferredX = reactor.gridX + project.offsetX;
+    const preferredZ = reactor.gridZ + project.offsetZ;
+    let site: CivicProject | null = null;
+    let nearest = Infinity;
+    for (let gridZ = 0; gridZ < GRID_SIZE; gridZ++) {
+      for (let gridX = 0; gridX < GRID_SIZE; gridX++) {
+        const distance = (gridX - preferredX) ** 2 + (gridZ - preferredZ) ** 2;
+        if (distance >= nearest || getTileTypeAt(gridX, gridZ) === 'sea') continue;
+        if (this.buildings.some((b) => overlapsSite(b, gridX, gridZ))) continue;
+        nearest = distance;
+        site = { kind, gridX, gridZ };
+      }
+    }
+    if (!site) return false;
+    this.resources.electricity -= CIVIC_POWER_COST;
+    this.resources[project.resource] -= CIVIC_MATERIAL_COST;
+    this.civicProject = site;
+    this.emit('civicProjectChange', site);
+    this.checkDistrictGoal();
+    this.emit('resourceChange', this.resources);
+    return true;
+  }
+
+  private checkDistrictGoal(): void {
+    if (
+      this.civicProject &&
+      !this.districtEstablished &&
+      this.resources.population >= WATERFRONT_EXPANSION.residents.target &&
+      this.getOperationalCount('microrayon') >= WATERFRONT_EXPANSION.homes.target
+    ) {
+      this.districtEstablished = true;
+      this.emit('districtEstablished');
+    }
+  }
+
+  public getOrderProgress(order: DistrictOrder): number {
+    if (order.measure === 'population') return this.resources.population;
+    if (order.measure === 'day') return this.day;
+    return this.getOperationalCount(order.measure);
+  }
+
+  public getOperationalCount(type: BuildingType): number {
+    return this.buildings.filter(
+      (building) => building.type === type && this.connectionChecker?.(building).isFullyOperational
+    ).length;
+  }
+
+  private advanceOrders(grantRewards = true): void {
+    let order = DISTRICT_ORDERS[this.completedOrders];
+    while (order && this.getOrderProgress(order) >= order.target) {
+      this.completedOrders++;
+      if (grantRewards && order.reward) {
+        const { resource, amount } = order.reward;
+        const capacity =
+          resource === 'population'
+            ? this.getOperationalCount('microrayon') * HOUSING_CAPACITY_PER_MICRORAYON
+            : RESOURCE_CAPS[resource]!;
+        this.resources[resource] += Math.max(
+          0,
+          Math.min(amount, capacity - this.resources[resource])
+        );
+      }
+      if (grantRewards) this.emit('orderComplete', order);
+      order = DISTRICT_ORDERS[this.completedOrders];
+    }
   }
 
   public isGameOver(): boolean {
@@ -210,11 +441,11 @@ export class GameState {
 
   public getSeasonMultiplier(): number {
     const baseMult = SEASON_HEAT_MULTIPLIER[this.getSeason()];
-    
+
     // Each year (120 days), winter gets 10% harder
-    const yearsElapsed = Math.floor(this.day / 120);
+    const yearsElapsed = Math.floor((this.day - 1) / (SEASON_LENGTH * 4));
     const winterEscalation = this.getSeason() === 'winter' ? yearsElapsed * 0.1 : 0;
-    
+
     return baseMult + winterEscalation;
   }
 
@@ -230,7 +461,7 @@ export class GameState {
   public getPopulationEfficiencyPenalty(): number {
     const pop = this.resources.population;
     if (pop <= 100) return 1.0;
-    
+
     const excessPop = pop - 100;
     return 1 + (excessPop / 50) * 0.03;
   }
@@ -324,12 +555,12 @@ export class GameState {
       return { canPlace: false, reason: 'Tile is already occupied' };
     }
 
+    if (this.civicProject && overlapsSite(this.civicProject, gridX, gridZ)) {
+      return { canPlace: false, reason: 'Civic project lot is occupied' };
+    }
+
     // Check minimum spacing between buildings
-    const tooClose = this.buildings.some((b) => {
-      const dx = Math.abs(b.gridX - gridX);
-      const dz = Math.abs(b.gridZ - gridZ);
-      return dx <= MIN_BUILDING_SPACING && dz <= MIN_BUILDING_SPACING && !(dx === 0 && dz === 0);
-    });
+    const tooClose = this.buildings.some((b) => overlapsSite(b, gridX, gridZ));
     if (tooClose) {
       return { canPlace: false, reason: 'Too close to another building' };
     }
@@ -388,6 +619,8 @@ export class GameState {
 
     this.buildings.push(building);
     this.emit('buildingPlaced', building);
+    this.advanceOrders();
+    this.checkDistrictGoal();
     this.emit('resourceChange', this.resources);
 
     return building;
@@ -399,6 +632,7 @@ export class GameState {
 
     const [removed] = this.buildings.splice(index, 1);
     this.emit('buildingRemoved', removed);
+    this.emit('resourceChange', this.resources);
     return true;
   }
 
@@ -432,8 +666,10 @@ export class GameState {
     this.checkFailStates();
 
     if (!this.gameOver) {
-      this.calculateTrend();
       this.day++;
+      this.advanceOrders();
+      this.checkDistrictGoal();
+      this.calculateTrend();
 
       const newSeason = this.getSeason();
       if (newSeason !== prevSeason) {
@@ -478,12 +714,7 @@ export class GameState {
     if (population <= 0) return;
 
     // Count connected microrayons for housing capacity
-    const connectedMicrorayons = this.buildings.filter(
-      (b) =>
-        b.type === 'microrayon' &&
-        this.connectionChecker &&
-        this.connectionChecker(b).isFullyOperational
-    ).length;
+    const connectedMicrorayons = this.getOperationalCount('microrayon');
 
     if (connectedMicrorayons === 0) return;
 
@@ -542,7 +773,10 @@ export class GameState {
     const seasonMultiplier = this.getSeasonMultiplier();
     const eventModifiers = this.getEventModifiers();
     // Combine season and event heat multipliers
-    const totalHeatMultiplier = seasonMultiplier * eventModifiers.heatMultiplier;
+    const heatingEfficiency =
+      this.civicProject?.kind === 'district_heating' ? 1 - CIVIC_SAVINGS : 1;
+    const totalHeatMultiplier =
+      seasonMultiplier * eventModifiers.heatMultiplier * heatingEfficiency;
     // Population-based consumption penalty for microrayons
     const populationPenalty = this.getPopulationEfficiencyPenalty();
 
@@ -551,35 +785,26 @@ export class GameState {
 
       const production = BUILDING_PRODUCTION[type as BuildingType];
 
+      const demand: Partial<Resources> = {};
       let canProduce = true;
-      for (const [resource, amount] of Object.entries(production.consumes)) {
-        let required = (amount ?? 0) * count;
-        // Apply total heat multiplier (season + events) to heat consumption
-        if (resource === 'heat' && (type === 'microrayon' || type === 'distiller')) {
-          required = Math.ceil(required * totalHeatMultiplier);
-        }
-        // Apply population penalty to microrayon consumption (all resources)
+      for (const [name, baseAmount] of Object.entries(production.consumes)) {
+        const resource = name as keyof Resources;
+        let amount = baseAmount * count;
+        if (resource === 'heat') amount = Math.ceil(amount * totalHeatMultiplier);
         if (type === 'microrayon') {
-          required = Math.ceil(required * populationPenalty);
+          if (resource === 'freshWater' && this.civicProject?.kind === 'public_garden') {
+            amount *= 1 - CIVIC_SAVINGS;
+          }
+          amount = Math.ceil(amount * populationPenalty);
         }
-        if (this.resources[resource as keyof Resources] < required) {
-          canProduce = false;
-          break;
-        }
+        demand[resource] = amount;
+        if (this.resources[resource] < amount) canProduce = false;
       }
 
-      if (canProduce) {
-        for (const [resource, amount] of Object.entries(production.consumes)) {
-          let consumed = (amount ?? 0) * count;
-          // Apply total heat multiplier (season + events) to heat consumption
-          if (resource === 'heat' && (type === 'microrayon' || type === 'distiller')) {
-            consumed = Math.ceil(consumed * totalHeatMultiplier);
-          }
-          // Apply population penalty to microrayon consumption (all resources)
-          if (type === 'microrayon') {
-            consumed = Math.ceil(consumed * populationPenalty);
-          }
-          this.resources[resource as keyof Resources] -= consumed;
+      // Homes still draw on reserves during a shortage.
+      if (canProduce || type === 'microrayon') {
+        for (const [resource, amount] of Object.entries(demand)) {
+          this.resources[resource as keyof Resources] -= amount;
         }
 
         for (const [resource, amount] of Object.entries(production.produces)) {
@@ -630,8 +855,10 @@ export class GameState {
       const heatGenerated = reactorCount * 1;
       const coolingCapacity = connectedDistillerCount * 0.8;
 
-      const netHeatIncrease = Math.max(0, heatGenerated - coolingCapacity);
-      this.reactor.temperature += netHeatIncrease;
+      this.reactor.temperature = Math.max(
+        0,
+        this.reactor.temperature + heatGenerated - coolingCapacity
+      );
       this.reactor.coolingActive = connectedDistillerCount > 0;
 
       if (this.reactor.temperature >= 80 && this.reactor.temperature < 100) {
@@ -696,6 +923,12 @@ export class GameState {
     this.reactor = { temperature: 0, coolingActive: false };
     this.buildings = [];
     this.day = 1;
+    this.completedOrders = 0;
+    this.nextDispatchDay = 0;
+    this.civicProject = null;
+    this.districtEstablished = false;
+    this.emit('civicProjectChange', null);
+    this.weatherPersistence?.restore(undefined);
     this.gameOver = false;
     this.gameOverReason = undefined;
     this.buildingIdCounter = 0;
@@ -715,6 +948,11 @@ export class GameState {
           gridZ: b.gridZ
         })),
         day: this.day,
+        completedOrders: this.completedOrders,
+        nextDispatchDay: this.nextDispatchDay,
+        civicProject: this.civicProject,
+        districtEstablished: this.districtEstablished,
+        weather: this.weatherPersistence?.save(),
         buildingIdCounter: this.buildingIdCounter
       };
       localStorage.setItem('aktau-save', JSON.stringify(saveData));
@@ -729,13 +967,26 @@ export class GameState {
       const saved = localStorage.getItem('aktau-save');
       if (!saved) return false;
 
-      const data = JSON.parse(saved);
+      const data: unknown = JSON.parse(saved);
+      if (!isCitySave(data)) return false;
+      if (this.weatherPersistence && !this.weatherPersistence.restore(data.weather)) return false;
+
       this.resources = data.resources;
       this.previousResources = { ...data.resources };
       this.reactor = data.reactor;
+      const previousBuildings = this.buildings;
       this.buildings = [];
+      for (const building of previousBuildings) this.emit('buildingRemoved', building);
+      this.completedOrders = data.completedOrders ?? 0;
+      this.nextDispatchDay = data.nextDispatchDay ?? 0;
+      this.civicProject = data.civicProject ?? null;
+      this.districtEstablished = data.districtEstablished ?? false;
       this.day = data.day;
-      this.buildingIdCounter = data.buildingIdCounter || 0;
+      this.buildingIdCounter = data.buildingIdCounter ?? 0;
+      for (const { id } of data.buildings) {
+        const suffix = /^building_(\d+)$/.exec(id)?.[1];
+        if (suffix) this.buildingIdCounter = Math.max(this.buildingIdCounter, Number(suffix) + 1);
+      }
       this.gameOver = false;
       this.gameOverReason = undefined;
       this.resourceTrend = {
@@ -758,8 +1009,16 @@ export class GameState {
         this.emit('buildingPlaced', building);
       }
 
+      // Legacy cities keep their saved balances while receiving credit for existing infrastructure.
+      this.advanceOrders(data.completedOrders !== undefined);
+      this.emit('civicProjectChange', this.civicProject);
+      this.checkDistrictGoal();
       this.emit('resourceChange', this.resources);
-      this.emit('dayAdvance', this.day);
+      this.emit('seasonChange', {
+        season: this.getSeason(),
+        multiplier: this.getSeasonMultiplier()
+      });
+      this.emit('resourceTrend', this.resourceTrend);
       return true;
     } catch {
       return false;

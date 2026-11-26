@@ -8,7 +8,7 @@ export class TickSystem {
   private openModalCount: number = 0;
   private wasPausedBeforeModal: boolean = false;
 
-  constructor(tickRate: number = 3000) {
+  constructor(tickRate: number = 1000) {
     this.tickRate = tickRate;
   }
 

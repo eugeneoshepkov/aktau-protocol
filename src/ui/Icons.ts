@@ -1,4 +1,9 @@
 export const ICONS = {
+  network: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="5" cy="6" r="2.5"/><circle cx="19" cy="8" r="2.5"/><circle cx="11" cy="18" r="2.5"/><path d="m6 8 4 8m2.5 0 5-6m-10-4 9 1.5"/></svg>`,
+  atom: `<svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.8"><ellipse cx="20" cy="20" rx="17" ry="6" transform="rotate(-34 20 20)"/><ellipse cx="20" cy="20" rx="17" ry="6" transform="rotate(28 20 20)"/><ellipse cx="20" cy="20" rx="17" ry="6" transform="rotate(88 20 20)"/><circle cx="20" cy="20" r="2.5" fill="currentColor" stroke="none"/></svg>`,
+  globe: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18"/></svg>`,
+  book: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 6c-3-2-6-2.5-10-2v14c4-.6 7 .2 10 2 3-1.8 6-2.6 10-2V4c-4-.5-7 0-10 2Zm0 0v14"/></svg>`,
+  pin: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z"/><circle cx="12" cy="10" r="2.3"/></svg>`,
   pump: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/><path d="M12 6c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm0 10c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z"/></svg>`,
 
   reactor: `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="3"/><path d="M12 2L9 9H3l5 4-2 7 6-5 6 5-2-7 5-4h-6z"/></svg>`,

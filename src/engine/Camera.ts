@@ -22,6 +22,7 @@ export class IsometricCamera {
   private shakeDuration = 0;
   private shakeTime = 0;
   private originalTarget: Vector3 | null = null;
+  private home = Vector3.Zero();
 
   constructor(scene: Scene, canvas: HTMLCanvasElement) {
     this.scene = scene;
@@ -38,7 +39,8 @@ export class IsometricCamera {
       scene
     );
 
-    this.camera.attachControl(canvas, true);
+    this.camera.attachControl(true, false, 0);
+    this.camera.inputs.removeByType('ArcRotateCameraKeyboardMoveInput');
 
     this.camera.lowerRadiusLimit = MIN_ZOOM;
     this.camera.upperRadiusLimit = MAX_ZOOM;
@@ -46,11 +48,10 @@ export class IsometricCamera {
     this.camera.lowerBetaLimit = ISOMETRIC_BETA;
     this.camera.upperBetaLimit = ISOMETRIC_BETA;
 
-    this.camera.wheelPrecision = 3;
+    this.camera.wheelDeltaPercentage = 0.015;
+    this.camera.useNaturalPinchZoom = true;
 
     this.camera.panningAxis = new Vector3(1, 0, 1);
-    this.camera.panningSensibility = 50;
-    this.camera._useCtrlForPanning = false;
 
     const shouldIgnoreKeyboard = () => {
       const active = document.activeElement;
@@ -70,23 +71,10 @@ export class IsometricCamera {
 
       const key = normalizeKey(e.key);
       this.keysPressed.add(key);
-
-      if (e.key === 'Shift') {
-        this.camera.panningSensibility = 50;
-        this.camera.angularSensibilityX = Infinity;
-        this.camera.angularSensibilityY = Infinity;
-      }
     };
 
     const onKeyUp = (e: KeyboardEvent) => {
-      const key = normalizeKey(e.key);
-      this.keysPressed.delete(key);
-
-      if (e.key === 'Shift') {
-        this.camera.panningSensibility = Infinity;
-        this.camera.angularSensibilityX = 500;
-        this.camera.angularSensibilityY = 500;
-      }
+      this.keysPressed.delete(normalizeKey(e.key));
     };
 
     window.addEventListener('keydown', onKeyDown);
@@ -108,7 +96,7 @@ export class IsometricCamera {
       }
     });
 
-    this.camera.panningSensibility = Infinity;
+    this.camera.panningSensibility = 110;
     this.camera.angularSensibilityX = 500;
     this.camera.angularSensibilityY = 500;
 
@@ -265,16 +253,20 @@ export class IsometricCamera {
     return this.camera;
   }
 
-  public setTarget(target: Vector3): void {
-    this.camera.setTarget(target);
+  public setHome(target: Vector3): void {
+    this.home.copyFrom(target);
+    this.resetView();
   }
 
   public resetView(): void {
-    const gridCenter = new Vector3((GRID_SIZE * TILE_SIZE) / 2, 0, (GRID_SIZE * TILE_SIZE) / 2);
-    this.camera.setTarget(gridCenter);
+    this.camera.setTarget(this.home);
+    this.camera.inertialPanningX = this.camera.inertialPanningY = 0;
+    this.camera.inertialAlphaOffset = this.camera.inertialBetaOffset = this.camera.inertialRadiusOffset = 0;
     this.camera.alpha = ISOMETRIC_ALPHA;
     this.camera.beta = ISOMETRIC_BETA;
-    this.camera.radius = DEFAULT_ZOOM;
+    const canvas = this.scene.getEngine().getRenderingCanvas()!;
+    const portraitScale = Math.max(1, 0.62 * canvas.clientHeight / Math.max(canvas.clientWidth, 1));
+    this.camera.radius = Math.min(MAX_ZOOM, DEFAULT_ZOOM * portraitScale);
   }
 
   public focusOn(target: Vector3, duration: number = 500): void {

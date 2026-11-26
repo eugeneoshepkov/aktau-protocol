@@ -1,131 +1,95 @@
-import { Scene, PointerEventTypes, Vector3, Plane, PointerInfo } from '@babylonjs/core';
+import { Scene, PointerEventTypes, Vector3, Plane } from '@babylonjs/core';
 import { GridManager } from '../grid/GridManager';
 import { worldToGrid, isValidGridPosition } from '../grid/GridCoords';
 import type { GridPosition } from '../grid/GridCoords';
 
-export type TileClickCallback = (gridX: number, gridZ: number) => void;
-export type TileHoverCallback = (gridX: number, gridZ: number) => void;
-export type PointerLeaveCallback = () => void;
+type PointerPosition = Pick<PointerEvent, 'clientX' | 'clientY'>;
+type TileCallback = (gridX: number, gridZ: number, pointer: PointerPosition) => void;
 
 export class InputManager {
   private scene: Scene;
   private gridManager: GridManager;
-  private groundPlane: Plane;
-
-  private onTileClick: TileClickCallback | null = null;
-  private onTileHover: TileHoverCallback | null = null;
-  private onPointerLeave: PointerLeaveCallback | null = null;
-
+  private isPlacing: () => boolean;
+  private groundPlane = Plane.FromPositionAndNormal(Vector3.Zero(), Vector3.Up());
+  private onTileClick: TileCallback | null = null;
+  private onTileHover: TileCallback | null = null;
+  private onPointerLeave: (() => void) | null = null;
   private lastHoveredTile: GridPosition | null = null;
 
-  constructor(scene: Scene, gridManager: GridManager) {
+  constructor(scene: Scene, gridManager: GridManager, isPlacing: () => boolean) {
     this.scene = scene;
     this.gridManager = gridManager;
+    this.isPlacing = isPlacing;
 
-    // Create a ground plane at y=0 for raycasting
-    this.groundPlane = Plane.FromPositionAndNormal(Vector3.Zero(), Vector3.Up());
-
-    this.setupPointerEvents();
-  }
-
-  private setupPointerEvents(): void {
-    this.scene.onPointerObservable.add((pointerInfo: PointerInfo) => {
-      switch (pointerInfo.type) {
-        case PointerEventTypes.POINTERMOVE:
-          this.handlePointerMove();
-          break;
-        case PointerEventTypes.POINTERPICK:
-          this.handlePointerClick();
-          break;
+    scene.onPointerObservable.add(({ type, event }) => {
+      if (type === PointerEventTypes.POINTERMOVE) {
+        if ((event as PointerEvent).pointerType !== 'touch' && event.buttons === 0)
+          this.hover(event);
+      } else if (
+        (type === PointerEventTypes.POINTERTAP || type === PointerEventTypes.POINTERDOUBLETAP) &&
+        event.button === 0
+      ) {
+        const tile = this.resolveTile();
+        if (tile) this.onTileClick?.(tile.x, tile.z, event);
+        else this.clearHover();
+      } else if (type === PointerEventTypes.POINTERDOWN) {
+        this.clearHover();
       }
     });
+    scene
+      .getEngine()
+      .getRenderingCanvas()
+      ?.addEventListener('pointerleave', (event) => {
+        // Touch devices dispatch pointerleave immediately after a tap. Keep the inspected card open.
+        if (event.pointerType !== 'touch') this.clearHover();
+      });
   }
 
-  private getGridPositionFromPointer(): GridPosition | null {
-    // Create picking ray from camera through mouse position
-    const pickRay = this.scene.createPickingRay(
+  private resolveTile(): GridPosition | null {
+    const ray = this.scene.createPickingRay(
       this.scene.pointerX,
       this.scene.pointerY,
       null,
       this.scene.activeCamera
     );
-
-    if (!pickRay) return null;
-
-    // Calculate intersection with ground plane
-    const distance = pickRay.intersectsPlane(this.groundPlane);
-    if (distance === null || distance < 0) return null;
-
-    const worldPos = pickRay.origin.add(pickRay.direction.scale(distance));
-    const gridPos = worldToGrid(worldPos);
-
-    // Check bounds
-    if (!isValidGridPosition(gridPos.x, gridPos.z)) {
-      return null;
+    if (!this.isPlacing()) {
+      const facade = this.scene.pickWithRay(ray, (mesh) => Boolean(mesh.metadata?.buildingId));
+      const tile = facade?.pickedMesh?.metadata;
+      if (tile) return { x: tile.gridX, z: tile.gridZ };
     }
-
-    return gridPos;
+    const distance = ray.intersectsPlane(this.groundPlane);
+    if (distance === null || distance < 0) return null;
+    const tile = worldToGrid(ray.origin.add(ray.direction.scale(distance)));
+    return isValidGridPosition(tile.x, tile.z) ? tile : null;
   }
 
-  private handlePointerMove(): void {
-    const gridPos = this.getGridPositionFromPointer();
-
-    if (!gridPos) {
-      if (this.lastHoveredTile !== null) {
-        this.gridManager.hideHighlight();
-        this.lastHoveredTile = null;
-        if (this.onPointerLeave) this.onPointerLeave();
-      }
+  private hover(pointer: PointerPosition): void {
+    const tile = this.resolveTile();
+    if (!tile) {
+      if (this.lastHoveredTile) this.clearHover();
       return;
     }
-
-    // Check if we moved to a new tile
-    if (
-      this.lastHoveredTile === null ||
-      this.lastHoveredTile.x !== gridPos.x ||
-      this.lastHoveredTile.z !== gridPos.z
-    ) {
-      this.lastHoveredTile = gridPos;
-      this.gridManager.showHighlight(gridPos.x, gridPos.z);
-
-      if (this.onTileHover) {
-        this.onTileHover(gridPos.x, gridPos.z);
-      }
-    }
+    if (tile.x === this.lastHoveredTile?.x && tile.z === this.lastHoveredTile.z) return;
+    this.lastHoveredTile = tile;
+    this.gridManager.showHighlight(tile.x, tile.z);
+    this.onTileHover?.(tile.x, tile.z, pointer);
   }
 
-  private handlePointerClick(): void {
-    const gridPos = this.getGridPositionFromPointer();
-
-    if (!gridPos) return;
-
-    // Log to console as per Sprint 1 requirements
-    const tileType = this.gridManager.getTileAt(gridPos.x, gridPos.z);
-    console.log(`Clicked tile at (${gridPos.x}, ${gridPos.z}) - Type: ${tileType}`);
-
-    if (this.onTileClick) {
-      this.onTileClick(gridPos.x, gridPos.z);
-    }
+  private clearHover(): void {
+    this.lastHoveredTile = null;
+    this.gridManager.hideHighlight();
+    this.onPointerLeave?.();
   }
 
-  /**
-   * Register callback for tile clicks
-   */
-  public setTileClickCallback(callback: TileClickCallback): void {
+  public setTileClickCallback(callback: TileCallback): void {
     this.onTileClick = callback;
   }
 
-  /**
-   * Register callback for tile hovers
-   */
-  public setTileHoverCallback(callback: TileHoverCallback): void {
+  public setTileHoverCallback(callback: TileCallback): void {
     this.onTileHover = callback;
   }
 
-  /**
-   * Register callback for when pointer leaves grid
-   */
-  public setPointerLeaveCallback(callback: PointerLeaveCallback): void {
+  public setPointerLeaveCallback(callback: () => void): void {
     this.onPointerLeave = callback;
   }
 }

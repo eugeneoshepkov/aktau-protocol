@@ -34,19 +34,35 @@ export class Tooltip {
     this.element.style.display = 'none';
     document.body.appendChild(this.element);
 
-    document.addEventListener('mousemove', (e) => {
-      if (this.visible) {
-        this.element.style.left = `${e.clientX + 12}px`;
-        this.element.style.top = `${e.clientY + 12}px`;
-      }
-    });
+    document.addEventListener('pointermove', this.trackPointer);
+    document.addEventListener('pointerdown', this.dismiss, true);
+  }
+
+  private dismiss = (): void => this.hide();
+
+  private trackPointer = (event: PointerEvent): void => {
+    if (this.visible && event.pointerType !== 'touch') this.position(event.clientX, event.clientY);
+  };
+
+  private position(x: number, y: number): void {
+    const gap = 12;
+    const width = this.element.offsetWidth;
+    const height = this.element.offsetHeight;
+    const left = x + gap + width <= window.innerWidth ? x + gap : x - gap - width;
+    const top = y + gap + height <= window.innerHeight ? y + gap : y - gap - height;
+    this.element.style.left = Math.max(6, Math.min(left, window.innerWidth - width - 6)) + 'px';
+    this.element.style.top = Math.max(6, Math.min(top, window.innerHeight - height - 6)) + 'px';
   }
 
   public setPipeManager(pipeManager: PipeManager): void {
     this.pipeManager = pipeManager;
   }
 
-  public show(gridX: number, gridZ: number): void {
+  public show(
+    gridX: number,
+    gridZ: number,
+    pointer: Pick<PointerEvent, 'clientX' | 'clientY'>
+  ): void {
     const building = gameState.getBuildingAt(gridX, gridZ);
 
     if (!building) {
@@ -58,6 +74,7 @@ export class Tooltip {
     this.renderBuilding(building);
     this.element.style.display = 'block';
     this.visible = true;
+    this.position(pointer.clientX, pointer.clientY);
 
     if (this.updateInterval === null) {
       this.updateInterval = window.setInterval(() => {
@@ -238,6 +255,8 @@ export class Tooltip {
 
   public dispose(): void {
     this.hide();
+    document.removeEventListener('pointermove', this.trackPointer);
+    document.removeEventListener('pointerdown', this.dismiss, true);
     this.element.remove();
   }
 }

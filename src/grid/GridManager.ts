@@ -1,408 +1,305 @@
 import {
-  Scene,
+  Color3,
+  DynamicTexture,
   Mesh,
   MeshBuilder,
+  Scene,
+  ShaderMaterial,
   StandardMaterial,
-  Color3,
-  Vector3,
-  VertexData,
-  VertexBuffer
+  Texture,
+  VertexBuffer,
+  VertexData
 } from '@babylonjs/core';
 import { GRID_SIZE, TILE_SIZE } from '../types';
 import type { TileType } from '../types';
-import { getTileTypeAt, getTileColor } from './TileTypes';
+import { generateTileMap, getCoastlineZ } from './TileTypes';
+import type { Season } from '../simulation/GameState';
+import { seasonalCoast } from '../engine/Seasons';
+
+const LAND_Y = 0.15;
+const SEA_Y = -0.04;
+
+function shoreAt(x: number): number {
+  // TileTypes classifies tile centers. Keep the drawn shoreline on the same sample.
+  return getCoastlineZ(x - 0.5) + 0.5;
+}
+
+const waterVertex = `
+  precision highp float;
+  attribute vec3 position;
+  attribute vec2 uv;
+  uniform mat4 worldViewProjection;
+  varying vec2 p;
+  varying float depth;
+  varying float distanceToCamera;
+  void main() {
+    p = position.xz;
+    depth = uv.x;
+    gl_Position = worldViewProjection * vec4(position, 1.0);
+    distanceToCamera = gl_Position.w;
+  }`;
+
+const waterFragment = `
+  precision highp float;
+  varying vec2 p;
+  varying float depth;
+  varying float distanceToCamera;
+  uniform float time;
+  uniform float wind;
+  uniform vec3 deep;
+  uniform vec3 shallow;
+  uniform vec3 horizon;
+  float hash(vec2 p) { return fract(sin(dot(p, vec2(27.61, 61.73))) * 4375.54); }
+  void main() {
+    float swell = time * wind;
+    float sandbar = depth + 0.42 * sin(p.x * 1.4 + p.y * 1.6);
+    vec3 color = mix(shallow, deep, smoothstep(-0.25, 6.2, sandbar));
+    color += (0.011 + wind * 0.011) * sin(p.x * 0.8 + p.y * 2.4 + swell * 0.48) + 0.013 * sin(p.y * 0.6 - swell * 0.28);
+    float wash = depth + (0.06 + wind * 0.04) * sin(2.1 * p.x + swell) + 0.05 * sin(4.0 * p.x);
+    float foam = (1.0 - smoothstep(0.035, 0.11, abs(wash - 0.15)))
+               + (1.0 - smoothstep(0.03, 0.085, abs(wash - 0.52))) * 0.42;
+    color = mix(color, vec3(0.82, 0.87, 0.76), clamp(foam, 0.0, 0.85));
+    // Small broken crests stretch parallel to the prevailing wind.
+    vec2 cell = vec2(p.x * 1.25 + p.y * 0.7, p.y * 3.4);
+    cell.x += 0.32 * sin(floor(cell.y) * 7.5 + swell * 0.5);
+    float seed = hash(floor(cell));
+    vec2 f = abs(fract(cell) - 0.5);
+    float glint = (1.0 - smoothstep(0.04, 0.26, f.x)) * (1.0 - smoothstep(0.02, 0.085, f.y));
+    color += glint * step(0.83 - wind * 0.12, seed) * (0.10 + 0.065 * wind + 0.07 * sin(seed * 17.0 + swell));
+    float haze = smoothstep(35.0, 100.0, distanceToCamera);
+    gl_FragColor = vec4(mix(color, horizon, haze), 1.0);
+  }`;
 
 export class GridManager {
   private scene: Scene;
   private tileMap: TileType[][] = [];
-
-  // Diorama meshes
-  private landMesh: Mesh | null = null;
-  private seaMesh: Mesh | null = null;
-  private baseMesh: Mesh | null = null;
-
-  // Highlight cursor
-  private highlightMesh: Mesh | null = null;
+  private land: Mesh | null = null;
+  private water: Mesh | null = null;
+  private dryGround: Float32Array | null = null;
+  private highlight: Mesh | null = null;
   private highlightMaterial: StandardMaterial | null = null;
-  private validColor = new Color3(1, 1, 0);
-  private invalidColor = new Color3(1, 0.3, 0.3);
 
   constructor(scene: Scene) {
     this.scene = scene;
   }
 
-  /**
-   * Generate the organic diorama terrain
-   */
   public generateGrid(): void {
-    // Generate tile type map
-    this.generateTileMap();
+    this.tileMap = generateTileMap();
+    this.land = this.createLand();
+    this.water = this.createWater();
 
-    // Create diorama meshes
-    this.createLandMesh();
-    this.createWaterMesh();
-    this.createDioramaBase();
-
-    // Create highlight cursor
-    this.createHighlightMesh();
+    this.highlight = MeshBuilder.CreateGround(
+      'selection tile',
+      { width: TILE_SIZE, height: TILE_SIZE },
+      this.scene
+    );
+    this.highlight.isPickable = false;
+    this.highlight.isVisible = false;
+    this.highlightMaterial = new StandardMaterial('selection wash', this.scene);
+    this.highlightMaterial.disableLighting = true;
+    this.highlightMaterial.alpha = 0.42;
+    this.highlight.material = this.highlightMaterial;
   }
 
-  private generateTileMap(): void {
-    this.tileMap = [];
-    for (let z = 0; z < GRID_SIZE; z++) {
-      const row: TileType[] = [];
-      for (let x = 0; x < GRID_SIZE; x++) {
-        row.push(getTileTypeAt(x, z));
-      }
-      this.tileMap.push(row);
-    }
-  }
+  private createLand(): Mesh {
+    const positions: number[] = [],
+      colors: number[] = [],
+      uvs: number[] = [],
+      indices: number[] = [];
+    // Smaller sections keep the waterline smooth, longer sections carry the
+    // landscape to the horizon without drawing an edge around the city.
+    const columns: number[] = [],
+      rows: number[] = [];
+    for (let x = -150; x < -5; x += 4) columns.push(x);
+    for (let x = -5; x < GRID_SIZE + 6; x += 0.5) columns.push(x);
+    for (let x = GRID_SIZE + 6; x <= 206; x += 4) columns.push(x);
+    for (let z = 0; z <= GRID_SIZE + 1; z++) rows.push(z);
+    for (let z = GRID_SIZE + 4; z < 206; z += 4) rows.push(z);
 
-  /**
-   * Deterministic seeded random based on position
-   * Returns value between 0 and 1
-   */
-  private seededRandom(vx: number, vz: number): number {
-    let hash = vx * 374761393 + vz * 668265263;
-    hash = (hash ^ (hash >> 13)) * 1274126177;
-    hash = hash ^ (hash >> 16);
-    return (Math.abs(hash) % 10000) / 10000;
-  }
-
-  /**
-   * Returns a roughness value (0-1) for terrain patches.
-   * Uses low-frequency sine waves to create large clustered patches
-   * of flat plains (0) and rough dunes/hills (1).
-   */
-  private getRoughness(x: number, z: number): number {
-    const scale1 = 0.1; // ~10-15 tile wide patches
-    const scale2 = 0.07; // Secondary frequency to break up repetition
-
-    // Combine two wave patterns
-    const noise = Math.sin(x * scale1) + Math.cos(z * scale1) + Math.sin(z * scale2 + x * 0.5);
-
-    // noise ranges roughly from -3 to +3, normalize to 0..1
-    const normalized = (noise + 3) / 6;
-
-    // Apply smoothstep for sharper transitions between flat and rough
-    const t = Math.max(0, Math.min(1, normalized));
-    const smoothed = t * t * (3 - 2 * t);
-
-    // Hard floor: below 0.3 threshold becomes exactly 0 (perfect flat)
-    return smoothed < 0.3 ? 0 : smoothed;
-  }
-
-  /**
-   * Get jitter for a corner point (deterministic, shared between adjacent tiles)
-   */
-  private getCornerJitter(cornerX: number, cornerZ: number): { jx: number; jz: number } {
-    const roughness = this.getRoughness(cornerX, cornerZ);
-    const jitterAmount = 0.6 * roughness; // Scale base jitter by roughness
-
-    return {
-      jx: (this.seededRandom(cornerX, cornerZ) - 0.5) * jitterAmount,
-      jz: (this.seededRandom(cornerX + 1000, cornerZ + 1000) - 0.5) * jitterAmount
-    };
-  }
-
-  /**
-   * Create the main land mesh with non-indexed geometry for crisp tile edges.
-   * Sea tiles are skipped entirely, leaving holes for water to show through.
-   */
-  private createLandMesh(): void {
-    // Count land tiles (non-sea) to allocate arrays
-    let landTileCount = 0;
-    for (let z = 0; z < GRID_SIZE; z++) {
-      for (let x = 0; x < GRID_SIZE; x++) {
-        if (this.tileMap[z][x] !== 'sea') {
-          landTileCount++;
+    const warmSand = Color3.FromHexString('#d9c6a4');
+    const beach = Color3.FromHexString('#e4d3ae');
+    const steppe = Color3.FromHexString('#baa98a');
+    for (let col = 0; col < columns.length - 1; col++) {
+      const left = columns[col],
+        right = columns[col + 1];
+      const leftShore = shoreAt(left),
+        rightShore = shoreAt(right);
+      for (let row = 0; row < rows.length - 1; row++) {
+        const bottom = rows[row],
+          top = rows[row + 1];
+        if (top < Math.min(leftShore, rightShore)) continue;
+        const ix = Math.floor(left),
+          iz = Math.floor(bottom);
+        const inside = this.isInBounds(ix, iz);
+        const tone = inside ? warmSand : steppe;
+        const fleck = Math.sin(ix * 32.617 + iz * 78.23) * 1364.56;
+        const variation = 0.98 + (fleck - Math.floor(fleck)) * 0.032;
+        const index = positions.length / 3;
+        for (const [x, z, coast] of [
+          [left, bottom, leftShore],
+          [left, top, leftShore],
+          [right, bottom, rightShore],
+          [right, top, rightShore]
+        ]) {
+          const wz = Math.max(z, coast);
+          const distance = Math.max(0, wz - coast);
+          const edge = Math.max(-x, x - GRID_SIZE, wz - GRID_SIZE, 0);
+          const hills = Math.min(1, edge / 18) * (1.2 + Math.sin(x * 0.22 + wz * 0.1)) ** 2;
+          const y =
+            SEA_Y +
+            Math.min(1, distance / 0.47) * (LAND_Y - SEA_Y) +
+            hills * Math.min(1, distance / 4);
+          const color = Color3.Lerp(beach, tone, Math.min(1, distance / 2.5));
+          positions.push(x * TILE_SIZE, y, wz * TILE_SIZE);
+          colors.push(color.r * variation, color.g * variation, color.b * variation, 1);
+          uvs.push(x / 4, wz / 4);
         }
+        indices.push(index, index + 2, index + 1, index + 2, index + 3, index + 1);
       }
     }
-
-    if (landTileCount === 0) return;
-
-    // Each land tile = 4 unique vertices (non-shared for flat shading)
-    // Each land tile = 2 triangles = 6 indices
-    const positions: number[] = [];
-    const colors: number[] = [];
-    const indices: number[] = [];
+    const data = new VertexData();
     const normals: number[] = [];
+    VertexData.ComputeNormals(positions, indices, normals);
+    Object.assign(data, { positions, normals, colors, uvs, indices });
+    const mesh = new Mesh('landMesh', this.scene);
+    data.applyToMesh(mesh);
+    this.dryGround = Float32Array.from(colors);
+    const mat = new StandardMaterial('steppe limestone', this.scene);
+    mat.specularColor = Color3.Black();
+    mat.diffuseTexture = this.createSurveyTexture();
+    mat.backFaceCulling = false;
+    mesh.material = mat;
+    mesh.receiveShadows = true;
+    mesh.freezeWorldMatrix();
+    return mesh;
+  }
 
-    let vertexIndex = 0;
-
-    for (let z = 0; z < GRID_SIZE; z++) {
-      for (let x = 0; x < GRID_SIZE; x++) {
-        const tileType = this.tileMap[z][x];
-
-        // Skip sea tiles - leave holes for water mesh to show through
-        if (tileType === 'sea') continue;
-
-        // Get jitter for each corner (consistent across adjacent tiles)
-        const j00 = this.getCornerJitter(x, z); // top-left
-        const j10 = this.getCornerJitter(x + 1, z); // top-right
-        const j01 = this.getCornerJitter(x, z + 1); // bottom-left
-        const j11 = this.getCornerJitter(x + 1, z + 1); // bottom-right
-
-        // World positions for corners with jitter applied
-        const x0 = x * TILE_SIZE + j00.jx;
-        const x1 = (x + 1) * TILE_SIZE + j10.jx;
-        const z0 = z * TILE_SIZE + j00.jz;
-        const z1_topRight = z * TILE_SIZE + j10.jz;
-        const z2_bottomLeft = (z + 1) * TILE_SIZE + j01.jz;
-        const z3 = (z + 1) * TILE_SIZE + j11.jz;
-        const x2 = x * TILE_SIZE + j01.jx;
-        const x3 = (x + 1) * TILE_SIZE + j11.jx;
-
-        // Get tile color (same for all 4 vertices - crisp flat color)
-        const rgb = getTileColor(tileType);
-
-        // Add color variation for sand tiles (simulates dunes/texture)
-        let r = rgb.r,
-          g = rgb.g,
-          b = rgb.b;
-        if (tileType === 'sand') {
-          // Get roughness at tile center for consistent per-tile appearance
-          const tileRoughness = this.getRoughness(x + 0.5, z + 0.5);
-
-          // Scale variation by roughness: flat=±1%, rough=±10%
-          const baseVariation = (this.seededRandom(x + 5000, z + 5000) - 0.5) * 0.2;
-          const variation = tileRoughness > 0 ? baseVariation : baseVariation * 0.1;
-
-          // Rough areas are slightly darker (up to 10% darker at max roughness)
-          const roughnessDarken = tileRoughness * 0.1;
-
-          r = Math.max(0, Math.min(1, rgb.r + variation - roughnessDarken));
-          g = Math.max(0, Math.min(1, rgb.g + variation - roughnessDarken));
-          b = Math.max(0, Math.min(1, rgb.b + variation - roughnessDarken));
-        }
-
-        // Height: rocks elevated above sand, all corners same height (no gaps)
-        const tileY = tileType === 'rock' ? 0.25 : 0.15;
-
-        // Create 4 unique vertices for this tile
-        // Vertex 0: top-left corner (x, z)
-        positions.push(x0, tileY, z0);
-        colors.push(r, g, b, 1.0);
-        normals.push(0, 1, 0);
-
-        // Vertex 1: top-right corner (x+1, z)
-        positions.push(x1, tileY, z1_topRight);
-        colors.push(r, g, b, 1.0);
-        normals.push(0, 1, 0);
-
-        // Vertex 2: bottom-left corner (x, z+1)
-        positions.push(x2, tileY, z2_bottomLeft);
-        colors.push(r, g, b, 1.0);
-        normals.push(0, 1, 0);
-
-        // Vertex 3: bottom-right corner (x+1, z+1)
-        positions.push(x3, tileY, z3);
-        colors.push(r, g, b, 1.0);
-        normals.push(0, 1, 0);
-
-        // Two triangles: 0-2-1 and 1-2-3 (counter-clockwise winding)
-        indices.push(
-          vertexIndex,
-          vertexIndex + 2,
-          vertexIndex + 1,
-          vertexIndex + 1,
-          vertexIndex + 2,
-          vertexIndex + 3
-        );
-
-        vertexIndex += 4;
+  private createSurveyTexture(): DynamicTexture {
+    const texture = new DynamicTexture(
+      'land survey',
+      256,
+      this.scene,
+      true,
+      Texture.TRILINEAR_SAMPLINGMODE
+    );
+    const ctx = texture.getContext();
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, 256, 256);
+    // Fine grain and small crosses give players a grid without obscuring the sand.
+    let seed = 1963;
+    const random = () => {
+      seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+      return seed / 4294967296;
+    };
+    ctx.fillStyle = 'rgba(99,84,65,.12)';
+    for (let n = 0; n < 2600; n++)
+      ctx.fillRect(random() * 256, random() * 256, 0.6 + random() * 1.4, 0.7);
+    for (let x = 0; x <= 256; x += 64) {
+      for (let z = 0; z <= 256; z += 64) {
+        ctx.fillStyle = 'rgba(81,73,61,.28)';
+        ctx.fillRect(x - 2.7, z - 0.55, 5.4, 1.1);
+        ctx.fillRect(x - 0.55, z - 2.7, 1.1, 5.4);
       }
     }
-
-    // Create mesh from vertex data
-    this.landMesh = new Mesh('landMesh', this.scene);
-
-    const vertexData = new VertexData();
-    vertexData.positions = positions;
-    vertexData.indices = indices;
-    vertexData.colors = colors;
-    vertexData.normals = normals;
-
-    vertexData.applyToMesh(this.landMesh);
-
-    // Create matte material that uses vertex colors
-    const material = new StandardMaterial('landMat', this.scene);
-    material.specularColor = Color3.Black();
-    material.diffuseColor = Color3.White(); // Let vertex colors show through
-    material.backFaceCulling = false; // Show both sides
-
-    this.landMesh.material = material;
+    texture.wrapU = Texture.WRAP_ADDRESSMODE;
+    texture.wrapV = Texture.WRAP_ADDRESSMODE;
+    texture.update();
+    return texture;
   }
 
-  /**
-   * Create animated water plane
-   */
-  private createWaterMesh(): void {
-    // Create ground with enough subdivisions for wave vertices
-    const subdivisions = Math.floor(GRID_SIZE / 2); // ~25 segments
-    this.seaMesh = MeshBuilder.CreateGround(
-      'seaMesh',
-      {
-        width: GRID_SIZE,
-        height: GRID_SIZE,
-        subdivisions: subdivisions,
-        updatable: true // Required for vertex animation
-      },
-      this.scene
-    );
-
-    // Position below land level
-    // Water base at -0.55 ensures waves (max +0.6 amplitude) stay below land (min 0.1)
-    this.seaMesh.position.x = GRID_SIZE / 2;
-    this.seaMesh.position.z = GRID_SIZE / 2;
-    this.seaMesh.position.y = -0.55;
-
-    // Create unlit water material (fully opaque to hide base underneath)
-    const waterMaterial = new StandardMaterial('waterMat', this.scene);
-    waterMaterial.emissiveColor = new Color3(0.18, 0.45, 0.52); // Teal
-    waterMaterial.diffuseColor = Color3.Black();
-    waterMaterial.specularColor = Color3.Black();
-    waterMaterial.alpha = 1.0; // Fully opaque - no dark base showing through
-    waterMaterial.backFaceCulling = false;
-    waterMaterial.disableLighting = true;
-
-    this.seaMesh.material = waterMaterial;
-    this.seaMesh.receiveShadows = false;
-
-    // Register animation callback
-    this.scene.registerBeforeRender(() => {
-      this.animateWater(performance.now() / 1000);
-    });
-  }
-
-  /**
-   * Animate water vertices with sine waves for low-poly effect
-   */
-  private animateWater(time: number): void {
-    if (!this.seaMesh) return;
-
-    const positions = this.seaMesh.getVerticesData(VertexBuffer.PositionKind);
-    if (!positions) return;
-
-    // Get mesh world position offset
-    const offsetX = this.seaMesh.position.x;
-    const offsetZ = this.seaMesh.position.z;
-
-    for (let i = 0; i < positions.length; i += 3) {
-      const x = positions[i] + offsetX;
-      const z = positions[i + 2] + offsetZ;
-
-      // Enhanced wave formula with increased amplitude
-      const primaryWave = Math.sin(x * 0.5 + time) * 0.3;
-      const secondaryWave = Math.cos(z * 0.3 + time) * 0.3;
-      const height = primaryWave + secondaryWave;
-
-      positions[i + 1] = height; // Y coordinate
+  private createWater(): Mesh {
+    const mesh = new Mesh('seaMesh', this.scene);
+    const positions: number[] = [],
+      uvs: number[] = [],
+      indices: number[] = [];
+    for (let x = -150; x <= 206; x += 0.5) {
+      const coast = shoreAt(x);
+      const i = positions.length / 3;
+      for (const z of [-180, coast + 0.35]) {
+        positions.push(x * TILE_SIZE, SEA_Y, z * TILE_SIZE);
+        uvs.push(coast - z, 0);
+      }
+      if (i > 0) indices.push(i - 2, i, i - 1, i, i + 1, i - 1);
     }
-
-    // Update mesh with new positions
-    this.seaMesh.updateVerticesData(VertexBuffer.PositionKind, positions);
-
-    // Skip normal recalculation - keeps smooth lighting without dark spots
-  }
-
-  /**
-   * Create diorama base (pedestal)
-   */
-  private createDioramaBase(): void {
-    this.baseMesh = MeshBuilder.CreateBox(
-      'baseMesh',
+    const data = new VertexData();
+    Object.assign(data, { positions, uvs, indices });
+    data.applyToMesh(mesh);
+    const mat = new ShaderMaterial(
+      'Caspian water',
+      this.scene,
       {
-        width: GRID_SIZE + 2, // Slightly larger than land
-        depth: GRID_SIZE + 2,
-        height: 10
+        vertexSource: waterVertex,
+        fragmentSource: waterFragment
       },
-      this.scene
+      {
+        attributes: ['position', 'uv'],
+        uniforms: ['worldViewProjection', 'time', 'wind', 'deep', 'shallow', 'horizon']
+      }
     );
-
-    // Position: top surface below lowest wave valley (water can dip to -1.15)
-    this.baseMesh.position.x = GRID_SIZE / 2;
-    this.baseMesh.position.z = GRID_SIZE / 2;
-    this.baseMesh.position.y = -6.5; // Center of 10-height box at -6.5 means top at -1.5
-
-    // Dark rock material
-    const baseMaterial = new StandardMaterial('baseMat', this.scene);
-    baseMaterial.diffuseColor = new Color3(0.15, 0.12, 0.1); // Dark brown/black
-    baseMaterial.specularColor = Color3.Black();
-
-    this.baseMesh.material = baseMaterial;
+    mat.backFaceCulling = false;
+    mat.onBindObservable.add(() => mat.setFloat('time', performance.now() * 0.001));
+    mesh.material = mat;
+    mesh.freezeWorldMatrix();
+    return mesh;
   }
 
-  private createHighlightMesh(): void {
-    this.highlightMesh = MeshBuilder.CreateBox(
-      'highlight',
-      { width: TILE_SIZE, height: 0.15, depth: TILE_SIZE },
-      this.scene
-    );
+  public setSeason(season: Season): void {
+    const climate = seasonalCoast[season];
+    const water = this.water?.material as ShaderMaterial | undefined;
+    water?.setColor3('deep', Color3.FromHexString(climate.deep));
+    water?.setColor3('shallow', Color3.FromHexString(climate.shallows));
+    water?.setColor3('horizon', this.scene.fogColor);
+    water?.setFloat('wind', climate.wind);
 
-    this.highlightMaterial = new StandardMaterial('highlightMat', this.scene);
-    this.highlightMaterial.diffuseColor = this.validColor;
-    this.highlightMaterial.alpha = 0.5;
-    this.highlightMaterial.emissiveColor = this.validColor.scale(0.5);
-    this.highlightMesh.material = this.highlightMaterial;
-
-    this.highlightMesh.isVisible = false;
+    const positions = this.land?.getVerticesData(VertexBuffer.PositionKind);
+    if (!this.dryGround || !positions || !this.land) return;
+    const colors = new Float32Array(this.dryGround);
+    const sand = Color3.FromHexString(climate.sand);
+    const snow = Color3.FromHexString('#e1e9e7');
+    for (let i = 0, c = 0; i < positions.length; i += 3, c += 4) {
+      const x = positions[i],
+        z = positions[i + 2];
+      colors[c] *= sand.r / (217 / 255);
+      colors[c + 1] *= sand.g / (198 / 255);
+      colors[c + 2] *= sand.b / (164 / 255);
+      if (season === 'winter') {
+        // Wind scours the shore and leaves long, uneven drifts further inland.
+        const ripple =
+          Math.sin(x * 0.65 + z * 0.27 + Math.sin(z * 0.5)) + 0.67 * Math.cos(x * 0.39 - z * 0.71);
+        const cover =
+          Math.max(0, Math.min(0.98, 0.68 + 0.57 * ripple)) *
+          Math.max(0, Math.min(1, (z - shoreAt(x)) / 1.8));
+        colors[c] += (snow.r - colors[c]) * cover;
+        colors[c + 1] += (snow.g - colors[c + 1]) * cover;
+        colors[c + 2] += (snow.b - colors[c + 2]) * cover;
+      }
+    }
+    this.land.setVerticesData(VertexBuffer.ColorKind, colors);
   }
 
-  /**
-   * Show highlight at grid position
-   */
   public showHighlight(gridX: number, gridZ: number, valid = true): void {
-    if (!this.highlightMesh || !this.highlightMaterial) return;
-
-    // Position highlight above ground level (sand=0.15, rock=0.25)
-    const tileType = this.getTileAt(gridX, gridZ);
-    const groundY = tileType === 'rock' ? 0.25 : 0.15;
-
-    this.highlightMesh.position = new Vector3(
-      gridX * TILE_SIZE + TILE_SIZE / 2,
-      groundY + 0.01, // Slightly above ground to prevent z-fighting
-      gridZ * TILE_SIZE + TILE_SIZE / 2
-    );
-
-    const color = valid ? this.validColor : this.invalidColor;
-    this.highlightMaterial.diffuseColor = color;
-    this.highlightMaterial.emissiveColor = color.scale(0.5);
-
-    this.highlightMesh.isVisible = true;
+    if (!this.highlight || !this.highlightMaterial) return;
+    const y = this.getTileAt(gridX, gridZ) === 'sea' ? SEA_Y : LAND_Y;
+    this.highlight.position.set((gridX + 0.5) * TILE_SIZE, y + 0.025, (gridZ + 0.5) * TILE_SIZE);
+    this.highlightMaterial.emissiveColor = Color3.FromHexString(valid ? '#8be3cc' : '#ed7158');
+    this.highlight.isVisible = true;
   }
 
-  /**
-   * Hide the highlight cursor
-   */
   public hideHighlight(): void {
-    if (this.highlightMesh) {
-      this.highlightMesh.isVisible = false;
-    }
+    if (this.highlight) this.highlight.isVisible = false;
   }
 
-  /**
-   * Get tile type at grid position
-   */
   public getTileAt(gridX: number, gridZ: number): TileType | null {
-    if (gridX < 0 || gridX >= GRID_SIZE || gridZ < 0 || gridZ >= GRID_SIZE) {
-      return null;
-    }
-    return this.tileMap[gridZ][gridX];
+    return this.isInBounds(gridX, gridZ) ? this.tileMap[gridZ][gridX] : null;
   }
 
-  /**
-   * Check if a position is within grid bounds
-   */
   public isInBounds(gridX: number, gridZ: number): boolean {
     return gridX >= 0 && gridX < GRID_SIZE && gridZ >= 0 && gridZ < GRID_SIZE;
   }
 
   public dispose(): void {
-    this.landMesh?.dispose();
-    this.seaMesh?.dispose();
-    this.baseMesh?.dispose();
-    this.highlightMesh?.dispose();
+    this.land?.dispose(false, true);
+    this.water?.dispose(false, true);
+    this.highlight?.dispose(false, true);
   }
 }

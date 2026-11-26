@@ -1,5 +1,5 @@
-import './style.css';
 import { GameEngine } from './engine/Engine';
+import { CityModels } from './models/CityModels';
 import { IsometricCamera } from './engine/Camera';
 import { GridManager } from './grid/GridManager';
 import { InputManager } from './engine/InputManager';
@@ -10,9 +10,9 @@ import { assetManager } from './managers/AssetManager';
 import { musicManager } from './managers/MusicManager';
 import { decorManager } from './managers/DecorManager';
 import { HUD } from './ui/HUD';
+import { mountNetworkInspector } from './ui/NetworkInspector';
 import { BuildPanel } from './ui/BuildPanel';
 import { Tooltip } from './ui/Tooltip';
-import { IntroScreen } from './ui/IntroScreen';
 import { ShortcutsModal } from './ui/ShortcutsModal';
 import { Chronicle } from './ui/Chronicle';
 import { feedbackManager } from './ui/FeedbackManager';
@@ -21,57 +21,31 @@ import { DiagnosticManager } from './ui/DiagnosticManager';
 import { tickSystem } from './simulation/TickSystem';
 import { gameState } from './simulation/GameState';
 import { eventSystem } from './simulation/EventSystem';
-import { FilmGrainEffect, HeatHazeEffect, FrostVignetteEffect } from './engine/PostProcess';
+import { FrostVignetteEffect } from './engine/PostProcess';
 import { ParticleManager } from './effects/ParticleManager';
 import { ICONS } from './ui/Icons';
 import { keyMatches } from './utils/keyboard';
 import { ambientManager } from './simulation/ambient';
-import { getTileTypeAt, getCoastlineZ } from './grid/TileTypes';
+import { STARTER_DISTRICT } from './simulation/DistrictPlan';
+import { t } from './i18n';
 import { getTileCenter } from './grid/GridCoords';
-import { GRID_SIZE } from './types';
 
-let gameLoopStarted = false;
-
-/**
- * Find a rock tile near the coast for the reactor placement.
- * The reactor needs to be within pipe connection range (5 tiles) of the sea
- * for water pump connections.
- */
-function findReactorLocation(): { x: number; z: number } | null {
-  // Search for rock tiles near the coast (within pump connection range)
-  // Start from just inland of the coast and work further inland
-  for (let z = 12; z < 25; z++) {
-    for (let x = 0; x < GRID_SIZE; x++) {
-      const tileType = getTileTypeAt(x, z);
-      if (tileType === 'rock') {
-        // Check if within 5 tiles of sea (pump connection range)
-        const coastZ = getCoastlineZ(x);
-        if (z - coastZ <= 5 && z - coastZ > 0) {
-          return { x, z };
-        }
-      }
-    }
-  }
-  return null;
-}
-
-async function initGame(): Promise<void> {
-  console.log('Initializing Caspian Atom - The Aktau Protocol');
+export async function initGame(resume: boolean): Promise<void> {
+  musicManager.initialize();
+  soundManager.setMuted(musicManager.isMuted());
 
   const gameEngine = new GameEngine('gameCanvas');
   const scene = gameEngine.getScene();
   const canvas = gameEngine.getCanvas();
 
   const camera = new IsometricCamera(scene, canvas);
-  new FilmGrainEffect(scene, camera.getCamera());
-  new HeatHazeEffect(scene, camera.getCamera());
   const frostEffect = new FrostVignetteEffect(scene, camera.getCamera());
 
   // Create reset view button
   const resetBtn = document.createElement('button');
   resetBtn.id = 'reset-view-btn';
   resetBtn.innerHTML = `<span class="icon-wrap">${ICONS.center}</span>`;
-  resetBtn.title = 'Reset view (C)';
+  resetBtn.title = t('shortcuts.center') + ' (C)';
   resetBtn.addEventListener('click', () => {
     camera.resetView();
     soundManager.play('click');
@@ -85,7 +59,7 @@ async function initGame(): Promise<void> {
   const shortcutsBtn = document.createElement('button');
   shortcutsBtn.id = 'shortcuts-btn';
   shortcutsBtn.innerHTML = `<span class="icon-wrap">${ICONS.keyboard}</span>`;
-  shortcutsBtn.title = 'Keyboard shortcuts (?)';
+  shortcutsBtn.title = t('shortcuts.title') + ' (?)';
   shortcutsBtn.addEventListener('click', () => {
     shortcutsModal.toggle();
   });
@@ -103,9 +77,9 @@ async function initGame(): Promise<void> {
     }
 
     // Pause/Resume (Space)
-    if (e.key === ' ') {
+    if (e.key === ' ' && !active?.closest('button, summary, a, select')) {
       e.preventDefault();
-      tickSystem.togglePause();
+      hud.togglePause();
       soundManager.play('click');
     }
 
@@ -131,12 +105,6 @@ async function initGame(): Promise<void> {
   gridManager.generateGrid();
   console.log('Grid generated: 50x50 tiles');
 
-  if (assetManager.shouldUseModels()) {
-    assetManager.preloadAllModels().catch((err) => {
-      console.warn('Failed to preload some models:', err);
-    });
-  }
-
   await decorManager.initialize(scene, (x, z) => gridManager.getTileAt(x, z));
 
   await ambientManager.initialize(scene, gridManager);
@@ -150,6 +118,8 @@ async function initGame(): Promise<void> {
   const pipeManager = new PipeManager(scene);
   const particleManager = new ParticleManager(scene);
 
+  mountNetworkInspector(pipeManager);
+
   // Wire up connection checker for reactor cooling logic
   gameState.setConnectionChecker((building) => ({
     isFullyOperational: pipeManager.isFullyOperational(building)
@@ -161,31 +131,40 @@ async function initGame(): Promise<void> {
   buildingManager.setParticleManager(particleManager);
   buildingManager.onSelectionChange(() => {
     pipeManager.hideConnectionPreview();
+    buildingManager.hideGhostPreview();
   });
 
-  // Auto-place the BN-350 reactor near the coast at game start
-  const reactorLocation = findReactorLocation();
-  if (reactorLocation) {
-    // Remove any decoration at the reactor location first
-    decorManager.removeDecorationAt(reactorLocation.x, reactorLocation.z);
-    gameState.placeBuilding('reactor', reactorLocation.x, reactorLocation.z);
-    console.log(`BN-350 reactor auto-placed at (${reactorLocation.x}, ${reactorLocation.z})`);
-
-    // Center camera on the reactor to draw attention to it
-    const reactorWorldPos = getTileCenter(reactorLocation.x, reactorLocation.z);
-    camera.setTarget(reactorWorldPos);
-  } else {
-    console.warn('Could not find suitable rock tile for reactor near coast');
+  const restored = resume && gameState.load();
+  if (!restored) {
+    for (const { type, x, z } of STARTER_DISTRICT) {
+      decorManager.removeDecorationAt(x, z);
+      gameState.placeBuilding(type, x, z);
+    }
   }
+  const applySeason = () => {
+    const season = gameState.getSeason();
+    gameEngine.setSeason(season);
+    gridManager.setSeason(season);
+    decorManager.setSeason(season);
+    CityModels.forScene(scene).setSnowy(season === 'winter');
+  };
+  applySeason();
+  gameState.on('seasonChange', applySeason);
+
+  const reactor = gameState.getBuildings().find((building) => building.type === 'reactor');
+  if (reactor) camera.setHome(getTileCenter(reactor.gridX, reactor.gridZ));
 
   gameState.on('resourceChange', () => {
     particleManager.updateReactorIntensity();
-    pipeManager.update();
   });
 
-  const inputManager = new InputManager(scene, gridManager);
+  const inputManager = new InputManager(
+    scene,
+    gridManager,
+    () => buildingManager.getSelectedBuildingType() !== null
+  );
 
-  inputManager.setTileClickCallback((x, z) => {
+  inputManager.setTileClickCallback((x, z, pointer) => {
     // Handle demolish mode first
     if (buildingManager.isDemolishMode()) {
       buildingManager.tryDemolishBuilding(x, z);
@@ -197,6 +176,8 @@ async function initGame(): Promise<void> {
       if (placed) {
         soundManager.play('build');
       }
+    } else {
+      tooltip.show(x, z, pointer);
     }
   });
 
@@ -207,8 +188,9 @@ async function initGame(): Promise<void> {
   diagnosticManager.setPipeManager(pipeManager);
   diagnosticManager.setBuildingManager(buildingManager);
 
-  inputManager.setTileHoverCallback((x, z) => {
-    tooltip.show(x, z);
+  inputManager.setTileHoverCallback((x, z, pointer) => {
+    if (buildingManager.getSelectedBuildingType()) tooltip.hide();
+    else tooltip.show(x, z, pointer);
 
     const building = gameState.getBuildingAt(x, z);
     if (building?.type === 'reactor') {
@@ -248,44 +230,20 @@ async function initGame(): Promise<void> {
     setTimeout(() => soundManager.play('gameover'), 300);
   });
 
-  gameState.on('dayAdvance', (day) => {
-    gameEngine.updateDayNightCycle(day as number);
-  });
-
-  gameState.on('buildingPlaced', () => {
-    if (!gameLoopStarted) {
-      gameLoopStarted = true;
-      tickSystem.start();
-      console.log('Game loop started after first building');
-    }
-  });
-
   const hud = new HUD();
   const buildPanel = new BuildPanel(buildingManager);
   new Chronicle();
-
-  // Initialize tutorial system
-  const tutorialManager = new TutorialManager();
-  tutorialManager.setBuildPanel(buildPanel);
+  new TutorialManager(buildPanel, scene, pipeManager, buildingManager);
 
   feedbackManager.initialize();
-
-  gameState.on('resourceChange', () => {
-    if (gameState.getDay() === 1) {
-      eventSystem.reset();
-    }
-  });
+  if (resume && !restored) feedbackManager.showToast(t('menu.saveUnavailable'), 'warning');
 
   eventSystem.onEventsChange((events) => {
     hud.updateActiveEvents(events);
 
     // Check for visual effects based on active events
-    const hasSnow = events.some(
-      (e) => e.event.visualEffect === 'snow'
-    );
-    const hasFrost = events.some(
-      (e) => e.event.visualEffect === 'frost'
-    );
+    const hasSnow = events.some((e) => e.event.visualEffect === 'snow');
+    const hasFrost = events.some((e) => e.event.visualEffect === 'frost');
 
     // Control snow particles
     if (hasSnow) {
@@ -305,23 +263,8 @@ async function initGame(): Promise<void> {
     }
   });
 
-  musicManager.initialize();
-
   gameEngine.startRenderLoop();
-  console.log('Game initialized. Waiting for intro to complete...');
-
-  new IntroScreen(() => {
-    console.log('Intro dismissed. Game ready!');
-    musicManager.play();
-  });
+  await scene.whenReadyAsync();
+  tickSystem.start();
+  musicManager.play();
 }
-
-// Prevent buttons from stealing keyboard focus - blur after click
-document.addEventListener('mouseup', (e) => {
-  const target = e.target as HTMLElement;
-  if (target.tagName === 'BUTTON' || target.closest('button')) {
-    (target.closest('button') || target).blur();
-  }
-});
-
-document.addEventListener('DOMContentLoaded', initGame);

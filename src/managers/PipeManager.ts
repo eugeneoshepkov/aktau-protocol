@@ -4,7 +4,6 @@ import {
   MeshBuilder,
   StandardMaterial,
   Color3,
-  Observer,
   Vector3
 } from '@babylonjs/core';
 import { gameState } from '../simulation/GameState';
@@ -63,9 +62,7 @@ export class PipeManager {
   private previewPipes: PreviewPipe[] = [];
   private materials: Map<string, StandardMaterial> = new Map();
   private previewMaterials: Map<string, StandardMaterial> = new Map();
-  private baseColors: Map<string, Color3> = new Map();
-  private animationTime = 0;
-  private renderObserver: Observer<Scene> | null = null;
+  private visibleLayers = { water: false, heat: false };
 
   // Capacity-based supply tracking
   // Maps resource type to Set of building IDs that are fully supplied for that resource
@@ -87,67 +84,30 @@ export class PipeManager {
     gameState.on('buildingPlaced', () => this.rebuildPipes());
     gameState.on('buildingRemoved', () => this.rebuildPipes());
 
-    this.renderObserver = this.scene.onBeforeRenderObservable.add(() => {
-      this.animatePipes();
-    });
+  }
+
+  public setVisibleLayers(water: boolean, heat: boolean): void {
+    this.visibleLayers = { water, heat };
+    for (const { mesh, type } of this.pipes.values()) mesh.setEnabled(this.visibleLayers[type]);
   }
 
   private createMaterial(name: string, color: string): void {
     const material = new StandardMaterial(`pipe_${name}`, this.scene);
-    const c = this.hexToColor3(color);
+    const c = Color3.FromHexString(color);
     material.diffuseColor = c;
-    material.emissiveColor = c.scale(0.3);
-    material.alpha = 0.8;
+    material.emissiveColor = c.scale(0.16);
+    material.specularColor = Color3.Black();
     this.materials.set(name, material);
-    this.baseColors.set(name, c);
   }
 
   private createPreviewMaterial(name: string, color: string): void {
     const material = new StandardMaterial(`pipe_preview_${name}`, this.scene);
-    const c = this.hexToColor3(color);
+    const c = Color3.FromHexString(color);
     material.diffuseColor = c.scale(0.6);
     material.emissiveColor = c.scale(0.4);
     material.alpha = 0.4;
     this.previewMaterials.set(name, material);
   }
-
-  private hexToColor3(hex: string): Color3 {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    if (!result) return new Color3(1, 1, 1);
-    return new Color3(
-      parseInt(result[1], 16) / 255,
-      parseInt(result[2], 16) / 255,
-      parseInt(result[3], 16) / 255
-    );
-  }
-
-  private animatePipes(): void {
-    this.animationTime += this.scene.getEngine().getDeltaTime() / 1000;
-
-    const waterPulse = (Math.sin(this.animationTime * Math.PI) + 1) / 2;
-    const heatPulse = (Math.sin(this.animationTime * Math.PI * 1.5) + 1) / 2;
-
-    const waterMat = this.materials.get('water');
-    const heatMat = this.materials.get('heat');
-    const waterBase = this.baseColors.get('water');
-    const heatBase = this.baseColors.get('heat');
-
-    if (waterMat && waterBase) {
-      const minGlow = 0.2;
-      const maxGlow = 0.6;
-      const glow = minGlow + (maxGlow - minGlow) * waterPulse;
-      waterMat.emissiveColor = waterBase.scale(glow);
-    }
-
-    if (heatMat && heatBase) {
-      const minGlow = 0.3;
-      const maxGlow = 0.8;
-      const glow = minGlow + (maxGlow - minGlow) * heatPulse;
-      heatMat.emissiveColor = heatBase.scale(glow);
-    }
-  }
-
-  public update(): void {}
 
   public showConnectionPreview(buildingType: BuildingType, gridX: number, gridZ: number): void {
     this.hideConnectionPreview();
@@ -217,7 +177,7 @@ export class PipeManager {
       const pipeType = flow.pipeType;
 
       // Get producers and relays for this resource
-      const producers = buildings.filter((b) => flow.producers.includes(b.type));
+      const producers = this.getProducers(buildings, flow);
       const relayTypes = flow.relays.map((r) => r.type);
       const relays = buildings.filter((b) => relayTypes.includes(b.type));
       const activeRelays = this.getActiveRelays(producers, relays);
@@ -335,7 +295,7 @@ export class PipeManager {
       const buildings = gameState.getBuildings();
       const flow = RESOURCE_FLOWS.find((f) => f.resource === resource);
       if (flow) {
-        const producers = buildings.filter((b) => flow.producers.includes(b.type));
+        const producers = this.getProducers(buildings, flow);
         const relayTypes = flow.relays.map((r) => r.type);
         const relays = buildings.filter((b) => relayTypes.includes(b.type));
         const activeRelays = this.getActiveRelays(producers, relays);
@@ -408,7 +368,7 @@ export class PipeManager {
         `preview_pipe_${this.previewPipes.length}`,
         {
           height: segmentLength,
-          diameter: 0.12,
+          diameter: 0.065,
           tessellation: 6
         },
         this.scene
@@ -421,9 +381,16 @@ export class PipeManager {
       pipe.rotation.z = -angle;
 
       pipe.material = this.previewMaterials.get(type) ?? null;
+      pipe.isPickable = false;
 
       this.previewPipes.push({ mesh: pipe, type });
     }
+  }
+
+  private getProducers(buildings: readonly Building[], flow: ResourceFlowConfig): Building[] {
+    return buildings.filter(
+      (b) => flow.producers.includes(b.type) && (b.type !== 'distiller' || this.isSupplied(b))
+    );
   }
 
   public rebuildPipes(): void {
@@ -447,8 +414,6 @@ export class PipeManager {
 
     // Create pipes based on allocations
     // Draw pipes for each hop in the path (consumer → relay → relay → producer)
-    const drawnPipes = new Set<string>(); // Avoid duplicate pipes
-
     for (const allocation of this.supplyAllocations) {
       const pipeType = getPipeType(allocation.resource);
       const path = allocation.path;
@@ -457,11 +422,6 @@ export class PipeManager {
       for (let i = 0; i < path.length - 1; i++) {
         const from = path[i];
         const to = path[i + 1];
-
-        // Create unique key for this pipe segment (order-independent)
-        const pipeKey = [from.id, to.id].sort().join('_') + '_' + pipeType;
-        if (drawnPipes.has(pipeKey)) continue;
-        drawnPipes.add(pipeKey);
 
         this.createPipe(from, to, pipeType);
       }
@@ -473,7 +433,7 @@ export class PipeManager {
       if (flow.relays.length === 0) continue;
 
       const pipeType = flow.pipeType;
-      const producers = buildings.filter((b) => flow.producers.includes(b.type));
+      const producers = this.getProducers(buildings, flow);
       const relayTypes = flow.relays.map((r) => r.type);
       const relays = buildings.filter((b) => relayTypes.includes(b.type));
 
@@ -499,11 +459,7 @@ export class PipeManager {
 
         for (const { relay } of unconnectedRelays) {
           // Draw pipe from current to relay
-          const pipeKey = [current.id, relay.id].sort().join('_') + '_' + pipeType;
-          if (!drawnPipes.has(pipeKey)) {
-            drawnPipes.add(pipeKey);
-            this.createPipe(current, relay, pipeType);
-          }
+          this.createPipe(current, relay, pipeType);
 
           // Track relay's upstream connection for getConnectionsForBuilding
           this.relayUpstreamConnections.set(relay.id, { upstream: current, pipeType });
@@ -526,7 +482,7 @@ export class PipeManager {
     const resource = flow.resource;
 
     // Get producers (buildings that create this resource)
-    const producers = buildings.filter((b) => flow.producers.includes(b.type));
+    const producers = this.getProducers(buildings, flow);
 
     // Get relay types and find relay buildings
     const relayTypes = flow.relays.map((r) => r.type);
@@ -788,17 +744,16 @@ export class PipeManager {
   }
 
   private createPipe(from: Building, to: Building, type: 'water' | 'heat'): void {
-    const pipeId = `pipe_${from.id}_${to.id}`;
+    const pipeId = `pipe_${type}_${[from.id, to.id].sort().join('_')}`;
 
-    if (this.pipes.has(pipeId) || this.pipes.has(`pipe_${to.id}_${from.id}`)) {
+    if (this.pipes.has(pipeId)) {
       return;
     }
 
     const startPos = getTileCenter(from.gridX, from.gridZ);
     const endPos = getTileCenter(to.gridX, to.gridZ);
 
-    startPos.y = 0.3;
-    endPos.y = 0.3;
+    startPos.y = endPos.y = type === 'heat' ? 0.42 : 0.3;
 
     const direction = endPos.subtract(startPos);
     const length = direction.length();
@@ -808,7 +763,7 @@ export class PipeManager {
       pipeId,
       {
         height: length,
-        diameter: 0.15,
+        diameter: 0.075,
         tessellation: 8
       },
       this.scene
@@ -821,6 +776,8 @@ export class PipeManager {
     pipe.rotation.z = -angle;
 
     pipe.material = this.materials.get(type) ?? null;
+    pipe.isPickable = false;
+    pipe.setEnabled(this.visibleLayers[type]);
 
     this.pipes.set(pipeId, { mesh: pipe, type });
   }
@@ -1124,7 +1081,7 @@ export class PipeManager {
     if (!flow) return false;
 
     // Get producers
-    const producers = buildings.filter((b) => flow.producers.includes(b.type));
+    const producers = this.getProducers(buildings, flow);
 
     // Get active relays that add capacity
     const relayTypes = flow.relays.map((r) => r.type);
@@ -1218,9 +1175,6 @@ export class PipeManager {
   }
 
   public dispose(): void {
-    if (this.renderObserver) {
-      this.scene.onBeforeRenderObservable.remove(this.renderObserver);
-    }
     this.hideConnectionPreview();
     for (const pipeData of this.pipes.values()) {
       pipeData.mesh.dispose();

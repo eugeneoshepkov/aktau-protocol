@@ -1,0 +1,278 @@
+.district-plan {
+  position: fixed;
+  top: 76px;
+  left: 20px;
+  z-index: 9;
+  width: min(268px, calc(100vw - 32px));
+  box-sizing: border-box;
+  background: #14232af2;
+  color: #f3f0e6;
+  border: 1px solid #526264;
+  border-left: 3px solid #ff684b;
+  border-radius: 4px;
+  box-shadow: 0 4px 16px #16222833;
+  padding: 14px 15px;
+  font-family: var(--sans);
+}
+.plan-summary {
+  appearance: none;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 7px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+  border: 0;
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+}
+.plan-summary:focus-visible,
+.plan-site:focus-visible {
+  outline: 2px solid white;
+  outline-offset: 4px;
+}
+.plan-kicker,
+.plan-step,
+.plan-stats {
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
+.plan-kicker {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #ffc0ac;
+}
+.plan-beacon {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border: 1px solid currentColor;
+  margin: 0 7px 1px 1px;
+  transform: rotate(45deg);
+}
+.plan-step {
+  color: #bdcac9;
+}
+.plan-chevron {
+  border: solid #bdcac9;
+  border-width: 0 1px 1px 0;
+  padding: 2px;
+  transform: rotate(225deg);
+  margin-left: 3px;
+}
+.plan-summary[aria-expanded='false'] .plan-chevron {
+  transform: rotate(45deg);
+}
+.plan-title {
+  grid-column: 1 / -1;
+  font-size: 21px;
+  line-height: 1.16;
+  font-weight: 650;
+  letter-spacing: -0.035em;
+}
+.plan-description {
+  margin: 7px 0 13px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #cfdbd9;
+}
+.plan-track {
+  height: 3px;
+  overflow: hidden;
+  background: #425154;
+}
+.plan-track span {
+  display: block;
+  height: 100%;
+  background: #ff866d;
+  transition: width 0.25s;
+}
+.plan-stats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 8px;
+  color: #d3dfdc;
+  margin-top: 6px;
+}
+.plan-grant {
+  color: #ffac95;
+}
+.plan-reserves {
+  margin-top: 11px;
+  padding-top: 8px;
+  border-top: 1px solid #435154;
+}
+.plan-reserves[hidden] {
+  display: none;
+}
+.plan-reserve-status {
+  font: 11px/1.4 var(--mono);
+  color: #d3dfdc;
+}
+.plan-reserve-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 5px;
+}
+.plan-reserve-actions button {
+  flex: 1;
+  border: 1px solid #8eacae;
+  background: #233e46;
+  color: #f4f0df;
+  border-radius: 3px;
+  padding: 6px;
+  font: 600 12px var(--sans);
+  cursor: pointer;
+}
+.plan-reserve-actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.plan-reserve-actions button:focus-visible {
+  outline: 2px solid white;
+}
+.plan-projects {
+  display: grid;
+  gap: 6px;
+}
+.plan-projects button {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  column-gap: 7px;
+  justify-items: start;
+  gap: 3px;
+  text-align: left;
+  padding: 8px 9px;
+  border: 1px solid #61797a;
+  border-radius: 3px;
+  color: #edf0e4;
+  background: #20373d;
+  font: 12px/1.3 var(--sans);
+  cursor: pointer;
+}
+.plan-projects img {
+  grid-column: 1;
+  grid-row: 1 / 4;
+  align-self: center;
+  width: 52px;
+  height: auto;
+  object-fit: contain;
+}
+.plan-projects button:hover:enabled,
+.plan-projects button:focus-visible {
+  border-color: var(--flare);
+}
+.plan-projects button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.plan-projects strong {
+  font-size: 14px;
+}
+.plan-projects small,
+.plan-landmark {
+  color: #ffc0ac;
+  font: 11px/1.4 var(--mono);
+}
+.plan-landmark {
+  margin-top: 8px;
+}
+.district-plan [hidden] {
+  display: none;
+}
+@media (max-height: 680px) {
+  #plan-details {
+    max-height: max(110px, calc(100dvh - 265px));
+    overflow-y: auto;
+  }
+}
+.plan-site {
+  position: fixed;
+  padding: 7px;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  transform: translate(-50%, -100%);
+  z-index: 6;
+  cursor: pointer;
+  touch-action: manipulation;
+  color: white;
+}
+.plan-site[hidden],
+#plan-details[hidden] {
+  display: none;
+}
+.plan-site span {
+  display: grid;
+  place-items: center;
+  width: 29px;
+  height: 29px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 2px solid #fff5e7;
+  background: #b8462a;
+  color: white;
+  box-shadow: 0 2px 6px #16232b80;
+  font:
+    500 24px/0.9 Arial,
+    sans-serif;
+}
+.plan-site::after {
+  content: '';
+  position: absolute;
+  left: calc(50% - 4px);
+  bottom: 2px;
+  border: 4px solid transparent;
+  border-top-color: #fff5e7;
+  border-bottom-width: 0;
+}
+.plan-site:hover span,
+.plan-site:focus-visible span {
+  background: #d55232;
+  transform: translateY(-2px);
+}
+.build-button.plan-target:not(.selected) {
+  border-color: #e67e62;
+}
+@media (max-width: 700px) {
+  .district-plan {
+    top: 104px;
+    left: 10px;
+    width: min(240px, calc(100vw - 70px));
+    padding: 10px 12px;
+  }
+  .plan-title {
+    font-size: 17px;
+  }
+  .plan-description {
+    margin: 4px 0 9px;
+    line-height: 1.3;
+  }
+}
+@media (max-height: 530px) and (orientation: landscape) {
+  .district-plan {
+    top: 58px;
+    left: 10px;
+    width: 205px;
+    padding: 9px 11px;
+  }
+  .plan-title {
+    font-size: 16px;
+  }
+  .plan-description {
+    font-size: 12px;
+    margin: 5px 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .plan-track span {
+    transition: none;
+  }
+}

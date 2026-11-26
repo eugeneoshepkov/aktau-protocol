@@ -56,7 +56,7 @@ export class ShortcutsModal {
             <div class="shortcut-row"><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd><span>${t('shortcuts.panDrag')}</span></div>
             <div class="shortcut-row"><kbd>Q</kbd> / <kbd>E</kbd><span>${t('shortcuts.rotate')}</span></div>
             <div class="shortcut-row"><kbd>Scroll</kbd><span>${t('shortcuts.zoom')}</span></div>
-            <div class="shortcut-row"><kbd>Shift</kbd> + <kbd>Drag</kbd><span>${t('shortcuts.panMouse')}</span></div>
+            <div class="shortcut-row"><kbd>${t('shortcuts.drag')}</kbd><span>${t('shortcuts.panMouse')}</span></div>
             <div class="shortcut-row"><kbd>C</kbd><span>${t('shortcuts.center')}</span></div>
             <div class="shortcut-row"><kbd>Home</kbd><span>${t('shortcuts.reset')}</span></div>
           </div>

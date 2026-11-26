@@ -1,152 +1,96 @@
 import { ICONS } from './Icons';
 import { t, i18n } from '../i18n';
-import { musicManager } from '../managers/MusicManager';
-import { soundManager } from '../managers/SoundManager';
 
 export class IntroScreen {
-  private overlay: HTMLDivElement;
-  private onStart: () => void;
-  private audio: HTMLAudioElement | null = null;
-  private muted: boolean = false;
+  constructor(onStart: (resume: boolean) => Promise<void>) {
+    const screen = document.createElement('main');
+    screen.id = 'intro-overlay';
+    const hasSave = Boolean(localStorage.getItem('aktau-save'));
+    const audio = new Audio('/audio/title.mp3');
+    audio.volume = 0.4;
+    audio.muted = localStorage.getItem('aktau-muted') === 'true';
 
-  constructor(onStart: () => void) {
-    this.onStart = onStart;
-
-    const savedMuted = localStorage.getItem('aktau-muted');
-    this.muted = savedMuted === 'true';
-
-    this.overlay = this.createOverlay();
-    document.body.appendChild(this.overlay);
-
-    this.initAudio();
-  }
-
-  private initAudio(): void {
-    this.audio = new Audio('/audio/title.mp3');
-    this.audio.loop = false;
-    this.audio.volume = 0.55;
-    this.audio.muted = this.muted;
-
-    const playPromise = this.audio.play();
-    if (playPromise) {
-      playPromise.catch(() => {
-        const playOnClick = () => {
-          this.audio?.play();
-          document.removeEventListener('click', playOnClick);
-        };
-        document.addEventListener('click', playOnClick);
-      });
-    }
-  }
-
-  private createOverlay(): HTMLDivElement {
-    const overlay = document.createElement('div');
-    overlay.id = 'intro-overlay';
-    // Start visible immediately to prevent flash of game underneath
-    overlay.classList.add('visible');
-    overlay.innerHTML = `
-      <div class="intro-content">
-        <div class="intro-header">
-          <div class="intro-emblem">☢</div>
-          <h1>THE AKTAU PROTOCOL</h1>
-          <div class="intro-subtitle">${t('intro.subtitle')}</div>
+    screen.innerHTML = `
+      <header class="title-bar">
+        <div class="studio-mark"><span class="orbit-mark">${ICONS.atom}</span>CASPIAN ATOM</div>
+        <nav class="title-options">
+          <button class="intro-lang-btn" title="${t('intro.language')}">${ICONS.globe}<span>${i18n.getLocale().toUpperCase()}</span></button>
+          <button class="intro-mute-btn" aria-label="${t('intro.mute')}"></button>
+        </nav>
+      </header>
+      <section class="title-stage" aria-labelledby="game-title">
+        <div class="title-copy">
+          <div class="title-genre">${t('menu.genre')}</div>
+          <h1 id="game-title"><span>AKTAU</span><span>PROTOCOL</span></h1>
+          <p class="title-premise">${t('menu.premise')}</p>
+          <div class="title-actions">
+            <button class="start-city">${ICONS.play}${t(hasSave ? 'menu.continue' : 'menu.start')}</button>
+            ${hasSave ? `<button class="new-city">${t('menu.new')}</button>` : ''}
+            <button class="open-guide">${ICONS.book}${t('menu.guide')}</button>
+          </div>
+          <p class="launch-status" role="status"></p>
         </div>
+      </section>
+      <footer class="title-footer">
+        <div>${ICONS.pin}<span>${t('menu.place')}</span></div>
+        <span class="title-coordinate">43°39′ N &nbsp; 51°09′ E</span>
+        <span class="title-year">1972</span>
+      </footer>
+      <dialog class="field-guide">
+        <header><h2>${t('menu.guide')}</h2><button class="close-guide" aria-label="${t('menu.close')}">${ICONS.close}</button></header>
+        <dl>
+          <dt>${t('guide.water')}</dt><dd>${t('guide.water.info')}</dd>
+          <dt>${t('guide.housing')}</dt><dd>${t('guide.housing.info')}</dd>
+          <dt>${t('guide.winter')}</dt><dd>${t('guide.winter.info')}</dd>
+        </dl>
+        <p>${t('guide.controls')}</p>
+      </dialog>`;
+    document.body.append(screen);
 
-        <div class="intro-image">
-          <img src="/pictures/intro-horizontal.png" alt="Aktau" />
-        </div>
+    const guide = screen.querySelector<HTMLDialogElement>('dialog')!;
+    screen.querySelector('.open-guide')!.addEventListener('click', () => guide.showModal());
+    screen.querySelector('.close-guide')!.addEventListener('click', () => guide.close());
+    guide.addEventListener('click', (event) => {
+      if (event.target === guide) guide.close();
+    });
+    screen.querySelector('.intro-lang-btn')!.addEventListener('click', () => i18n.toggleLocale());
 
-        <div class="intro-lore">
-          <p class="intro-year">${t('intro.year')}</p>
+    const mute = screen.querySelector<HTMLButtonElement>('.intro-mute-btn')!;
+    const showSound = () => {
+      mute.innerHTML =
+        (audio.muted ? ICONS.volumeOff : ICONS.volumeOn) +
+        `<span>${t(audio.muted ? 'menu.soundOff' : 'menu.soundOn')}</span>`;
+      mute.setAttribute('aria-pressed', String(audio.muted));
+    };
+    showSound();
+    mute.addEventListener('click', () => {
+      audio.muted = !audio.muted;
+      localStorage.setItem('aktau-muted', String(audio.muted));
+      if (!audio.muted) void audio.play().catch(() => {});
+      showSound();
+    });
+    if (!audio.muted) void audio.play().catch(() => {});
 
-          <p>${t('intro.lore1')}</p>
-
-          <p>${t('intro.lore2')}</p>
-
-          <p>${t('intro.lore3')}</p>
-
-          <p class="intro-highlight">${t('intro.lore4')}</p>
-
-          <p class="intro-mission">${t('intro.mission')}</p>
-        </div>
-
-        <button class="intro-start-btn">
-          <span>${t('intro.start')}</span>
-        </button>
-
-        <div class="intro-footer">
-          <span>${t('intro.controls')}</span>
-        </div>
-
-        <button class="intro-mute-btn" title="${t('intro.mute')}">
-          <span class="icon-wrap">${this.muted ? ICONS.volumeOff : ICONS.volumeOn}</span>
-        </button>
-
-        <button class="intro-lang-btn" title="${t('intro.language')}">
-          ${i18n.getLocale() === 'en' ? 'EN' : 'RU'}
-        </button>
-      </div>
-    `;
-
-    const startBtn = overlay.querySelector('.intro-start-btn');
-    startBtn?.addEventListener('click', () => this.dismiss());
-
-    const muteBtn = overlay.querySelector('.intro-mute-btn');
-    muteBtn?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.toggleMute();
-      const iconWrap = muteBtn.querySelector('.icon-wrap');
-      if (iconWrap) {
-        iconWrap.innerHTML = this.muted ? ICONS.volumeOff : ICONS.volumeOn;
+    let starting = false;
+    const start = async (resume: boolean) => {
+      if (starting) return;
+      starting = true;
+      audio.pause();
+      const primary = screen.querySelector<HTMLButtonElement>('.start-city')!;
+      primary.disabled = true;
+      primary.textContent = t('menu.loading');
+      try {
+        await onStart(resume);
+        screen.remove();
+      } catch (error) {
+        console.error('Could not start Aktau Protocol', error);
+        primary.textContent = t('menu.retry');
+        primary.disabled = false;
+        primary.onclick = () => location.reload();
+        screen.querySelector('.launch-status')!.textContent = t('menu.loadFailed');
       }
-    });
-
-    const langBtn = overlay.querySelector('.intro-lang-btn');
-    langBtn?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      i18n.toggleLocale();
-    });
-
-    return overlay;
-  }
-
-  private toggleMute(): void {
-    this.muted = !this.muted;
-    localStorage.setItem('aktau-muted', String(this.muted));
-    if (this.audio) {
-      this.audio.muted = this.muted;
-    }
-    musicManager.setMuted(this.muted);
-    soundManager.setMuted(this.muted);
-    this.updateHUDIcon();
-  }
-
-  private updateHUDIcon(): void {
-    const volumeIcon = document.querySelector('.volume-icon');
-    if (volumeIcon) {
-      volumeIcon.innerHTML = this.muted ? ICONS.volumeOff : ICONS.volumeOn;
-    }
-  }
-
-  private dismiss(): void {
-    this.overlay.classList.remove('visible');
-    this.overlay.classList.add('dismissed');
-
-    if (this.audio) {
-      const fadeOut = setInterval(() => {
-        if (this.audio && this.audio.volume > 0.01) {
-          this.audio.volume = Math.max(0, this.audio.volume - 0.02);
-        } else {
-          clearInterval(fadeOut);
-          this.audio?.pause();
-          this.audio = null;
-        }
-      }, 50);
-    }
-
-    setTimeout(() => {
-      this.overlay.remove();
-      this.onStart();
-    }, 800);
+    };
+    screen.querySelector('.start-city')!.addEventListener('click', () => void start(hasSave));
+    screen.querySelector('.new-city')?.addEventListener('click', () => void start(false));
   }
 }

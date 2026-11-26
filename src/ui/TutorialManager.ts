@@ -1,282 +1,316 @@
-import { gameState } from '../simulation/GameState';
+import { Matrix, Scene, Vector3 } from '@babylonjs/core';
+import { getTileCenter } from '../grid/GridCoords';
+import { getTileTypeAt } from '../grid/TileTypes';
+import type { BuildingManager } from '../managers/BuildingManager';
+import type { PipeManager } from '../managers/PipeManager';
 import { soundManager } from '../managers/SoundManager';
-import type { BuildingType } from '../types';
+import {
+  DISTRICT_ORDERS,
+  CIVIC_PROJECTS,
+  CIVIC_POWER_COST,
+  CIVIC_MATERIAL_COST,
+  WATERFRONT_EXPANSION,
+  CIVIC_SAVINGS,
+  type DistrictOrder,
+  type CivicProjectKind
+} from '../simulation/DistrictPlan';
+import { getCameraInstance } from '../engine/Camera';
+import { gameState, RESERVE_SUPPLIES, RESERVE_POWER_COST } from '../simulation/GameState';
+import { GRID_SIZE, RESOURCE_CAPS, type BuildingType } from '../types';
 import type { BuildPanel } from './BuildPanel';
+import { feedbackManager } from './FeedbackManager';
 import { t, td } from '../i18n';
-
-type TutorialStep = 'WELCOME' | 'BUILD_PUMP' | 'BUILD_DESAL' | 'BUILD_HOUSING' | 'COMPLETED';
-
-interface StepConfig {
-  translationKey: string;
-  target: BuildingType | null;
-  targetCount: number;
-}
-
-const STEP_CONFIGS: Record<TutorialStep, StepConfig> = {
-  WELCOME: {
-    translationKey: 'tutorial.welcome',
-    target: null,
-    targetCount: 0
-  },
-  BUILD_PUMP: {
-    translationKey: 'tutorial.pump',
-    target: 'pump',
-    targetCount: 1
-  },
-  BUILD_DESAL: {
-    translationKey: 'tutorial.desal',
-    target: 'distiller',
-    targetCount: 1
-  },
-  BUILD_HOUSING: {
-    translationKey: 'tutorial.housing',
-    target: 'microrayon',
-    targetCount: 2
-  },
-  COMPLETED: {
-    translationKey: 'tutorial.complete',
-    target: null,
-    targetCount: 0
-  }
-};
-
-const STEP_ORDER: TutorialStep[] = [
-  'WELCOME',
-  'BUILD_PUMP',
-  'BUILD_DESAL',
-  'BUILD_HOUSING',
-  'COMPLETED'
-];
+import './district-plan.css';
 
 export class TutorialManager {
-  private currentStep: TutorialStep = 'WELCOME';
-  private panel: HTMLDivElement;
-  private welcomeOverlay: HTMLDivElement;
-  private buildPanel: BuildPanel | null = null;
-  private completedTimeout: number | null = null;
+  private panel = document.createElement('section');
+  private marker = document.createElement('button');
+  private site: { type: BuildingType; x: number; z: number } | null = null;
+  private readonly panelButton: HTMLButtonElement;
+  private readonly buildPanel: BuildPanel;
+  private readonly pipes: PipeManager;
+  private readonly positionMarker: () => void;
+  private siteDirty = true;
 
-  constructor() {
-    // Create welcome overlay (shown first, centered)
-    this.welcomeOverlay = this.createWelcomeOverlay();
-    document.body.appendChild(this.welcomeOverlay);
-
-    // Create mission panel (hidden until welcome is dismissed)
-    this.panel = this.createPanel();
-    this.panel.style.display = 'none';
-    document.body.appendChild(this.panel);
-
-    this.setupListeners();
-  }
-
-  public setBuildPanel(bp: BuildPanel): void {
-    this.buildPanel = bp;
-  }
-
-  private createWelcomeOverlay(): HTMLDivElement {
-    const overlay = document.createElement('div');
-    overlay.id = 'welcome-overlay';
-    overlay.innerHTML = `
-      <div class="welcome-box">
-        <div class="welcome-header">THE AKTAU PROTOCOL</div>
-        <div class="welcome-title">${t('welcome.title')}</div>
-        <div class="welcome-desc">${t('welcome.desc')}</div>
-        <div class="welcome-note">${t('welcome.note')}</div>
-        <button class="welcome-btn">${t('welcome.button')}</button>
-      </div>
-    `;
-
-    const btn = overlay.querySelector('.welcome-btn');
-    btn?.addEventListener('click', () => {
-      soundManager.play('click');
-      this.dismissWelcome();
+  constructor(
+    buildPanel: BuildPanel,
+    scene: Scene,
+    pipes: PipeManager,
+    buildings: BuildingManager
+  ) {
+    this.buildPanel = buildPanel;
+    this.pipes = pipes;
+    this.panel.className = 'district-plan';
+    this.panel.setAttribute('aria-label', t('plan.label'));
+    this.panel.innerHTML = `
+      <button type="button" class="plan-summary" aria-expanded="true" aria-controls="plan-details">
+        <span class="plan-kicker"><span class="plan-beacon"></span>${t('plan.label')}</span>
+        <span class="plan-step"></span><span class="plan-chevron" aria-hidden="true"></span>
+        <strong class="plan-title" aria-live="polite"></strong>
+      </button>
+      <div id="plan-details">
+        <p class="plan-description"></p>
+        <div class="plan-track" aria-hidden="true"><span></span></div>
+        <div class="plan-stats"><span class="plan-count"></span><span class="plan-grant"></span></div>
+        <div class="plan-projects" hidden></div>
+        <div class="plan-landmark" hidden></div>
+        <div class="plan-reserves" hidden>
+          <div class="plan-reserve-status"></div>
+          <div class="plan-reserve-actions"><button type="button" data-supply="freshWater"></button><button type="button" data-supply="heat"></button></div>
+        </div>
+      </div>`;
+    this.panelButton = this.panel.querySelector('button')!;
+    this.panelButton.addEventListener('click', () => {
+      const expanded = this.panelButton.getAttribute('aria-expanded') === 'true';
+      this.panelButton.setAttribute('aria-expanded', String(!expanded));
+      this.panel.querySelector<HTMLElement>('#plan-details')!.hidden = expanded;
     });
 
-    return overlay;
-  }
+    const choices = this.panel.querySelector<HTMLElement>('.plan-projects')!;
+    for (const kind of Object.keys(CIVIC_PROJECTS) as CivicProjectKind[]) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.dataset.project = kind;
+      const material = CIVIC_PROJECTS[kind].resource;
+      button.innerHTML = `<img src="/pictures/construction/${kind}.webp" width="58" height="48" alt="" loading="lazy">
+        <strong>${td('civic.' + kind + '.name')}</strong>
+        <span>${td('civic.' + kind + '.benefit', { percent: CIVIC_SAVINGS * 100 })}</span>
+        <small>${td('civic.cost.' + material, { power: CIVIC_POWER_COST, amount: CIVIC_MATERIAL_COST })}</small>`;
+      button.addEventListener('click', () => {
+        if (!gameState.commissionCivicProject(kind)) {
+          feedbackManager.showToast(t('civic.noSite'), 'warning');
+          return;
+        }
+        const project = gameState.getCivicProject()!;
+        this.buildPanel.cancelSelection();
+        const landmark = getTileCenter(project.gridX, project.gridZ);
+        const nextSite = this.site && getTileCenter(this.site.x, this.site.z);
+        // Make room to see the new landmark and its neighbouring construction lot on a phone.
+        if (
+          nextSite &&
+          window.matchMedia('(max-width: 700px)').matches &&
+          this.panelButton.getAttribute('aria-expanded') === 'true'
+        ) {
+          this.panelButton.click();
+        }
+        getCameraInstance()?.focusOn(nextSite ? Vector3.Lerp(landmark, nextSite, 0.65) : landmark);
+        feedbackManager.showToast(
+          t('civic.opened', { project: td('civic.' + kind + '.name') }),
+          'success'
+        );
+        soundManager.play('success');
+      });
+      choices.append(button);
+    }
 
-  private dismissWelcome(): void {
-    // Fade out welcome overlay
-    this.welcomeOverlay.classList.add('fade-out');
-    setTimeout(() => {
-      this.welcomeOverlay.remove();
-    }, 500);
+    for (const resource of ['freshWater', 'heat'] as const) {
+      this.panel.querySelector(`[data-supply="${resource}"]`)!.addEventListener('click', () => {
+        if (gameState.dispatchSupply(resource)) soundManager.play('success');
+      });
+    }
 
-    // Show mission panel with WELCOME step content first
-    this.panel.style.display = 'block';
-    this.updateUI();
-
-    // Auto-advance to first real step after a delay
-    setTimeout(() => {
-      this.advanceStep();
-    }, 4000);
-  }
-
-  private createPanel(): HTMLDivElement {
-    const panel = document.createElement('div');
-    panel.id = 'mission-panel';
-    panel.innerHTML = `
-      <div class="mission-header"></div>
-      <div class="mission-title"></div>
-      <div class="mission-desc"></div>
-      <div class="mission-progress"></div>
-      <div class="mission-note"></div>
-    `;
-    return panel;
-  }
-
-  private setupListeners(): void {
-    gameState.on('buildingPlaced', (data) => {
-      const building = data as { type: BuildingType };
-      this.onBuildingPlaced(building.type);
+    this.marker.type = 'button';
+    this.marker.className = 'plan-site';
+    this.marker.innerHTML = '<span aria-hidden="true">+</span>';
+    this.marker.addEventListener('click', () => {
+      if (!this.site || gameState.isGameOver()) return;
+      const { type, x, z } = this.site;
+      if (buildings.getSelectedBuildingType() !== type || buildings.isDemolishMode()) {
+        this.buildPanel.getButton(type)?.click();
+      }
+      if (buildings.tryPlaceBuilding(x, z)) {
+        this.buildPanel.cancelSelection();
+        soundManager.play('build');
+      }
     });
+
+    document.body.append(this.panel, this.marker);
+    // The marker uses the same camera transform as the lot when the map is rotated or zoomed.
+    const worldMatrix = Matrix.Identity();
+    const engine = scene.getEngine();
+    this.positionMarker = () => {
+      const camera = scene.activeCamera;
+      const canvas = engine.getRenderingCanvas();
+      if (!this.site || !camera || !canvas) return;
+      const position = getTileCenter(this.site.x, this.site.z);
+      position.y = 0.22;
+      const view = camera.viewport.toGlobal(canvas.clientWidth, canvas.clientHeight);
+      const point = Vector3.Project(position, worldMatrix, scene.getTransformMatrix(), view);
+      this.marker.hidden =
+        gameState.isGameOver() ||
+        point.z < 0 ||
+        point.z > 1 ||
+        point.x < 0 ||
+        point.x > view.width ||
+        point.y < 0 ||
+        point.y > view.height;
+      this.marker.style.left = Math.round(point.x) + 'px';
+      this.marker.style.top = Math.round(point.y) + 'px';
+    };
+    scene.onAfterRenderObservable.add(this.positionMarker);
+
+    gameState.on('buildingPlaced', () => {
+      this.siteDirty = true;
+    });
+    gameState.on('buildingRemoved', () => {
+      this.siteDirty = true;
+    });
+    gameState.on('resourceChange', () => this.update());
+    gameState.on('gameOver', () => {
+      this.marker.hidden = true;
+    });
+    gameState.on('civicProjectChange', () => {
+      this.siteDirty = true;
+    });
+    gameState.on('districtEstablished', () => {
+      feedbackManager.showToast(t('plan.established.title'), 'success');
+      soundManager.play('success');
+    });
+    gameState.on('orderComplete', (data) => {
+      const order = data as DistrictOrder;
+      const reward = this.rewardLabel(order);
+      const title = td(`plan.${order.id}.title`);
+      feedbackManager.showToast(reward ? title + '  ·  ' + reward : title + ' ✓', 'success');
+      soundManager.play('success');
+      this.siteDirty = true;
+    });
+    this.update();
   }
 
-  private onBuildingPlaced(type: BuildingType): void {
-    const config = STEP_CONFIGS[this.currentStep];
+  private rewardLabel(order: DistrictOrder): string {
+    return order.reward
+      ? td(`plan.reward.${order.reward.resource}`, { amount: order.reward.amount })
+      : '';
+  }
 
-    // Check if this building type matches the current objective
-    if (config.target && type === config.target) {
-      const progress = this.getProgress();
-      this.updateProgressDisplay(progress);
+  private update(): void {
+    const completed = gameState.getCompletedOrders();
+    const project = gameState.getCivicProject();
+    const established = gameState.isDistrictEstablished();
+    const chartered = completed === DISTRICT_ORDERS.length;
+    const expanding = project && !established;
+    const expansion =
+      expanding && gameState.getOperationalCount('microrayon') < WATERFRONT_EXPANSION.homes.target
+        ? WATERFRONT_EXPANSION.homes
+        : WATERFRONT_EXPANSION.residents;
+    const order = DISTRICT_ORDERS[completed] ?? (expanding ? expansion : null);
+    const count = order ? Math.min(order.target, gameState.getOrderProgress(order)) : 0;
+    this.panel.querySelector('.plan-step')!.textContent = chartered
+      ? t('civic.stage')
+      : String(completed + 1).padStart(2, '0') +
+        ' / ' +
+        String(DISTRICT_ORDERS.length).padStart(2, '0');
 
-      // Check if objective is complete
-      if (progress.current >= progress.target) {
-        this.completeStep();
+    const key = order?.id ?? (established ? 'established' : 'complete');
+    const title = this.panel.querySelector('.plan-title')!;
+    const text = td(`plan.${key}.title`);
+    if (title.textContent !== text) title.textContent = text;
+    this.panel.querySelector('.plan-description')!.textContent = td(`plan.${key}.desc`);
+    this.panel.querySelector<HTMLElement>('.plan-track')!.hidden = !order;
+    this.panel.querySelector<HTMLElement>('.plan-stats')!.hidden = !order;
+    if (order) {
+      this.panel.querySelector<HTMLElement>('.plan-track span')!.style.width =
+        (count / order.target) * 100 + '%';
+      this.panel.querySelector('.plan-count')!.textContent = td(`plan.count.${order.measure}`, {
+        count,
+        target: order.target
+      });
+      this.panel.querySelector('.plan-grant')!.textContent = this.rewardLabel(order);
+    }
+    const choices = this.panel.querySelector<HTMLElement>('.plan-projects')!;
+    choices.hidden = !chartered || !!project;
+    if (!choices.hidden) {
+      const resources = gameState.getResources();
+      for (const button of choices.querySelectorAll('button')) {
+        const kind = button.dataset.project as CivicProjectKind;
+        button.disabled =
+          resources.electricity < CIVIC_POWER_COST ||
+          resources[CIVIC_PROJECTS[kind].resource] < CIVIC_MATERIAL_COST;
+      }
+    }
+    const landmark = this.panel.querySelector<HTMLElement>('.plan-landmark')!;
+    landmark.hidden = !project;
+    if (project)
+      landmark.textContent =
+        td('civic.' + project.kind + '.name') +
+        ' · ' +
+        td('civic.' + project.kind + '.benefit', { percent: CIVIC_SAVINGS * 100 });
+
+    const reserves = this.panel.querySelector<HTMLElement>('.plan-reserves')!;
+    reserves.hidden = completed < 4;
+    if (!reserves.hidden) {
+      const resources = gameState.getResources();
+      const nextDay = gameState.getNextDispatchDay();
+      const ready = nextDay <= gameState.getDay();
+      reserves.querySelector('.plan-reserve-status')!.textContent = ready
+        ? t('plan.dispatch', { cost: RESERVE_POWER_COST })
+        : t('plan.nextDispatch', { day: nextDay });
+      for (const resource of ['freshWater', 'heat'] as const) {
+        const button = reserves.querySelector<HTMLButtonElement>(`[data-supply="${resource}"]`)!;
+        const amount = Math.max(
+          0,
+          Math.min(RESERVE_SUPPLIES[resource], RESOURCE_CAPS[resource]! - resources[resource])
+        );
+        button.textContent =
+          t(resource === 'heat' ? 'hud.heat' : 'hud.water') + ' +' + Math.floor(amount);
+        button.disabled = !ready || resources.electricity < RESERVE_POWER_COST || amount <= 0;
+        button.title = t('plan.dispatchHelp');
+      }
+    }
+
+    if (this.siteDirty || !this.site || this.site.type !== order?.measure) {
+      const target = order?.measure;
+      this.site =
+        target && target !== 'day' && target !== 'population'
+          ? this.findSite(target, order.sites ?? [])
+          : null;
+      this.siteDirty = false;
+      this.marker.hidden = !this.site;
+      if (this.site) {
+        const label = t('plan.build', { building: td(`building.${this.site.type}.name`) });
+        this.marker.setAttribute('aria-label', label);
+        this.marker.title = label;
+        this.positionMarker();
+      }
+      for (const type of ['pump', 'distiller', 'microrayon'] as const) {
+        this.buildPanel.getButton(type)?.classList.toggle('plan-target', type === target);
       }
     }
   }
 
-  private getProgress(): { current: number; target: number } {
-    const config = STEP_CONFIGS[this.currentStep];
-    if (!config.target) {
-      return { current: 0, target: 0 };
+  private findSite(type: BuildingType, preferred: [number, number][]) {
+    const cost = gameState.getEffectiveCost(type);
+    if (
+      !cost ||
+      Object.entries(cost).some(
+        ([resource, amount]) => gameState.getResources()[resource as keyof typeof cost] < amount
+      )
+    )
+      return null;
+
+    const viable = (x: number, z: number) =>
+      x >= 0 &&
+      z >= 0 &&
+      x < GRID_SIZE &&
+      z < GRID_SIZE &&
+      gameState.canPlaceBuilding(type, x, z, getTileTypeAt(x, z)).canPlace &&
+      this.pipes.wouldBeOperational(type, x, z);
+
+    for (const [x, z] of preferred) {
+      if (viable(x, z)) return { type, x, z };
     }
-
-    const buildings = gameState.getBuildings();
-    const count = buildings.filter((b) => b.type === config.target).length;
-    return { current: count, target: config.targetCount };
-  }
-
-  private completeStep(): void {
-    // Play success sound
-    soundManager.play('success');
-
-    // Flash the panel green
-    this.panel.classList.add('step-complete');
-    setTimeout(() => {
-      this.panel.classList.remove('step-complete');
-    }, 500);
-
-    // Advance after a short delay
-    setTimeout(() => {
-      this.advanceStep();
-    }, 800);
-  }
-
-  private advanceStep(): void {
-    const currentIndex = STEP_ORDER.indexOf(this.currentStep);
-    if (currentIndex < STEP_ORDER.length - 1) {
-      this.currentStep = STEP_ORDER[currentIndex + 1];
-      this.updateUI();
-
-      // If completed, hide panel after a delay
-      if (this.currentStep === 'COMPLETED') {
-        this.completedTimeout = window.setTimeout(() => {
-          this.hidePanel();
-        }, 5000);
+    // Allow a custom layout or a previously occupied suggestion to move the recommended lot.
+    const reactor = gameState.getBuildings().find((building) => building.type === 'reactor');
+    if (!reactor) return null;
+    for (let distance = 2; distance <= 12; distance++) {
+      for (let dx = -distance; dx <= distance; dx++) {
+        for (const dz of new Set([distance - Math.abs(dx), Math.abs(dx) - distance])) {
+          const x = reactor.gridX + dx;
+          const z = reactor.gridZ + dz;
+          if (viable(x, z)) return { type, x, z };
+        }
       }
     }
-  }
-
-  private updateUI(): void {
-    const config = STEP_CONFIGS[this.currentStep];
-    const key = config.translationKey;
-
-    const headerEl = this.panel.querySelector('.mission-header');
-    const titleEl = this.panel.querySelector('.mission-title');
-    const descEl = this.panel.querySelector('.mission-desc');
-    const noteEl = this.panel.querySelector('.mission-note');
-
-    if (headerEl) headerEl.textContent = td(`${key}.header`);
-    if (titleEl) titleEl.textContent = td(`${key}.title`);
-    if (descEl) descEl.textContent = td(`${key}.desc`);
-    if (noteEl) noteEl.textContent = td(`${key}.note`);
-
-    // Update progress display
-    const progress = this.getProgress();
-    this.updateProgressDisplay(progress);
-
-    // Update button highlighting
-    this.updateHighlight();
-
-    // Check if step is already complete (player built ahead)
-    if (config.target && progress.current >= progress.target) {
-      // Auto-advance after a short delay
-      setTimeout(() => {
-        this.completeStep();
-      }, 500);
-    }
-  }
-
-  private updateProgressDisplay(progress: { current: number; target: number }): void {
-    const progressEl = this.panel.querySelector('.mission-progress');
-    if (progressEl) {
-      if (progress.target > 0) {
-        progressEl.textContent = t('tutorial.progress', {
-          current: progress.current,
-          target: progress.target
-        });
-        (progressEl as HTMLElement).style.display = 'block';
-      } else {
-        (progressEl as HTMLElement).style.display = 'none';
-      }
-    }
-  }
-
-  private updateHighlight(): void {
-    if (!this.buildPanel) return;
-
-    // Remove highlight from all buttons (reactor excluded since it's auto-placed)
-    const allTypes: BuildingType[] = [
-      'pump',
-      'distiller',
-      'microrayon',
-      'water_tank',
-      'thermal_plant'
-    ];
-    for (const type of allTypes) {
-      const button = this.buildPanel.getButton(type);
-      if (button) {
-        button.classList.remove('tutorial-highlight');
-      }
-    }
-
-    // Add highlight to current target
-    const config = STEP_CONFIGS[this.currentStep];
-    if (config.target) {
-      const button = this.buildPanel.getButton(config.target);
-      if (button) {
-        button.classList.add('tutorial-highlight');
-      }
-    }
-  }
-
-  private hidePanel(): void {
-    this.panel.style.transition = 'opacity 0.5s ease-out';
-    this.panel.style.opacity = '0';
-    setTimeout(() => {
-      this.panel.style.display = 'none';
-    }, 500);
-
-    // Remove any remaining highlights
-    this.updateHighlight();
-  }
-
-  public dispose(): void {
-    if (this.completedTimeout) {
-      clearTimeout(this.completedTimeout);
-    }
-    this.welcomeOverlay?.remove();
-    this.panel.remove();
+    return null;
   }
 }

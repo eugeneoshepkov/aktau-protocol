@@ -1,15 +1,6 @@
 import { Scene, SceneLoader, AbstractMesh, AssetContainer } from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
-import type { BuildingType, TileType } from '../types';
-
-export interface PrimitiveConfig {
-  type: 'cylinder' | 'box';
-  height: number;
-  diameter?: number;
-  width?: number;
-  depth?: number;
-  color: string;
-}
+import type { TileType } from '../types';
 
 export interface ModelConfig {
   basePath?: string;
@@ -18,13 +9,6 @@ export interface ModelConfig {
   rotation: number;
   yOffset: number;
   offset?: { x: number; y: number; z: number };
-}
-
-export interface BuildingAsset {
-  primitive: PrimitiveConfig;
-  model?: ModelConfig | null;
-  models?: ModelConfig[];
-  variants?: ModelConfig[];
 }
 
 export interface DecorationItem {
@@ -61,7 +45,6 @@ export interface AssetManifest {
   version: string;
   useModels: boolean;
   basePaths: Record<string, string>;
-  buildings: Record<string, BuildingAsset>;
   decorations?: DecorationsConfig;
   roads?: RoadsConfig;
   tiles: Record<string, TileAsset>;
@@ -103,43 +86,6 @@ class AssetManagerClass {
     if (this.manifest) {
       this.manifest.useModels = useModels;
     }
-  }
-
-  public getBuildingPrimitive(type: BuildingType): PrimitiveConfig {
-    const asset = this.manifest?.buildings[type];
-    if (asset?.primitive) {
-      return asset.primitive;
-    }
-    return this.getDefaultBuildingPrimitive(type);
-  }
-
-  public getBuildingModel(type: BuildingType): ModelConfig | null {
-    return this.manifest?.buildings[type]?.model ?? null;
-  }
-
-  public getBuildingModels(type: BuildingType): ModelConfig[] | null {
-    return this.manifest?.buildings[type]?.models ?? null;
-  }
-
-  public hasCompositeModel(type: BuildingType): boolean {
-    const models = this.manifest?.buildings[type]?.models;
-    return Array.isArray(models) && models.length > 0;
-  }
-
-  public hasVariants(type: BuildingType): boolean {
-    const variants = this.manifest?.buildings[type]?.variants;
-    return Array.isArray(variants) && variants.length > 0;
-  }
-
-  public getRandomVariant(type: BuildingType): ModelConfig | null {
-    const variants = this.manifest?.buildings[type]?.variants;
-    if (!variants || variants.length === 0) return null;
-    const randomIndex = Math.floor(Math.random() * variants.length);
-    return variants[randomIndex];
-  }
-
-  public getBuildingVariants(type: BuildingType): ModelConfig[] | null {
-    return this.manifest?.buildings[type]?.variants ?? null;
   }
 
   public getDecorations(): DecorationsConfig | null {
@@ -229,28 +175,6 @@ class AssetManagerClass {
 
     const loadTasks: Promise<void>[] = [];
 
-    for (const asset of Object.values(this.manifest.buildings)) {
-      if (asset.model) {
-        const basePathKey = asset.model.basePath ?? 'suburban';
-        const basePath = this.getBasePath(basePathKey);
-        loadTasks.push(this.preloadModel(asset.model.file, basePath));
-      }
-      if (asset.models) {
-        for (const model of asset.models) {
-          const basePathKey = model.basePath ?? 'suburban';
-          const basePath = this.getBasePath(basePathKey);
-          loadTasks.push(this.preloadModel(model.file, basePath));
-        }
-      }
-      if (asset.variants) {
-        for (const variant of asset.variants) {
-          const basePathKey = variant.basePath ?? 'suburban';
-          const basePath = this.getBasePath(basePathKey);
-          loadTasks.push(this.preloadModel(variant.file, basePath));
-        }
-      }
-    }
-
     if (this.manifest.decorations) {
       const decorBasePath = this.getBasePath(this.manifest.decorations.basePath);
       for (const item of this.manifest.decorations.items) {
@@ -297,44 +221,8 @@ class AssetManagerClass {
       version: '1.0.0',
       useModels: false,
       basePaths: { suburban: '/models/suburban/Models/GLB format/' },
-      buildings: {},
       tiles: {}
     };
-  }
-
-  private getDefaultBuildingPrimitive(type: BuildingType): PrimitiveConfig {
-    const defaults: Record<BuildingType, PrimitiveConfig> = {
-      pump: { type: 'cylinder', height: 1.5, diameter: 0.8, color: '#2F8D8D' },
-      reactor: { type: 'cylinder', height: 3, diameter: 2, color: '#FF6B35' },
-      distiller: {
-        type: 'box',
-        height: 1,
-        width: 1.2,
-        depth: 1.2,
-        color: '#4A90A4'
-      },
-      microrayon: {
-        type: 'box',
-        height: 2,
-        width: 0.9,
-        depth: 0.9,
-        color: '#D4C5A9'
-      },
-      water_tank: {
-        type: 'cylinder',
-        height: 1.2,
-        diameter: 1.4,
-        color: '#5599CC'
-      },
-      thermal_plant: {
-        type: 'box',
-        height: 2.0,
-        width: 1.2,
-        depth: 1.2,
-        color: '#8B7355'
-      }
-    };
-    return defaults[type];
   }
 
   private getDefaultTileColor(type: TileType): string {

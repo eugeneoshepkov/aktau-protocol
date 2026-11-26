@@ -15,15 +15,6 @@ const BUILDING_HOTKEYS: Record<string, BuildingType> = {
   '5': 'thermal_plant'
 };
 
-const BUILDING_COLORS: Record<BuildingType, string> = {
-  pump: '#22d3d1',
-  reactor: '#f97316',
-  distiller: '#60a5fa',
-  microrayon: '#a78bfa',
-  water_tank: '#6ee7b7',
-  thermal_plant: '#d97706'
-};
-
 export class BuildPanel {
   private container: HTMLDivElement;
   private buildingManager: BuildingManager;
@@ -35,6 +26,7 @@ export class BuildPanel {
     this.container = this.createPanel();
     document.body.appendChild(this.container);
     this.setupKeyboardShortcuts();
+    this.updateButtonStates();
 
     // Update button states when buildings are placed (for max limits and cost changes)
     gameState.on('buildingPlaced', () => {
@@ -51,6 +43,7 @@ export class BuildPanel {
     const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement | null;
 
     this.buildingManager.onDemolishModeChange((enabled) => {
+      this.setPanelTitle(enabled ? t('build.site.demolish') : t('build.title'));
       if (this.demolishButton) {
         if (enabled) {
           this.demolishButton.classList.add('selected', 'demolish-active');
@@ -72,7 +65,7 @@ export class BuildPanel {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
       const type = BUILDING_HOTKEYS[e.key];
-      if (type) {
+      if (type && !this.buttons.get(type)?.disabled) {
         e.preventDefault();
         this.toggleBuilding(type);
         soundManager.play('click');
@@ -109,16 +102,15 @@ export class BuildPanel {
       const button = document.createElement('button');
       button.className = 'build-button';
       button.dataset.type = type;
+      button.setAttribute('aria-pressed', 'false');
 
-      const icon = this.getBuildingIcon(type);
-      const color = BUILDING_COLORS[type];
       const costText = this.formatCost(this.getDisplayCost(type));
       const hotkey = index + 1;
-      const name = td(`building.${type}.name`);
+      const name = td(`build.${type}`);
       const desc = td(`building.${type}.desc`);
 
       button.innerHTML = `
-        <span class="build-icon icon-wrap" style="color: ${color}">${icon}</span>
+        <img class="build-model" alt="" src="/pictures/construction/${type}.webp" draggable="false">
         <span class="build-name">${name}</span>
         <span class="build-cost">${costText}</span>
         <span class="build-hotkey">${hotkey}</span>
@@ -162,18 +154,6 @@ export class BuildPanel {
     return container;
   }
 
-  private getBuildingIcon(type: BuildingType): string {
-    const icons: Record<BuildingType, string> = {
-      pump: ICONS.pump,
-      reactor: ICONS.reactor,
-      distiller: ICONS.distiller,
-      microrayon: ICONS.microrayon,
-      water_tank: ICONS.water_tank,
-      thermal_plant: ICONS.thermal_plant
-    };
-    return icons[type];
-  }
-
   private formatCost(costs: Partial<Record<string, number>> | null): string {
     // null means max limit reached
     if (costs === null) {
@@ -203,9 +183,11 @@ export class BuildPanel {
       if (cost === null) {
         // Max limit reached - disable button
         button.classList.add('max-reached');
+        button.disabled = true;
         if (costEl) costEl.innerHTML = this.formatCost(null);
       } else {
         button.classList.remove('max-reached');
+        button.disabled = false;
         if (costEl) costEl.innerHTML = this.formatCost(cost);
       }
     }
@@ -231,10 +213,8 @@ export class BuildPanel {
 
     const currentSelection = this.buildingManager.getSelectedBuildingType();
 
-    // Only change selection if a different building type is clicked
-    if (currentSelection !== type) {
-      this.selectBuilding(type);
-    }
+    if (currentSelection === type) this.cancelSelection();
+    else this.selectBuilding(type);
   }
 
   private selectBuilding(type: BuildingType): void {
@@ -244,6 +224,7 @@ export class BuildPanel {
     }
 
     for (const [t, btn] of this.buttons) {
+      btn.setAttribute('aria-pressed', String(t === type));
       if (t === type) {
         btn.classList.add('selected');
       } else {
@@ -251,6 +232,7 @@ export class BuildPanel {
       }
     }
 
+    this.setPanelTitle(td(`build.site.${type}`));
     this.buildingManager.selectBuildingType(type);
     this.container.classList.add('building-selected');
   }
@@ -268,13 +250,18 @@ export class BuildPanel {
     }
   }
 
-  private cancelSelection(): void {
+  public cancelSelection(): void {
     for (const btn of this.buttons.values()) {
+      btn.setAttribute('aria-pressed', 'false');
       btn.classList.remove('selected');
     }
     this.buildingManager.selectBuildingType(null);
     this.buildingManager.setDemolishMode(false);
     this.container.classList.remove('building-selected');
+  }
+
+  private setPanelTitle(text: string): void {
+    this.container.querySelector('.panel-title')!.textContent = text;
   }
 
   public getButton(type: BuildingType): HTMLButtonElement | undefined {

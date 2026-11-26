@@ -162,17 +162,67 @@ class EventSystemClass {
   
   // Guaranteed event cadence tracking
   private daysSinceLastEvent: number = 0;
-  private readonly MIN_EVENT_INTERVAL = 15; // Events become more likely after this many days
+  private readonly MIN_EVENT_INTERVAL = 8;
   private readonly FORCED_EVENT_INTERVAL = 20; // Force event after this many days
 
   constructor() {
     gameState.on('dayAdvance', this.onDayAdvance.bind(this) as GameEventCallback);
+    gameState.setWeatherPersistence({
+      save: () => ({
+        daysSinceLastEvent: this.daysSinceLastEvent,
+        activeEvents: this.activeEvents.map(({ event, remainingDays }) => ({
+          id: event.id,
+          remainingDays
+        }))
+      }),
+      restore: (snapshot) => this.restore(snapshot)
+    });
+  }
+
+  private restore(snapshot: unknown): boolean {
+    if (snapshot === undefined) {
+      this.reset();
+      return true;
+    }
+    if (!snapshot || typeof snapshot !== 'object') return false;
+    const { daysSinceLastEvent, activeEvents } = snapshot as Record<string, unknown>;
+    if (
+      typeof daysSinceLastEvent !== 'number' ||
+      !Number.isSafeInteger(daysSinceLastEvent) ||
+      daysSinceLastEvent < 0 ||
+      daysSinceLastEvent > this.FORCED_EVENT_INTERVAL ||
+      !Array.isArray(activeEvents)
+    )
+      return false;
+    const restored: ActiveEvent[] = [];
+    for (const entry of activeEvents) {
+      const event = EVENTS.find((e) => e.id === entry?.id);
+      if (
+        !event ||
+        !Number.isSafeInteger(entry.remainingDays) ||
+        entry.remainingDays < 1 ||
+        entry.remainingDays > event.duration ||
+        restored.some((item) => item.event === event)
+      )
+        return false;
+      restored.push({ event, remainingDays: entry.remainingDays });
+    }
+    this.daysSinceLastEvent = daysSinceLastEvent;
+    this.activeEvents = restored;
+    this.applyModifiers();
+    this.notifyListeners();
+    return true;
   }
 
   private onDayAdvance(): void {
+    if (gameState.getDay() <= 8) return;
     this.tickActiveEvents();
     this.daysSinceLastEvent++;
-    
+    if (this.daysSinceLastEvent < this.MIN_EVENT_INTERVAL) {
+      this.applyModifiers();
+      return;
+    }
+
     // Scale event chances based on time since last event
     const urgencyMultiplier = Math.min(3, 1 + (this.daysSinceLastEvent / this.MIN_EVENT_INTERVAL));
     
@@ -321,6 +371,7 @@ class EventSystemClass {
 
   public onEventsChange(callback: (events: ActiveEvent[]) => void): void {
     this.listeners.add(callback);
+    callback([...this.activeEvents]);
   }
 
   public offEventsChange(callback: (events: ActiveEvent[]) => void): void {

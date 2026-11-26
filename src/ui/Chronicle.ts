@@ -37,20 +37,7 @@ export class Chronicle {
     this.createArchiveButton();
     this.setupEventListeners();
 
-    // Check for day 1 trigger on startup (after intro screen is dismissed)
-    const checkDay1 = () => {
-      // Wait until intro screen is dismissed
-      const introOverlay = document.getElementById('intro-overlay');
-      if (introOverlay) {
-        setTimeout(checkDay1, 500);
-        return;
-      }
-      const currentDay = gameState.getDay();
-      if (currentDay === 1) {
-        this.checkDayTrigger(1);
-      }
-    };
-    setTimeout(checkDay1, 2000);
+    if (gameState.getDay() === 1) this.checkDayTrigger(1);
   }
 
   private loadDiscoveredFacts(): void {
@@ -239,6 +226,7 @@ export class Chronicle {
   private createArchiveButton(): void {
     this.archiveBtn = document.createElement('button');
     this.archiveBtn.id = 'chronicle-btn';
+    this.archiveBtn.setAttribute('aria-label', t('shortcuts.chronicle'));
     this.archiveBtn.innerHTML = `<span class="icon-wrap">${ICONS.chronicle}</span>`;
     this.archiveBtn.title = t('chronicle.button');
     this.archiveBtn.addEventListener('click', () => {

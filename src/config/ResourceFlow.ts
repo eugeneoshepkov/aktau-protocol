@@ -56,15 +56,6 @@ export const RESOURCE_FLOWS: ResourceFlowConfig[] = [
     consumerPriority: { distiller: 1 }
   },
   {
-    resource: 'freshWater',
-    pipeType: 'water',
-    pipeColor: '#4A90A4',
-    producers: ['distiller'],
-    relays: [{ type: 'water_tank', addsCapacity: true }], // relay AND adds capacity
-    consumers: ['microrayon'],
-    consumerPriority: { microrayon: 1 }
-  },
-  {
     resource: 'heat',
     pipeType: 'heat',
     pipeColor: '#FF6B35',
@@ -72,8 +63,18 @@ export const RESOURCE_FLOWS: ResourceFlowConfig[] = [
     relays: [], // heat doesn't relay through pipes
     consumers: ['distiller', 'microrayon'],
     consumerPriority: { distiller: 1, microrayon: 2 }
+  },
+  // Allocate fresh water after each distiller's seawater and heat inputs are known.
+  {
+    resource: 'freshWater',
+    pipeType: 'water',
+    pipeColor: '#4A90A4',
+    producers: ['distiller'],
+    relays: [{ type: 'water_tank', addsCapacity: true }], // relay AND adds capacity
+    consumers: ['microrayon'],
+    consumerPriority: { microrayon: 1 }
   }
-];;
+];
 
 // ============================================
 // Helper Functions

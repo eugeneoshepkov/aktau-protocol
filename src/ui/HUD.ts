@@ -1,4 +1,4 @@
-import { gameState, type ResourceTrend, type Season } from '../simulation/GameState';
+import { gameState, SEASONS, SEASON_LENGTH, type ResourceTrend, type Season } from '../simulation/GameState';
 import { tickSystem } from '../simulation/TickSystem';
 import { musicManager } from '../managers/MusicManager';
 import { soundManager } from '../managers/SoundManager';
@@ -7,7 +7,7 @@ import type { Resources } from '../types';
 import { t, td } from '../i18n';
 
 // Tooltip content for each HUD resource
-type HudTooltipKey = 'day' | 'population' | 'freshWater' | 'seawater' | 'heat' | 'electricity' | 'temp' | 'happiness';
+type HudTooltipKey = 'population' | 'freshWater' | 'seawater' | 'heat' | 'electricity' | 'temp' | 'happiness';
 
 export class HUD {
   private container: HTMLDivElement;
@@ -119,11 +119,6 @@ export class HUD {
     };
 
     switch (key) {
-      case 'day':
-        return `
-          <div class="tooltip-header">📅 ${t('hud.day')}</div>
-          <div class="tooltip-desc">${t('hud.tooltip.day')}</div>
-        `;
       case 'population':
         return `
           <div class="tooltip-header">${colorIcon('population')} ${td('hud.pop')}</div>
@@ -172,7 +167,7 @@ export class HUD {
           <div class="tooltip-header">${colorIcon('nuclear')} ${t('hud.temp')}</div>
           <div class="tooltip-desc">${t('hud.tooltip.temp')}</div>
           <div class="tooltip-special" style="color: ${tempColor}">
-            ${colorIcon('nuclear')} Current: ${Math.floor(reactor.temperature)}°C
+            ${colorIcon('nuclear')} ${t('tooltip.temp', { temp: Math.floor(reactor.temperature) })}
           </div>
         `;
       case 'happiness':
@@ -190,11 +185,13 @@ export class HUD {
     container.id = 'hud';
     container.innerHTML = `
       <div class="hud-top">
-        <div class="hud-section" data-tooltip="day">
-          <span class="hud-label">${t('hud.day')}</span>
+        <div class="district-name"><span>${ICONS.atom}</span>AKTAU</div>
+        <div class="hud-resources">
+        <button class="hud-section hud-calendar" popovertarget="season-calendar">
+          <span class="hud-label">${t('hud.day')} · <span id="season-name"></span></span>
           <span id="hud-day" class="hud-value">1</span>
           <span id="hud-season" class="hud-season icon-wrap icon-season">${ICONS.spring}</span>
-        </div>
+        </button>
         <div class="hud-section" data-tooltip="population">
           <span class="hud-label"><span class="icon-wrap icon-population">${ICONS.population}</span> ${t('hud.pop')}</span>
           <span id="hud-population" class="hud-value">0</span>
@@ -223,30 +220,42 @@ export class HUD {
         <div class="hud-section reactor-temp" data-tooltip="temp">
           <span class="hud-label"><span class="icon-wrap icon-nuclear">${ICONS.nuclear}</span> ${t('hud.temp')}</span>
           <span id="hud-temp" class="hud-value">0</span>
-          <span class="hud-unit">°C</span>
+          <span class="hud-unit">%</span>
         </div>
         <div class="hud-section" data-tooltip="happiness">
           <span class="hud-label"><span class="icon-wrap icon-happiness">${ICONS.happiness}</span> ${t('hud.mood')}</span>
           <span id="hud-happiness" class="hud-value">0</span>
           <span id="hud-trend-happiness" class="hud-trend"></span>
         </div>
+        </div>
         <div class="hud-controls">
-          <button id="hud-save" class="hud-button" title="${t('hud.save')}"><span class="icon-wrap">${ICONS.save}</span></button>
-          <button id="hud-load" class="hud-button" title="${t('hud.load')}"><span class="icon-wrap">${ICONS.load}</span></button>
-          <span class="hud-divider">│</span>
-          <span class="hud-volume-control" title="${t('hud.volume')}">
-            <span class="volume-icon icon-wrap">${ICONS.volumeOn}</span>
-            <input type="range" id="hud-volume" min="0" max="100" value="30" class="volume-slider" title="${t('hud.volume')}">
-          </span>
-          <span class="hud-divider">│</span>
-          <button id="hud-pause" class="hud-button"><span class="icon-wrap pause-icon">${ICONS.pause}</span></button>
+          <button id="hud-pause" class="hud-button" title="${t('hud.pause')}"><span class="icon-wrap pause-icon">${ICONS.pause}</span></button>
           <button id="hud-speed-0" class="hud-button speed-btn active">1×</button>
           <button id="hud-speed-1" class="hud-button speed-btn">2×</button>
           <button id="hud-speed-2" class="hud-button speed-btn">4×</button>
+          <details class="hud-options"><summary title="${t('hud.options')}" aria-label="${t('hud.options')}">•••</summary><div class="hud-options-menu">
+          <button id="hud-save" class="hud-button" title="${t('hud.save')}"><span class="icon-wrap">${ICONS.save}</span>${t('hud.save')}</button>
+          <button id="hud-load" class="hud-button" title="${t('hud.load')}"><span class="icon-wrap">${ICONS.load}</span>${t('hud.load')}</button>
+          <span class="hud-volume-control" title="${t('hud.volume')}">
+            <button class="volume-icon icon-wrap" title="${t('intro.mute')}">${ICONS.volumeOn}</button>
+            <input type="range" id="hud-volume" min="0" max="100" value="30" class="volume-slider" title="${t('hud.volume')}">
+          </span>
+          </div></details>
         </div>
       </div>
     `;
 
+    const calendar = document.createElement('div');
+    calendar.id = 'season-calendar';
+    calendar.setAttribute('popover', 'auto');
+    calendar.innerHTML = '<strong id="calendar-demand"></strong><span id="calendar-next"></span>';
+    container.appendChild(calendar);
+    const calendarButton = container.querySelector<HTMLButtonElement>('.hud-calendar')!;
+    calendar.addEventListener('beforetoggle', () => {
+      const bounds = calendarButton.getBoundingClientRect();
+      calendar.style.left = `${Math.max(8, Math.min(bounds.left, window.innerWidth - 244))}px`;
+      calendar.style.top = `${bounds.bottom + 9}px`;
+    });
     this.dayElement = container.querySelector('#hud-day');
     this.seasonElement = container.querySelector('#hud-season');
     this.tempElement = container.querySelector('#hud-temp');
@@ -259,12 +268,13 @@ export class HUD {
       if (trendEl) this.trendElements.set(key, trendEl as HTMLSpanElement);
     });
 
-    this.pauseButton?.addEventListener('click', () => {
-      tickSystem.togglePause();
-      const pauseIcon = this.pauseButton?.querySelector('.pause-icon');
-      if (pauseIcon) {
-        pauseIcon.innerHTML = tickSystem.isPausedState() ? ICONS.play : ICONS.pause;
-      }
+    this.pauseButton?.addEventListener('click', () => this.togglePause());
+    const options = container.querySelector<HTMLDetailsElement>('.hud-options')!;
+    document.addEventListener('pointerdown', (event) => {
+      if (!options.contains(event.target as Node)) options.open = false;
+    });
+    container.querySelectorAll('#hud-save, #hud-load').forEach((button) => {
+      button.addEventListener('click', () => { options.open = false; });
     });
 
     const saveBtn = container.querySelector('#hud-save') as HTMLButtonElement;
@@ -292,6 +302,7 @@ export class HUD {
       if (gameState.load()) {
         this.updateResources();
         this.updateDay();
+        this.updateSeason();
         this.showNotification(t('hud.loaded'));
       } else {
         this.showNotification(t('hud.loadFailed'), true);
@@ -332,6 +343,12 @@ export class HUD {
     }
 
     return container;
+  }
+
+  public togglePause(): void {
+    tickSystem.togglePause();
+    const icon = this.pauseButton?.querySelector('.pause-icon');
+    if (icon) icon.innerHTML = tickSystem.isPausedState() ? ICONS.play : ICONS.pause;
   }
 
   private showNotification(message: string, isError = false): void {
@@ -401,7 +418,13 @@ export class HUD {
 
   private updateDay(): void {
     if (this.dayElement) {
-      this.dayElement.textContent = gameState.getDay().toString();
+      const day = gameState.getDay();
+      this.dayElement.textContent = String(day);
+      const season = gameState.getSeason();
+      const next = SEASONS[(SEASONS.indexOf(season) + 1) % SEASONS.length];
+      this.container.querySelector('#calendar-next')!.textContent = t('calendar.next', {
+        season: t(`calendar.${next}`), day: day + SEASON_LENGTH - ((day - 1) % SEASON_LENGTH)
+      });
     }
   }
 
@@ -410,9 +433,8 @@ export class HUD {
       const season = gameState.getSeason();
       const mult = gameState.getSeasonMultiplier();
       this.seasonElement.innerHTML = this.seasonIcons[season];
-      this.seasonElement.title = td(`season.${season}`, {
-        mult: mult.toString()
-      });
+      this.container.querySelector('#season-name')!.textContent = t(`calendar.${season}`);
+      this.container.querySelector('#calendar-demand')!.textContent = t(`season.${season}`, { mult });
       this.seasonElement.className = `hud-season icon-wrap ${season}`;
     }
   }
@@ -466,7 +488,6 @@ export class HUD {
     document.body.appendChild(overlay);
 
     overlay.querySelector('#restart-btn')?.addEventListener('click', () => {
-      gameState.deleteSave();
       window.location.reload();
     });
   }
@@ -491,16 +512,18 @@ export class HUD {
       return;
     }
 
+    const expanded = new Set(
+      [...eventsContainer.querySelectorAll<HTMLDetailsElement>('details[open]')].map((event) => event.dataset.id)
+    );
     eventsContainer.style.display = 'flex';
-    eventsContainer.innerHTML = events
-      .map(
-        (e) =>
-          `<div class="hud-event" title="${e.event.name} (${t('hud.daysLeft', { days: e.remainingDays })})">
-        <span class="event-icon">${e.event.icon}</span>
-        <span class="event-days">${e.remainingDays}d</span>
-      </div>`
-      )
-      .join('');
+    eventsContainer.innerHTML = events.map(({ event, remainingDays }) => `
+      <details class="hud-event" data-id="${event.id}" ${expanded.has(event.id) ? 'open' : ''}>
+        <summary><span aria-hidden="true">${event.icon}</span>
+          <strong>${td(`event.${event.id}.name`)}</strong>
+          <small>${t('hud.daysLeft', { days: remainingDays })}</small></summary>
+        <p>${td(`event.${event.id}.desc`)}</p>
+      </details>`).join('');
+
   }
 
   public dispose(): void {
