@@ -1,0 +1,147 @@
+.map-tools {
+  position: fixed;
+  top: 76px;
+  right: 16px;
+  z-index: 12;
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+}
+.map-tools .network-control {
+  position: relative;
+  inset: auto;
+}
+.sights-launcher svg {
+  color: #f2ad78;
+}
+
+#city-sights {
+  position: fixed;
+  z-index: 20;
+  bottom: max(22px, env(safe-area-inset-bottom));
+  left: max(22px, env(safe-area-inset-left));
+  width: min(335px, calc(100% - 32px));
+  box-sizing: border-box;
+  padding: 11px 16px 9px;
+  background: #f2ecdc;
+  color: #26393c;
+  border: 1px solid #a99e88;
+  border-top: 3px solid #b35637;
+  border-radius: 4px;
+  box-shadow: 0 6px 22px #1326273d;
+  font-family: var(--sans);
+}
+.sight-header,
+.sight-header span,
+.sight-footer,
+.sight-pages {
+  display: flex;
+  align-items: center;
+}
+.sight-header,
+.sight-footer {
+  justify-content: space-between;
+}
+.sight-header span,
+.sight-count {
+  font: 600 11px/1.2 var(--mono);
+  letter-spacing: 0.04em;
+  color: #566362;
+}
+.sight-header span {
+  gap: 6px;
+  text-transform: uppercase;
+}
+.sight-header span svg {
+  width: 16px;
+  color: #9d4e32;
+}
+#sight-name {
+  margin: 0;
+  font: 700 23px/1.12 var(--sans);
+}
+.sight-description {
+  margin: 7px 0 12px;
+  font: 14px/1.4 var(--sans);
+}
+.sight-footer {
+  border-top: 1px solid #ccc2ac;
+  padding-top: 5px;
+}
+.sight-source {
+  color: #356060;
+  text-underline-offset: 2px;
+  font: 600 12px var(--sans);
+}
+#city-sights button {
+  display: inline-grid;
+  place-items: center;
+  width: 35px;
+  height: 34px;
+  padding: 0;
+  color: #3b5151;
+  background: transparent;
+  border: 0;
+  border-radius: 3px;
+  cursor: pointer;
+  font: 26px/1 var(--sans);
+}
+#city-sights button:hover {
+  background: #e0d9c7;
+}
+#city-sights :focus-visible,
+.sights-launcher:focus-visible {
+  outline: 2px solid #b65a38;
+  outline-offset: 2px;
+}
+.sight-close svg {
+  width: 17px;
+}
+.sight-pages {
+  gap: 2px;
+}
+
+.sightseeing
+  :is(
+    .map-tools,
+    #hud,
+    #hud-events,
+    #build-panel,
+    .district-plan,
+    .plan-site,
+    #reset-view-btn,
+    #chronicle-btn,
+    #shortcuts-btn,
+    #chronicle-notification,
+    #toast-container,
+    #hint-bar,
+    .building-tooltip,
+    .hud-tooltip
+  ) {
+  display: none !important;
+}
+
+@media (max-width: 700px) {
+  .map-tools {
+    top: auto;
+    right: 125px;
+    bottom: 106px;
+  }
+  #city-sights {
+    left: max(10px, env(safe-area-inset-left));
+    bottom: max(10px, env(safe-area-inset-bottom));
+    width: min(350px, calc(100% - 20px));
+  }
+}
+@media (max-width: 383px) {
+  .sights-launcher span {
+    display: none;
+  }
+}
+@media (max-height: 480px) and (orientation: landscape) {
+  #city-sights {
+    bottom: 8px;
+    left: 8px;
+    width: 260px;
+  }
+}

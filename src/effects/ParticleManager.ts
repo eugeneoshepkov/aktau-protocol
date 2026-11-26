@@ -50,8 +50,8 @@ export class ParticleManager {
 
     // Stack outlet on the eastern side of the reactor hall.
     system.emitter = new Vector3(
-      building.gridX * TILE_SIZE + TILE_SIZE / 2 + 0.59,
-      2.70,
+      building.gridX * TILE_SIZE + TILE_SIZE / 2 + 0.73,
+      2.52,
       building.gridZ * TILE_SIZE + TILE_SIZE / 2 - 0.48
     );
 
@@ -101,11 +101,11 @@ export class ParticleManager {
 
     system.particleTexture = this.vaporTexture;
 
-    // Convert grid coordinates to world position
+    // Open header vent on the evaporator gallery.
     system.emitter = new Vector3(
-      building.gridX * TILE_SIZE + TILE_SIZE / 2 - 0.51,
-      1.31,
-      building.gridZ * TILE_SIZE + TILE_SIZE / 2 + 0.23
+      building.gridX * TILE_SIZE + TILE_SIZE / 2 - 0.73,
+      1.54,
+      building.gridZ * TILE_SIZE + TILE_SIZE / 2 - 0.24
     );
 
     system.minEmitBox = new Vector3(-0.04, 0, -0.04);

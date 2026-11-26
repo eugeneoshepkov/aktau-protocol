@@ -143,7 +143,8 @@ export class GridManager {
         ]) {
           const wz = Math.max(z, coast);
           const distance = Math.max(0, wz - coast);
-          const edge = Math.max(-x, x - GRID_SIZE, wz - GRID_SIZE, 0);
+          // The old town continues east on level ground before the steppe rises.
+          const edge = Math.max(-x, x - GRID_SIZE - 10, wz - GRID_SIZE, 0);
           const hills = Math.min(1, edge / 18) * (1.2 + Math.sin(x * 0.22 + wz * 0.1)) ** 2;
           const y =
             SEA_Y +

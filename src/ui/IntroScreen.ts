@@ -34,7 +34,7 @@ export class IntroScreen {
       <footer class="title-footer">
         <div>${ICONS.pin}<span>${t('menu.place')}</span></div>
         <span class="title-coordinate">43°39′ N &nbsp; 51°09′ E</span>
-        <span class="title-year">1972</span>
+        <span class="title-year">${t('menu.era')}</span>
       </footer>
       <dialog class="field-guide">
         <header><h2>${t('menu.guide')}</h2><button class="close-guide" aria-label="${t('menu.close')}">${ICONS.close}</button></header>

@@ -16,7 +16,7 @@
 
 ## The Story
 
-**Mangyshlak Peninsula, 1972.**
+**Shevchenko, Kazakh SSR, 1980s.**
 
 In the middle of the Kazakh desert, Soviet engineers achieved the impossible: a city that shouldn't exist. No rivers. No rainfall. Just endless sand, the Caspian Sea, and one audacious idea—use a nuclear reactor to turn seawater into life.
 
@@ -30,9 +30,13 @@ The **BN-350 fast breeder reactor** wasn't just generating power. It was *desali
 
 You take charge of a working waterfront with 50 residents. Your first order is to connect a second housing block to water and heat. Click the suggested lot, or pick a building from the construction menu and choose your own site.
 
-![The waterfront with four housing blocks, a second desalination line and the district plan open](public/pictures/screenshots/waterfront.webp)
+![The completed Shevchenko waterfront with five housing blocks and the BN-350 reactor hall](public/pictures/screenshots/waterfront.webp)
 
 Earn the district charter by expanding both supply lines, housing 180 residents, and reaching spring on day 121. Once four blocks are connected, emergency shifts let you spend surplus power on water or heat. After the charter, choose a waterfront reed garden to save household water or district heating works to cut heat demand. Connect a fifth housing block and settle 250 residents to complete the waterfront. You can keep building in free play.
+
+Open **City sights** to visit the Melovoy rooftop lighthouse, the Shevchenko monument, the fertiliser works, the BN-350 reactor hall and the MAEK desalination works. Each stop includes a historical reference. The buildings share a compressed waterfront map.
+
+![Five in-game views of Shevchenko’s civic and industrial landmarks](public/pictures/screenshots/shevchenko.webp)
 
 Open the pipe network to check water and heat coverage independently. Select the day in the top bar to see current heat demand and the next season’s arrival.
 

@@ -8,6 +8,9 @@ import {
   VertexData
 } from '@babylonjs/core';
 import { CityModels, ModelParts } from '../models/CityModels';
+import { melovoyLighthouse, shevchenkoMonument } from '../models/ShevchenkoLandmarks';
+import { fertiliserWorks } from '../models/ShevchenkoFactory';
+import type { SightId } from '../ui/CitySights';
 import {
   foliage,
   harborLight,
@@ -144,6 +147,18 @@ class DecorManagerClass {
       wakePaint.dispose();
     });
 
+    // The historic town stands just east of the construction boundary, including in older saves.
+    const landmark = (id: SightId, parts: ModelParts, x: number, z: number, angle = 0) => {
+      const mesh = finish(parts, id);
+      place(mesh, x, 0.15, z, angle);
+      mesh.metadata = { sight: id };
+      mesh.isPickable = true;
+      this.waterfrontRoofs.push(mesh);
+    };
+    landmark('lighthouse', melovoyLighthouse(), 51.45, 10.35, -0.38);
+    landmark('monument', shevchenkoMonument(), 55.2, 10.25, -1.9);
+    landmark('factory', fertiliserWorks(), 52.55, 21.35, -0.12);
+
     const trees = finish(foliage(true), 'Caspian poplar');
     const shrubs = finish(foliage(false), 'steppe shrub');
     const rocks = finish(limestoneOutcrop(), 'limestone outcrop');
@@ -204,10 +219,27 @@ class DecorManagerClass {
         );
       }
     };
-    boulevard(41.25, 14, 18.5, true);
-    boulevard(39.5, 18, 22, true);
+    boulevard(44.75, 14, 25.5, true);
+    boulevard(43, 18, 29, true);
     boulevard(32.9, 14.58, 7.55, false);
     boulevard(42, 12.3, 11.55, false);
+    boulevard(57.35, 17.26, 11.57, false);
+    boulevard(54.18, 23.03, 6.34, true);
+    streets.box(52.71, 21.52, 0.15, 4.62, 2.94, 0.018, '#b8b4a3');
+    // A limestone promenade joins the lighthouse block and the poet's square.
+    streets.box(53.85, 10.52, 0.15, 7.05, 2.28, 0.023, '#cec4ab');
+    streets.box(53.85, 9.30, 0.15, 7.05, 0.22, 0.013, '#bcb49c');
+    for (const x of [53.21, 53.63, 54.05, 55.65, 56.07, 56.49]) {
+      streets.box(x, 10.53, 0.173, 0.012, 2.24, 0.002, '#bcb49c');
+    }
+    streets.box(53.9, 11.48, 0.174, 7.25, 0.46, 0.022, '#d6c9ad');
+    streets.box(53.9, 11.26, 0.185, 7.25, 0.035, 0.045, '#e9dabe');
+    for (const x of [51.25, 52.78, 54.3, 55.84]) {
+      plant(trees, x, 0.15, 23.53, x, 0.86);
+    }
+    for (const x of [50.55, 52.93, 54.18, 56.65]) {
+      plant(trees, x, 0.15, 11.96, x * 0.4, 0.82);
+    }
     // Painted crossings and slim street lanterns at the two main intersections.
     for (const x of [32.9, 42]) {
       for (const z of [14, 18]) {
@@ -268,13 +300,13 @@ class DecorManagerClass {
       [56, 13.3, 0],
       [52, 17.1, Math.PI / 2],
       [54.5, 17.1, Math.PI / 2],
-      [57, 17.1, Math.PI / 2]
+      [56.4, 16.85, Math.PI / 2]
     ]) {
       const block = library.create('microrayon', 'old town apartments', Math.round(x));
       place(
         block,
         x,
-        0.15 + Math.min(1, (x - GRID_SIZE) / 18) * (1.2 + Math.sin(x * 0.22 + z * 0.1)) ** 2,
+        0.15,
         z,
         angle,
         1.1

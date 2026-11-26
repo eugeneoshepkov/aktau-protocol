@@ -10,6 +10,7 @@ import { assetManager } from './managers/AssetManager';
 import { musicManager } from './managers/MusicManager';
 import { decorManager } from './managers/DecorManager';
 import { HUD } from './ui/HUD';
+import { CitySights } from './ui/CitySights';
 import { mountNetworkInspector } from './ui/NetworkInspector';
 import { BuildPanel } from './ui/BuildPanel';
 import { Tooltip } from './ui/Tooltip';
@@ -152,19 +153,44 @@ export async function initGame(resume: boolean): Promise<void> {
   gameState.on('seasonChange', applySeason);
 
   const reactor = gameState.getBuildings().find((building) => building.type === 'reactor');
-  if (reactor) camera.setHome(getTileCenter(reactor.gridX, reactor.gridZ));
+  if (reactor) {
+    const waterfront = getTileCenter(reactor.gridX, reactor.gridZ);
+    waterfront.x += 1.45;
+    waterfront.z -= 0.35;
+    camera.setHome(waterfront);
+  }
 
   gameState.on('resourceChange', () => {
     particleManager.updateReactorIntensity();
   });
 
+  const sights = new CitySights((id) => {
+    let mesh;
+    if (id === 'reactor' || id === 'distiller') {
+      const building = gameState.getBuildings().find((b) => b.type === id);
+      mesh = building && scene.getMeshByName('building_' + building.id);
+    } else {
+      mesh = scene.getMeshByName(id);
+    }
+    if (!mesh) return false;
+    gridManager.hideHighlight();
+    buildingManager.hideGhostPreview();
+    pipeManager.hideConnectionPreview();
+    camera.visitSight(mesh);
+    return true;
+  }, () => camera.leaveSight());
+
   const inputManager = new InputManager(
     scene,
     gridManager,
-    () => buildingManager.getSelectedBuildingType() !== null
+    () => !sights.isOpen() && buildingManager.getSelectedBuildingType() !== null,
+    (id) => {
+      if (!buildingManager.isDemolishMode() || sights.isOpen()) sights.open(id);
+    }
   );
 
   inputManager.setTileClickCallback((x, z, pointer) => {
+    if (sights.isOpen()) return;
     // Handle demolish mode first
     if (buildingManager.isDemolishMode()) {
       buildingManager.tryDemolishBuilding(x, z);
@@ -189,6 +215,10 @@ export async function initGame(resume: boolean): Promise<void> {
   diagnosticManager.setBuildingManager(buildingManager);
 
   inputManager.setTileHoverCallback((x, z, pointer) => {
+    if (sights.isOpen()) {
+      gridManager.hideHighlight();
+      return;
+    }
     if (buildingManager.getSelectedBuildingType()) tooltip.hide();
     else tooltip.show(x, z, pointer);
 

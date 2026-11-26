@@ -1,4 +1,4 @@
-import { ArcRotateCamera, Vector3, Scene, Animation, EasingFunction, CubicEase } from '@babylonjs/core';
+import { ArcRotateCamera, Vector3, Scene, Animation, EasingFunction, CubicEase, type AbstractMesh } from '@babylonjs/core';
 import {
   ISOMETRIC_ALPHA,
   ISOMETRIC_BETA,
@@ -23,6 +23,7 @@ export class IsometricCamera {
   private shakeTime = 0;
   private originalTarget: Vector3 | null = null;
   private home = Vector3.Zero();
+  private beforeSight: { target: Vector3; alpha: number; beta: number; radius: number } | null = null;
 
   constructor(scene: Scene, canvas: HTMLCanvasElement) {
     this.scene = scene;
@@ -160,12 +161,6 @@ export class IsometricCamera {
       this.camera.inertialPanningX += ARROW_PAN_SPEED;
     }
 
-    // Clamp target to grid bounds
-    const PADDING = 0;
-    const worldSize = GRID_SIZE * TILE_SIZE;
-    target.x = Math.max(-PADDING, Math.min(worldSize + PADDING, target.x));
-    target.z = Math.max(-PADDING, Math.min(worldSize + PADDING, target.z));
-
     if (moved) {
       this.camera.setTarget(target);
     }
@@ -182,33 +177,12 @@ export class IsometricCamera {
   }
 
   private clampCameraTarget(): void {
-    const PADDING = 0;
-    const worldSize = GRID_SIZE * TILE_SIZE;
+    const limit = GRID_SIZE * TILE_SIZE;
     const target = this.camera.target;
-
-    let needsClamp = false;
-    let clampedX = target.x;
-    let clampedZ = target.z;
-
-    if (target.x < -PADDING) {
-      clampedX = -PADDING;
-      needsClamp = true;
-    } else if (target.x > worldSize + PADDING) {
-      clampedX = worldSize + PADDING;
-      needsClamp = true;
-    }
-
-    if (target.z < -PADDING) {
-      clampedZ = -PADDING;
-      needsClamp = true;
-    } else if (target.z > worldSize + PADDING) {
-      clampedZ = worldSize + PADDING;
-      needsClamp = true;
-    }
-
-    if (needsClamp) {
-      this.camera.setTarget(new Vector3(clampedX, target.y, clampedZ));
-    }
+    // The historic waterfront continues ten units beyond the playable lots.
+    const x = Math.max(0, Math.min(limit + 10, target.x));
+    const z = Math.max(0, Math.min(limit, target.z));
+    if (x !== target.x || z !== target.z) this.camera.setTarget(new Vector3(x, target.y, z));
   }
 
   private updateShake(): void {
@@ -258,10 +232,43 @@ export class IsometricCamera {
     this.resetView();
   }
 
-  public resetView(): void {
-    this.camera.setTarget(this.home);
+  private stopMotion(): void {
+    this.scene.stopAnimation(this.camera);
     this.camera.inertialPanningX = this.camera.inertialPanningY = 0;
     this.camera.inertialAlphaOffset = this.camera.inertialBetaOffset = this.camera.inertialRadiusOffset = 0;
+  }
+
+  public visitSight(mesh: AbstractMesh): void {
+    const camera = this.camera;
+    this.beforeSight ??= {
+      target: camera.target.clone(), alpha: camera.alpha, beta: camera.beta, radius: camera.radius
+    };
+    this.stopMotion();
+    const box = mesh.getBoundingInfo().boundingBox;
+    const height = box.maximum.y - box.minimum.y;
+    const span = Math.max(height, box.maximum.x - box.minimum.x, box.maximum.z - box.minimum.z);
+    const canvas = this.scene.getEngine().getRenderingCanvas()!;
+    const portrait = Math.max(1, 0.7 * canvas.clientHeight / Math.max(1, canvas.clientWidth));
+    camera.setTarget(new Vector3(mesh.position.x, mesh.position.y + height * 0.46, mesh.position.z));
+    camera.alpha = ISOMETRIC_ALPHA - mesh.rotation.y;
+    camera.beta = ISOMETRIC_BETA;
+    camera.radius = Math.max(MIN_ZOOM + 0.6, span * 2.35) * portrait;
+  }
+
+  public leaveSight(): void {
+    const saved = this.beforeSight;
+    if (!saved) return;
+    this.stopMotion();
+    this.camera.setTarget(saved.target);
+    this.camera.alpha = saved.alpha;
+    this.camera.beta = saved.beta;
+    this.camera.radius = saved.radius;
+    this.beforeSight = null;
+  }
+
+  public resetView(): void {
+    this.stopMotion();
+    this.camera.setTarget(this.home.clone());
     this.camera.alpha = ISOMETRIC_ALPHA;
     this.camera.beta = ISOMETRIC_BETA;
     const canvas = this.scene.getEngine().getRenderingCanvas()!;

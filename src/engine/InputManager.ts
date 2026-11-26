@@ -2,6 +2,7 @@ import { Scene, PointerEventTypes, Vector3, Plane } from '@babylonjs/core';
 import { GridManager } from '../grid/GridManager';
 import { worldToGrid, isValidGridPosition } from '../grid/GridCoords';
 import type { GridPosition } from '../grid/GridCoords';
+import type { SightId } from '../ui/CitySights';
 
 type PointerPosition = Pick<PointerEvent, 'clientX' | 'clientY'>;
 type TileCallback = (gridX: number, gridZ: number, pointer: PointerPosition) => void;
@@ -16,7 +17,12 @@ export class InputManager {
   private onPointerLeave: (() => void) | null = null;
   private lastHoveredTile: GridPosition | null = null;
 
-  constructor(scene: Scene, gridManager: GridManager, isPlacing: () => boolean) {
+  constructor(
+    scene: Scene,
+    gridManager: GridManager,
+    isPlacing: () => boolean,
+    onSightTap: (id: SightId) => void
+  ) {
     this.scene = scene;
     this.gridManager = gridManager;
     this.isPlacing = isPlacing;
@@ -30,7 +36,8 @@ export class InputManager {
         event.button === 0
       ) {
         const tile = this.resolveTile();
-        if (tile) this.onTileClick?.(tile.x, tile.z, event);
+        if (tile && 'sight' in tile) onSightTap(tile.sight);
+        else if (tile) this.onTileClick?.(tile.x, tile.z, event);
         else this.clearHover();
       } else if (type === PointerEventTypes.POINTERDOWN) {
         this.clearHover();
@@ -45,7 +52,7 @@ export class InputManager {
       });
   }
 
-  private resolveTile(): GridPosition | null {
+  private resolveTile(): GridPosition | { sight: SightId } | null {
     const ray = this.scene.createPickingRay(
       this.scene.pointerX,
       this.scene.pointerY,
@@ -53,8 +60,9 @@ export class InputManager {
       this.scene.activeCamera
     );
     if (!this.isPlacing()) {
-      const facade = this.scene.pickWithRay(ray, (mesh) => Boolean(mesh.metadata?.buildingId));
+      const facade = this.scene.pickWithRay(ray, (mesh) => Boolean(mesh.metadata?.buildingId || mesh.metadata?.sight));
       const tile = facade?.pickedMesh?.metadata;
+      if (tile?.sight) return { sight: tile.sight };
       if (tile) return { x: tile.gridX, z: tile.gridZ };
     }
     const distance = ray.intersectsPlane(this.groundPlane);
@@ -65,7 +73,7 @@ export class InputManager {
 
   private hover(pointer: PointerPosition): void {
     const tile = this.resolveTile();
-    if (!tile) {
+    if (!tile || 'sight' in tile) {
       if (this.lastHoveredTile) this.clearHover();
       return;
     }

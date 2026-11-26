@@ -130,39 +130,38 @@ function stack(p: ModelParts, x: number, z: number, diameter: number, height: nu
 
 function reactor(p: ModelParts) {
   foundation(p, 1.96, 1.66);
-  // Main hall, turbine annex and raised crane rail.
-  p.box(0.24, 0.23, 0.1, 1.26, 0.93, 0.61, limestone);
-  p.box(0.24, 0.23, 0.44, 1.28, 0.95, 0.17, glass);
-  for (let i = 0; i < 6; i++) p.box(-0.34 + i * 0.235, 0.23, 0.12, 0.054, 0.98, 0.59, white);
-  p.box(0.24, 0.23, 0.7, 1.35, 1.02, 0.12, teal);
-  p.box(0.29, 0.24, 0.82, 0.9, 0.42, 0.1, turquoise);
-  for (const x of [0.02, 0.45]) p.cylinder(x, 0.25, 0.92, 0.2, 0.17, 0.09, shadow);
-  // The faceted reactor shield has an annular service deck and a stepped cap.
-  const x = -0.49,
-    z = -0.24;
-  p.cylinder(x, z, 0.1, 1.0, 1.0, 0.24, shadow);
-  p.cylinder(x, z, 0.34, 0.9, 0.9, 0.91, limestone);
-  p.cylinder(x, z, 0.5, 0.92, 0.92, 0.19, turquoise);
-  for (let i = 0; i < 12; i++) {
-    const a = (i * Math.PI) / 6;
-    p.cylinder(
-      x + 0.448 * Math.cos(a),
-      z + 0.448 * Math.sin(a),
-      0.34,
-      0.045,
-      0.045,
-      0.89,
-      white,
-      6
-    );
+  // IAEA TECDOC-1769, fig. 10: a tall ochre hall behind a brick front with three glazed bays.
+  const ochre = '#d4b477';
+  const brick = '#bd7658';
+  p.box(-0.04, -0.19, 0.105, 1.17, 0.89, 1.51, ochre);
+  p.box(-0.04, -0.19, 1.615, 1.20, 0.92, 0.036, limestone);
+  p.box(-0.04, -0.19, 1.651, 1.13, 0.85, 0.02, '#969787');
+  for (const x of [-0.36, 0.02, 0.40]) p.box(x, -0.19, 1.671, 0.012, 0.81, 0.006, '#a8a599');
+  for (const z of [-0.4, -0.10, 0.18]) p.box(-0.628, z, 0.21, 0.014, 0.015, 1.34, '#c1a46e');
+
+  p.box(0.045, 0.37, 0.105, 1.45, 0.55, 0.91, brick);
+  p.box(0.045, 0.37, 1.015, 1.48, 0.58, 0.045, concrete);
+  for (const x of [-0.43, -0.09, 0.25]) {
+    p.box(x, 0.65, 0.24, 0.145, 0.027, 0.68, '#596f78');
+    for (let j = 0; j < 4; j++) p.box(x, 0.667, 0.34 + j * 0.15, 0.145, 0.011, 0.015, shadow);
+    p.box(x - 0.095, 0.65, 0.105, 0.041, 0.052, 0.91, '#d18a64');
   }
-  p.cylinder(x, z, 1.23, 1.01, 1.01, 0.095, shadow);
-  p.cylinder(x, z, 1.325, 1.01, 0.91, 0.055, white);
-  p.cylinder(x, z, 1.38, 0.91, 0.74, 0.17, turquoise);
-  p.cylinder(x, z, 1.55, 0.74, 0.39, 0.13, turquoise);
-  p.cylinder(x, z, 1.68, 0.28, 0.25, 0.065, limestone);
-  stack(p, 0.59, -0.48, 0.27, 2.16);
-  p.tube([0.53, 0.32, -0.48], [-0.1, 0.32, -0.48], 0.12, orange);
+  for (const x of [0.49, 0.63]) {
+    for (const y of [0.31, 0.53, 0.75]) p.box(x, 0.65, y, 0.086, 0.019, 0.085, navy);
+  }
+  // External steel stair and landings stand clear of the high hall's facade.
+  for (const x of [-0.46, -0.24]) p.box(x, 0.304, 1.057, 0.027, 0.027, 0.58, steel);
+  for (let i = 0; i < 3; i++) {
+    const y = 1.065 + i * 0.165;
+    p.box(-0.35, 0.305, y, 0.25, 0.12, 0.03, shadow);
+    const dx = i % 2 ? 0.09 : -0.09;
+    p.tube([-0.35 + dx, y + 0.03, 0.34], [-0.35 - dx, y + 0.17, 0.34], 0.035, steel, 4);
+  }
+  p.box(-0.76, 0.18, 0.105, 0.27, 0.79, 0.37, brick);
+  p.box(-0.76, 0.18, 0.475, 0.30, 0.82, 0.04, concrete);
+  for (const z of [-0.04, 0.18, 0.40]) p.box(-0.898, z, 0.255, 0.013, 0.14, 0.12, glass);
+  stack(p, 0.73, -0.48, 0.175, 1.98);
+  stack(p, -0.78, -0.43, 0.12, 1.29);
 }
 
 function pump(p: ModelParts) {
@@ -194,23 +193,40 @@ function pump(p: ModelParts) {
 }
 
 function distiller(p: ModelParts) {
-  foundation(p, 1.63, 1.26);
-  p.box(-0.51, 0, 0.105, 0.45, 1.08, 0.6, white);
-  p.box(-0.51, 0, 0.46, 0.46, 1.09, 0.12, glass);
-  p.box(-0.51, 0, 0.7, 0.52, 1.15, 0.075, teal);
-  // Three horizontal evaporators and their common header.
-  for (const z of [-0.4, 0, 0.4]) {
-    for (const x of [-0.09, 0.48]) p.box(x, z, 0.105, 0.13, 0.24, 0.19, shadow);
-    p.tube([-0.26, 0.42, z], [0.62, 0.42, z], 0.3, turquoise, 16);
-    for (const x of [-0.19, 0.17, 0.54])
-      p.tube([x, 0.42, z], [x + 0.045, 0.42, z], 0.33, white, 16);
-    p.tube([0.61, 0.42, z], [0.72, 0.42, z], 0.105, orange);
+  foundation(p, 1.73, 1.13);
+  // IAEA TECDOC-1642, fig. 44: a bank of upright evaporators raised above an open gallery.
+  const columns = [-0.57, -0.19, 0.19, 0.57];
+  const vessel = '#b5c9c3';
+  for (const x of [-0.72, 0, 0.72]) {
+    for (const z of [-0.32, 0.32]) p.box(x, z, 0.105, 0.054, 0.054, 0.38, shadow);
   }
-  p.tube([0.72, 0.42, -0.48], [0.72, 0.42, 0.48], 0.12, orange);
-  for (const z of [-0.25, 0.23]) {
-    p.cylinder(-0.51, z, 0.77, 0.19, 0.16, 0.29, concrete);
-    p.cylinder(-0.51, z, 1.06, 0.19, 0.19, 0.045, shadow);
+  for (const z of [-0.32, 0.32]) {
+    p.box(0, z, 0.45, 1.55, 0.073, 0.075, shadow);
+    for (const x of [-0.72, 0]) {
+      p.tube([x, 0.12, z], [x + 0.72, 0.46, z], 0.031, steel, 4);
+      p.tube([x, 0.46, z], [x + 0.72, 0.12, z], 0.031, steel, 4);
+    }
   }
+  p.box(0, 0, 0.52, 1.58, 0.72, 0.045, steel);
+  for (const x of columns) {
+    p.cylinder(x, 0, 0.106, 0.171, 0.171, 0.46, '#768d89', 12);
+    p.cylinder(x, 0, 0.565, 0.18, 0.33, 0.15, vessel, 16);
+    p.cylinder(x, 0, 0.715, 0.33, 0.33, 0.36, vessel, 16);
+    p.cylinder(x, 0, 0.82, 0.34, 0.34, 0.022, steel, 16);
+    p.cylinder(x, 0, 1.075, 0.375, 0.375, 0.035, shadow, 16);
+    p.cylinder(x, 0, 1.11, 0.375, 0.245, 0.09, '#d6ded2', 16);
+    p.cylinder(x, 0, 1.20, 0.245, 0.12, 0.035, '#d6ded2', 16);
+    p.tube([x, 1.23, 0], [x, 1.30, -0.09], 0.076, steel);
+    p.tube([x, 1.30, -0.09], [x, 1.30, -0.24], 0.076, steel);
+  }
+  p.tube([-0.74, 0.24, 0.43], [0.74, 0.24, 0.43], 0.105, teal);
+  p.tube([-0.73, 1.30, -0.24], [0.70, 1.30, -0.24], 0.086, steel);
+  p.cylinder(-0.73, -0.24, 0.2, 0.102, 0.102, 1.16, steel);
+  // Handrails trace the front service gallery. One open vent gives vapor a visible outlet.
+  for (const x of columns) p.box(x, 0.325, 0.565, 0.024, 0.024, 0.15, rust);
+  p.box(0, 0.325, 0.626, 1.55, 0.02, 0.015, steel);
+  p.box(0, 0.325, 0.70, 1.55, 0.027, 0.025, orange);
+  p.cylinder(-0.73, -0.24, 1.36, 0.122, 0.122, 0.03, shadow);
 }
 
 function waterTank(p: ModelParts) {
