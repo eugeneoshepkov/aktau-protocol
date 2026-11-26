@@ -41,7 +41,7 @@ class FeedbackManagerClass {
     }, 400);
   }
 
-  private getFriendlyErrorMessage(reason: string, buildingType?: BuildingType): string {
+  public getFriendlyErrorMessage(reason: string, buildingType?: BuildingType): string {
     if (reason.includes('cannot be placed on')) {
       return buildingType ? td(`feedback.${buildingType}.tile`) : reason;
     }
@@ -58,6 +58,9 @@ class FeedbackManagerClass {
     if (reason.includes('occupied')) {
       return t('feedback.occupied');
     }
+    if (reason.includes('near the coastline')) return t('feedback.nearShore');
+    if (reason.includes('Too close')) return t('feedback.leaveSpace');
+    if (reason.includes('limit reached')) return t('build.maxed');
     if (reason.includes('Game is over')) {
       return t('feedback.gameOver');
     }

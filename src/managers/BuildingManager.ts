@@ -11,7 +11,7 @@ import {
 } from '@babylonjs/core';
 import { gameState } from '../simulation/GameState';
 import { GridManager } from '../grid/GridManager';
-import { getTileCenter } from '../grid/GridCoords';
+import { getTileCenter, type GridPosition } from '../grid/GridCoords';
 import { CityModels } from '../models/CityModels';
 import { decorManager } from './DecorManager';
 import { feedbackManager } from '../ui/FeedbackManager';
@@ -33,7 +33,7 @@ export class BuildingManager {
   private renderObserver: Observer<Scene>;
   private animationTime = 0;
   private selectedBuildingType: BuildingType | null = null;
-  private onSelectionChangeCallback: ((type: BuildingType | null) => void) | null = null;
+  private onSelectionChangeCallback?: (type: BuildingType | null, lot?: GridPosition) => void;
   private demolishMode: boolean = false;
   private onDemolishModeChangeCallback: ((enabled: boolean) => void) | null = null;
 
@@ -108,13 +108,13 @@ export class BuildingManager {
     this.ghostStyle = '';
   }
 
-  public selectBuildingType(type: BuildingType | null): void {
+  public selectBuildingType(type: BuildingType | null, lot?: GridPosition): void {
     this.selectedBuildingType = type;
     console.log(`Selected building: ${type ?? 'none'}`);
-    this.onSelectionChangeCallback?.(type);
+    this.onSelectionChangeCallback?.(type, lot);
   }
 
-  public onSelectionChange(callback: (type: BuildingType | null) => void): void {
+  public onSelectionChange(callback: (type: BuildingType | null, lot?: GridPosition) => void): void {
     this.onSelectionChangeCallback = callback;
   }
 
@@ -145,13 +145,7 @@ export class BuildingManager {
       return false;
     }
 
-    const tileType = this.gridManager.getTileAt(gridX, gridZ);
-    if (!tileType) {
-      console.log('Invalid tile position');
-      return false;
-    }
-
-    const check = gameState.canPlaceBuilding(this.selectedBuildingType, gridX, gridZ, tileType);
+    const check = this.checkPlacement(gridX, gridZ);
 
     if (!check.canPlace) {
       console.log(`Cannot place building: ${check.reason}`);
@@ -215,13 +209,10 @@ export class BuildingManager {
     return success;
   }
 
-  public canPlaceAt(gridX: number, gridZ: number): boolean {
-    if (!this.selectedBuildingType) return false;
-
+  public checkPlacement(gridX: number, gridZ: number): { canPlace: boolean; reason?: string } {
     const tileType = this.gridManager.getTileAt(gridX, gridZ);
-    if (!tileType) return false;
-
-    return gameState.canPlaceBuilding(this.selectedBuildingType, gridX, gridZ, tileType).canPlace;
+    if (!tileType || !this.selectedBuildingType) return { canPlace: false };
+    return gameState.canPlaceBuilding(this.selectedBuildingType, gridX, gridZ, tileType);
   }
 
   private playSquashStretchAnimation(node: Mesh): void {

@@ -13,6 +13,7 @@ import { HUD } from './ui/HUD';
 import { CitySights } from './ui/CitySights';
 import { mountNetworkInspector } from './ui/NetworkInspector';
 import { BuildPanel } from './ui/BuildPanel';
+import { mountTouchPlacement } from './ui/TouchPlacement';
 import { Tooltip } from './ui/Tooltip';
 import { ShortcutsModal } from './ui/ShortcutsModal';
 import { Chronicle } from './ui/Chronicle';
@@ -138,10 +139,6 @@ export async function initGame(resume: boolean, walk = false): Promise<void> {
   gameState.setEventModifiersGetter(() => eventSystem.getModifiers());
 
   buildingManager.setParticleManager(particleManager);
-  buildingManager.onSelectionChange(() => {
-    pipeManager.hideConnectionPreview();
-    buildingManager.hideGhostPreview();
-  });
 
   const restored = resume && gameState.load();
   if (!restored) {
@@ -182,6 +179,7 @@ export async function initGame(resume: boolean, walk = false): Promise<void> {
     }
     return mesh?.isEnabled() && mesh.isVisible ? mesh : null;
   }, (mesh, card) => {
+    if (buildPanel.hasTouchPreview()) buildPanel.cancelSelection();
     gridManager.hideHighlight();
     buildingManager.hideGhostPreview();
     pipeManager.hideConnectionPreview();
@@ -190,7 +188,6 @@ export async function initGame(resume: boolean, walk = false): Promise<void> {
 
   const inputManager = new InputManager(
     scene,
-    gridManager,
     isPlacing,
     (id) => {
       if (!buildingManager.isDemolishMode() || sights.isOpen()) sights.open(id);
@@ -198,7 +195,7 @@ export async function initGame(resume: boolean, walk = false): Promise<void> {
   );
 
   inputManager.setTileClickCallback((x, z, pointer) => {
-    if (sights.isOpen()) return;
+    if (sights.isOpen() || tickSystem.hasOpenModal() || gameState.isGameOver()) return;
     // Handle demolish mode first
     if (buildingManager.isDemolishMode()) {
       buildingManager.tryDemolishBuilding(x, z);
@@ -206,6 +203,11 @@ export async function initGame(resume: boolean, walk = false): Promise<void> {
     }
     // Handle building placement
     if (buildingManager.getSelectedBuildingType()) {
+      if (buildPanel.hasTouchPreview() || pointer.pointerType === 'touch' || pointer.pointerType === 'pen') {
+        previewTouchLot(x, z);
+        return;
+      }
+      if (!gridManager.isInBounds(x, z)) return;
       const placed = buildingManager.tryPlaceBuilding(x, z);
       if (placed) {
         soundManager.play('build');
@@ -226,6 +228,7 @@ export async function initGame(resume: boolean, walk = false): Promise<void> {
   diagnosticManager.setBuildingManager(buildingManager);
 
   inputManager.setTileHoverCallback((x, z, pointer) => {
+    if (buildPanel.hasTouchPreview()) return;
     if (sights.isOpen()) {
       gridManager.hideHighlight();
       return;
@@ -242,7 +245,7 @@ export async function initGame(resume: boolean, walk = false): Promise<void> {
 
     const selectedType = buildingManager.getSelectedBuildingType();
     if (selectedType) {
-      const canPlace = buildingManager.canPlaceAt(x, z);
+      const canPlace = buildingManager.checkPlacement(x, z).canPlace;
       gridManager.showHighlight(x, z, canPlace);
       pipeManager.showConnectionPreview(selectedType, x, z);
 
@@ -250,6 +253,7 @@ export async function initGame(resume: boolean, walk = false): Promise<void> {
       const wouldWork = pipeManager.wouldBeOperational(selectedType, x, z);
       buildingManager.showGhostPreview(selectedType, x, z, canPlace, wouldWork);
     } else {
+      gridManager.showHighlight(x, z);
       pipeManager.hideConnectionPreview();
       buildingManager.hideGhostPreview();
     }
@@ -257,6 +261,8 @@ export async function initGame(resume: boolean, walk = false): Promise<void> {
 
   inputManager.setPointerLeaveCallback(() => {
     tooltip.hide();
+    if (buildPanel.hasTouchPreview()) return;
+    gridManager.hideHighlight();
     pipeManager.hideConnectionPreview();
     buildingManager.hideGhostPreview();
   });
@@ -275,7 +281,8 @@ export async function initGame(resume: boolean, walk = false): Promise<void> {
   const buildPanel = new BuildPanel(buildingManager);
   new Chronicle(notices);
   buildPanel.mountMobileControls();
-  new TutorialManager(buildPanel, scene, pipeManager, buildingManager, (id, readPress) => sights.open(id, readPress));
+  const tutorial = new TutorialManager(buildPanel, scene, pipeManager, buildingManager, (id, readPress) => sights.open(id, readPress));
+  const previewTouchLot = mountTouchPlacement(buildPanel, buildingManager, gridManager, pipeManager, camera, tutorial);
   sights.mountInvitation(document.querySelector('#plan-details')!);
 
   feedbackManager.initialize();

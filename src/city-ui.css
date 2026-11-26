@@ -569,7 +569,8 @@ body {
 }
 
 .hud-speeds { display: flex; gap: inherit; }
-.mobile-menu-label, .status-short, .build-launcher, .placement-cancel { display: none; }
+.mobile-menu-label, .status-short, .build-launcher, .placement-cancel,
+.placement-copy, .placement-confirm { display: none; }
 
 .compact-city {
   --dock-bottom: max(8px, env(safe-area-inset-bottom));
@@ -772,4 +773,43 @@ body {
 }
 @media (orientation: landscape) {
   .compact-city .build-buttons { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+
+.previewing-lot :is(.plan-site, .district-plan, .city-notices) { visibility: hidden; }
+.previewing-lot #build-panel.touch-placement {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+}
+#build-panel.touch-placement :is(.panel-title, .build-buttons) { display: none; }
+.touch-placement .placement-copy { display: block; min-width: 0; }
+.placement-title { color: var(--paper); font: 700 15px/1.2 var(--sans); }
+.placement-status, .placement-hint { font: 14px/1.25 var(--sans); }
+.placement-status { display: flex; flex-wrap: wrap; align-items: center; gap: 3px 12px; margin-top: 3px; color: #f6d2a4; }
+.lot-utility { display: inline-flex; align-items: center; gap: 4px; color: var(--paper); }
+.lot-utility .icon-wrap { width: 17px; height: 17px; }
+.lot-water { color: #65caff; }
+.lot-heat { color: #ff8c57; }
+.lot-missing { color: #c1ada6; }
+.placement-hint { margin-top: 2px; color: #bed1cc; }
+#build-panel.touch-placement :is(.placement-confirm, .placement-cancel) {
+  display: block;
+  min-height: 44px;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font: 650 14px/1.2 var(--sans);
+  cursor: pointer;
+}
+.touch-placement .placement-cancel { border: 1px solid #6d8586; color: var(--paper); background: transparent; }
+.placement-confirm { border: 1px solid transparent; color: #1e2c2b; background: #ff825f; }
+.placement-confirm:disabled { color: #a6b4b1; background: #324647; cursor: default; }
+.placement-confirm:focus-visible { outline: 2px solid var(--paper); outline-offset: -3px; }
+@media (max-width: 480px) {
+  .previewing-lot #build-panel.touch-placement { grid-template-columns: 1fr 1fr; }
+  .touch-placement .placement-copy { grid-column: 1 / -1; }
+}
+@media (orientation: landscape) {
+  .compact-city.previewing-lot #build-panel { max-width: 640px; }
 }

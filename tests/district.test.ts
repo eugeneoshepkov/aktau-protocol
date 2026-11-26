@@ -1,5 +1,6 @@
 import { expect, mock, spyOn, test } from 'bun:test';
 import { NullEngine, Scene } from '@babylonjs/core';
+import { findSuitableLot, isBuildableLot } from '../src/grid/BuildingLots';
 import { getTileTypeAt } from '../src/grid/TileTypes';
 import { PipeManager } from '../src/managers/PipeManager';
 import {
@@ -36,6 +37,31 @@ test('the suggested district can earn its charter and host the Melovoye field se
   };
 
   for (const { type, x, z } of STARTER_DISTRICT) place(type, x, z);
+  const anchor = { x: 38, z: 12 };
+  expect(findSuitableLot('microrayon', pipes, anchor, [[37, 15], [39, 15]])).toEqual({ x: 39, z: 15 });
+  const waterBefore = gameState.getResources().freshWater;
+  gameState.addResources({ freshWater: -waterBefore });
+  expect(findSuitableLot('microrayon', pipes, anchor, [[39, 15]])).toEqual({ x: 39, z: 15 });
+  expect(gameState.canPlaceBuilding('microrayon', 39, 15, getTileTypeAt(39, 15)).canPlace).toBe(false);
+  gameState.addResources({ freshWater: waterBefore });
+  for (const type of ['pump', 'water_tank'] as const) {
+    const lot = findSuitableLot(type, pipes, { x: 0, z: 49 })!;
+    expect(isBuildableLot(type, lot.x, lot.z)).toBe(true);
+    expect(pipes.getLotConnections(type, lot.x, lot.z).water).toBe(true);
+  }
+  expect(pipes.getLotConnections('water_tank', 3, 28).water).toBe(false);
+  // Here the connected tank relays fresh water beyond the distiller’s direct range.
+  expect(pipes.getLotConnections('microrayon', 35, 19)).toEqual({ water: true, heat: false });
+  expect(pipes.getLotConnections('microrayon', 47, 16)).toEqual({ water: false, heat: true });
+  // The existing distiller takes the pump's entire capacity. The tap readout and dashed
+  // pipes must agree, even though the candidate is right beside a pump and a house.
+  expect(findSuitableLot('distiller', pipes, anchor)).toBeNull();
+  expect(pipes.getLotConnections('distiller', 35, 11)).toEqual({ water: false, heat: true });
+  pipes.showConnectionPreview('distiller', 35, 11);
+  const previewMaterials = scene.meshes.filter((m) => m.name.startsWith('preview_pipe_')).map((m) => m.material?.name);
+  expect(previewMaterials).toContain('pipe_preview_heat');
+  expect(previewMaterials).not.toContain('pipe_preview_water');
+  pipes.hideConnectionPreview();
   expect(gameState.getCompletedOrders()).toBe(0);
   expect(gameState.startFieldSeason()).toBe(false);
   expect(gameState.commissionCivicProject('public_garden')).toBe(false);

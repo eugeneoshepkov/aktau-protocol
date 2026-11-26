@@ -582,7 +582,8 @@ export class GameState {
     type: BuildingType,
     gridX: number,
     gridZ: number,
-    tileType: TileType
+    tileType: TileType,
+    requireResources = true
   ): { canPlace: boolean; reason?: string } {
     // Check if game is over
     if (this.gameOver) {
@@ -650,7 +651,8 @@ export class GameState {
       }
     }
 
-    // Check if we have enough resources
+    // Preview a physical site even while the city is saving up to build it.
+    if (!requireResources) return { canPlace: true };
     for (const [resource, amount] of Object.entries(cost)) {
       if (this.resources[resource as keyof Resources] < (amount ?? 0)) {
         return { canPlace: false, reason: `Not enough ${resource}` };

@@ -112,7 +112,7 @@ You can't build infinitely. Plan carefully.
 
 ## Controls
 
-On a phone, drag with one finger to move the map. Pinch to zoom and twist two fingers to rotate. Tap a landmark to visit it, or tap the marked lot to build the next district building. **Build** opens the construction tray for choosing your own site.
+On a phone, drag with one finger to move the map. Pinch to zoom and twist two fingers to rotate. Tap a landmark to visit it. For construction, tap the marked district lot or choose a building from **Build**. The map previews its connections. Tap another tile to compare, then tap **Build here** to spend the resources.
 
 | Key | Action |
 |-----|--------|

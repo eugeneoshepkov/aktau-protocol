@@ -366,6 +366,22 @@ export class IsometricCamera {
     this.camera.radius = Math.min(MAX_ZOOM, DEFAULT_ZOOM * portraitScale);
   }
 
+  public framePlacement(points: Vector3[]): void {
+    const min = points[0].clone(), max = min.clone();
+    for (const point of points) {
+      min.minimizeInPlace(point);
+      max.maximizeInPlace(point);
+    }
+    const center = Vector3.Center(min, max);
+    // Leave room for the waterfront buildings and the placement controls at the bottom.
+    const canvas = this.scene.getEngine().getRenderingCanvas()!;
+    const aspect = canvas.clientWidth / Math.max(1, canvas.clientHeight);
+    const halfAngle = Math.atan(Math.tan(this.camera.fov / 2) * Math.min(0.84 * aspect, 0.57));
+    const extent = Vector3.Distance(min, max) / 2 + 0.95;
+    this.camera.radius = Math.min(MAX_ZOOM, Math.max(this.camera.radius, extent / Math.sin(halfAngle)));
+    this.focusOn(center, 260);
+  }
+
   public focusOn(target: Vector3, duration: number = 500): void {
     this.stopMotion();
     const startTarget = this.camera.target.clone();

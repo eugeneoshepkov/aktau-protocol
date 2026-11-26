@@ -1,6 +1,6 @@
 import { Matrix, Scene, Vector3 } from '@babylonjs/core';
 import { getTileCenter } from '../grid/GridCoords';
-import { getTileTypeAt } from '../grid/TileTypes';
+import { findBuildableLot } from '../grid/BuildingLots';
 import type { BuildingManager } from '../managers/BuildingManager';
 import type { PipeManager } from '../managers/PipeManager';
 import { soundManager } from '../managers/SoundManager';
@@ -16,7 +16,7 @@ import {
 } from '../simulation/DistrictPlan';
 import { getCameraInstance } from '../engine/Camera';
 import { gameState, RESERVE_SUPPLIES, RESERVE_POWER_COST } from '../simulation/GameState';
-import { GRID_SIZE, RESOURCE_CAPS, type BuildingType } from '../types';
+import { RESOURCE_CAPS, type BuildingType } from '../types';
 import { compactCityScreen, type BuildPanel } from './BuildPanel';
 import { feedbackManager } from './FeedbackManager';
 import { FieldSeasonPanel } from './FieldSeasonPanel';
@@ -148,9 +148,8 @@ export class TutorialManager {
     this.marker.addEventListener('click', () => {
       if (!this.site || gameState.isGameOver()) return;
       const { type, x, z } = this.site;
-      if (buildings.getSelectedBuildingType() !== type || buildings.isDemolishMode()) {
-        this.buildPanel.getButton(type)?.click();
-      }
+      this.buildPanel.selectBuilding(type, { x, z });
+      if (this.buildPanel.hasTouchPreview()) return;
       if (buildings.tryPlaceBuilding(x, z)) {
         this.buildPanel.cancelSelection();
         soundManager.play('build');
@@ -216,6 +215,10 @@ export class TutorialManager {
       }
     });
     this.update();
+  }
+
+  public getSuggestedLot(type: BuildingType) {
+    return this.site?.type === type ? this.site : null;
   }
 
   private rewardLabel(order: DistrictOrder): string {
@@ -323,29 +326,12 @@ export class TutorialManager {
   }
 
   private findSite(type: BuildingType, preferred: [number, number][]) {
-    const viable = (x: number, z: number) =>
-      x >= 0 &&
-      z >= 0 &&
-      x < GRID_SIZE &&
-      z < GRID_SIZE &&
-      gameState.canPlaceBuilding(type, x, z, getTileTypeAt(x, z)).canPlace &&
-      this.pipes.wouldBeOperational(type, x, z);
-
-    for (const [x, z] of preferred) {
-      if (viable(x, z)) return { type, x, z };
-    }
-    // Allow a custom layout or a previously occupied suggestion to move the recommended lot.
     const reactor = gameState.getBuildings().find((building) => building.type === 'reactor');
-    if (!reactor) return null;
-    for (let distance = 2; distance <= 12; distance++) {
-      for (let dx = -distance; dx <= distance; dx++) {
-        for (const dz of new Set([distance - Math.abs(dx), Math.abs(dx) - distance])) {
-          const x = reactor.gridX + dx;
-          const z = reactor.gridZ + dz;
-          if (viable(x, z)) return { type, x, z };
-        }
-      }
-    }
-    return null;
+    // A district intake can reserve capacity for the following distiller order, even before it has users.
+    const center = reactor ?? gameState.getBuildings()[0];
+    if (!center && !preferred.length) return null;
+    const anchor = center ? { x: center.gridX, z: center.gridZ } : { x: preferred[0][0], z: preferred[0][1] };
+    const site = findBuildableLot(type, anchor, preferred, (x, z) => this.pipes.wouldBeOperational(type, x, z));
+    return site && { type, ...site };
   }
 }

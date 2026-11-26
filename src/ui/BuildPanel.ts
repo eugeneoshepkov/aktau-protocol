@@ -4,11 +4,41 @@ import { ICONS } from './Icons';
 import { soundManager } from '../managers/SoundManager';
 import { gameState } from '../simulation/GameState';
 import type { BuildingType } from '../types';
+import type { GridPosition } from '../grid/GridCoords';
 import { t, td } from '../i18n';
 
 export const compactCityScreen = window.matchMedia(
   '(max-width: 700px), (pointer: coarse) and (orientation: landscape) and (max-height: 540px)'
 );
+
+export interface TouchPlacementPreview {
+  type: BuildingType;
+  suggested: boolean;
+  canBuild: boolean;
+  status?: string;
+  connections?: { water: boolean; heat: boolean };
+}
+
+function connectionLabels(type: BuildingType, { water, heat }: { water: boolean; heat: boolean }): string {
+  const label = (resource: 'water' | 'heat', connected: boolean, text: string) =>
+    `<span class="lot-utility"><span class="icon-wrap lot-${connected ? resource : 'missing'}" aria-hidden="true">${ICONS[resource]}</span>${text}</span>`;
+  switch (type) {
+    case 'pump':
+      return label('water', water, t(water ? 'build.preview.pumpReach' : 'build.preview.pumpIsolated'));
+    case 'reactor':
+    case 'thermal_plant':
+      return label('heat', heat, t(heat ? 'build.preview.heatReach' : 'build.preview.heatIsolated'));
+    case 'water_tank':
+      return label('water', water, t(water ? 'build.preview.tankLinked' : 'build.preview.tankIsolated'));
+    case 'distiller':
+    case 'microrayon': {
+      const waterStatus = type === 'distiller'
+        ? t(water ? 'build.preview.seawater' : 'build.preview.noSeawater')
+        : t(water ? 'build.preview.freshWater' : 'build.preview.noFreshWater');
+      return label('water', water, waterStatus) + ' ' + label('heat', heat, t(heat ? 'build.preview.heat' : 'build.preview.noHeat'));
+    }
+  }
+}
 
 // Reactor is auto-placed at game start, so not in menu
 const BUILDING_HOTKEYS: Record<string, BuildingType> = {
@@ -23,6 +53,9 @@ export class BuildPanel {
   private container: HTMLDivElement;
   private buildingManager: BuildingManager;
   private readonly launcher = document.createElement('button');
+  private readonly previewTitle = document.createElement('strong');
+  private readonly previewStatus = document.createElement('p');
+  private readonly confirm = document.createElement('button');
   private buttons: Map<BuildingType, HTMLButtonElement> = new Map();
   private demolishButton: HTMLButtonElement | null = null;
 
@@ -156,15 +189,31 @@ export class BuildPanel {
     title.className = 'panel-title';
     title.textContent = t('build.title');
     container.appendChild(title);
+
+    const preview = document.createElement('div');
+    preview.className = 'placement-copy';
+    this.previewTitle.className = 'placement-title';
+    this.previewStatus.className = 'placement-status';
+    this.previewStatus.setAttribute('role', 'status');
+    const hint = document.createElement('p');
+    hint.className = 'placement-hint';
+    hint.textContent = t('build.preview.compare');
+    preview.append(this.previewTitle, this.previewStatus, hint);
+    container.append(preview);
+
     const cancel = document.createElement('button');
     cancel.type = 'button';
     cancel.className = 'placement-cancel';
     cancel.textContent = t('build.cancel');
     cancel.onclick = () => {
+      const previousControl = this.container.querySelector<HTMLButtonElement>('.build-button.selected');
       this.cancelSelection();
-      this.launcher.focus();
+      (compactCityScreen.matches ? this.launcher : previousControl)?.focus();
     };
-    container.append(cancel);
+    this.confirm.type = 'button';
+    this.confirm.className = 'placement-confirm';
+    this.confirm.textContent = t('build.preview.confirm');
+    container.append(cancel, this.confirm);
 
     const buttonContainer = document.createElement('div');
     buttonContainer.className = 'build-buttons';
@@ -291,7 +340,7 @@ export class BuildPanel {
     else this.selectBuilding(type);
   }
 
-  private selectBuilding(type: BuildingType): void {
+  public selectBuilding(type: BuildingType, lot?: GridPosition): void {
     // Exit demolish mode when selecting a building
     if (this.buildingManager.isDemolishMode()) {
       this.buildingManager.setDemolishMode(false);
@@ -308,7 +357,7 @@ export class BuildPanel {
 
     this.openPalette(false);
     this.setPanelTitle(td(`build.site.${type}`));
-    this.buildingManager.selectBuildingType(type);
+    this.buildingManager.selectBuildingType(type, lot);
     this.container.classList.add('building-selected');
   }
 
@@ -334,6 +383,25 @@ export class BuildPanel {
     this.buildingManager.selectBuildingType(null);
     this.buildingManager.setDemolishMode(false);
     this.container.classList.remove('building-selected');
+  }
+
+  public setTouchPreview(preview: TouchPlacementPreview | null): void {
+    this.container.classList.toggle('touch-placement', preview !== null);
+    document.body.classList.toggle('previewing-lot', preview !== null);
+    this.confirm.disabled = !preview?.canBuild;
+    if (!preview) return;
+    const building = td(`build.${preview.type}`);
+    this.previewTitle.textContent = preview.suggested ? t('build.preview.suggested', { building }) : building;
+    this.previewStatus.innerHTML = preview.connections ? connectionLabels(preview.type, preview.connections) : '';
+    if (preview.status) this.previewStatus.append(document.createTextNode(preview.status));
+  }
+
+  public hasTouchPreview(): boolean {
+    return this.container.classList.contains('touch-placement');
+  }
+
+  public onConfirmPlacement(callback: () => void): void {
+    this.confirm.onclick = callback;
   }
 
   private setPanelTitle(text: string): void {

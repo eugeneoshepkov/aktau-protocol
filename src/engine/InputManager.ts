@@ -1,15 +1,13 @@
 import { Scene, PointerEventTypes, Vector3, Plane } from '@babylonjs/core';
-import { GridManager } from '../grid/GridManager';
 import { worldToGrid, isValidGridPosition } from '../grid/GridCoords';
 import type { GridPosition } from '../grid/GridCoords';
 import type { SightId } from '../ui/CitySights';
 
-type PointerPosition = Pick<PointerEvent, 'clientX' | 'clientY'>;
+type PointerPosition = Pick<PointerEvent, 'clientX' | 'clientY'> & { pointerType?: string };
 type TileCallback = (gridX: number, gridZ: number, pointer: PointerPosition) => void;
 
 export class InputManager {
   private scene: Scene;
-  private gridManager: GridManager;
   private isPlacing: () => boolean;
   private groundPlane = Plane.FromPositionAndNormal(Vector3.Zero(), Vector3.Up());
   private onTileClick: TileCallback | null = null;
@@ -19,12 +17,10 @@ export class InputManager {
 
   constructor(
     scene: Scene,
-    gridManager: GridManager,
     isPlacing: () => boolean,
     onSightTap: (id: SightId) => void
   ) {
     this.scene = scene;
-    this.gridManager = gridManager;
     this.isPlacing = isPlacing;
 
     scene.onPointerObservable.add(({ type, event }) => {
@@ -35,7 +31,7 @@ export class InputManager {
         (type === PointerEventTypes.POINTERTAP || type === PointerEventTypes.POINTERDOUBLETAP) &&
         event.button === 0
       ) {
-        const tile = this.resolveTile();
+        const tile = this.resolveTile(this.isPlacing());
         if (tile && 'sight' in tile) onSightTap(tile.sight);
         else if (tile) this.onTileClick?.(tile.x, tile.z, event);
         else this.clearHover();
@@ -52,7 +48,7 @@ export class InputManager {
       });
   }
 
-  private resolveTile(): GridPosition | { sight: SightId } | null {
+  private resolveTile(includeOutside = false): GridPosition | { sight: SightId } | null {
     const ray = this.scene.createPickingRay(
       this.scene.pointerX,
       this.scene.pointerY,
@@ -71,7 +67,7 @@ export class InputManager {
     const distance = ray.intersectsPlane(this.groundPlane);
     if (distance === null || distance < 0) return null;
     const tile = worldToGrid(ray.origin.add(ray.direction.scale(distance)));
-    return isValidGridPosition(tile.x, tile.z) ? tile : null;
+    return includeOutside || isValidGridPosition(tile.x, tile.z) ? tile : null;
   }
 
   private hover(pointer: PointerPosition): void {
@@ -82,13 +78,11 @@ export class InputManager {
     }
     if (tile.x === this.lastHoveredTile?.x && tile.z === this.lastHoveredTile.z) return;
     this.lastHoveredTile = tile;
-    this.gridManager.showHighlight(tile.x, tile.z);
     this.onTileHover?.(tile.x, tile.z, pointer);
   }
 
   private clearHover(): void {
     this.lastHoveredTile = null;
-    this.gridManager.hideHighlight();
     this.onPointerLeave?.();
   }
 
