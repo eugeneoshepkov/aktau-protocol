@@ -1,0 +1,281 @@
+.walk-album {
+  border-top: 1px dashed #b4ab98;
+  padding: 9px 0;
+}
+.walk-album[hidden],
+#city-sights .walk-album [hidden] { display: none; }
+
+.album-line, .album-item-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+}
+.album-count {
+  flex-shrink: 0;
+  color: #596456;
+  font: 600 10px/1.35 var(--mono);
+}
+#city-sights .walk-album button {
+  width: auto;
+  height: auto;
+  min-height: 32px;
+  padding: 5px 9px;
+  font: 600 13px/1.2 var(--sans);
+  text-align: center;
+}
+#city-sights .album-take {
+  color: #fffaea;
+  background-color: #305b59;
+}
+#city-sights .album-take:hover { background-color: #1d4948; }
+.album-wait, .album-result {
+  color: #445755;
+  font: 13px/1.35 var(--sans);
+  margin: 3px 0 0;
+}
+.album-item {
+  margin-top: 7px;
+  padding: 7px 9px 4px;
+  border: 1px solid #c4b79c;
+  background: #f9f0d9;
+  box-shadow: 0 2px 3px #50402e16;
+}
+.album-item-label strong { font: 600 13px/1.2 var(--sans); }
+#city-sights .album-flip {
+  flex-shrink: 0;
+  padding: 3px;
+  max-width: 53%;
+  color: #355955;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  font-size: 12px;
+}
+.album-back label, .album-back small {
+  display: block;
+  font: 11px/1.4 var(--sans);
+  color: #53605a;
+}
+.album-back textarea {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 48px;
+  max-height: 100px;
+  resize: vertical;
+  margin: 3px 0;
+  padding: 4px 7px;
+  border: 1px solid #bdad90;
+  border-radius: 1px;
+  background: repeating-linear-gradient(to bottom,#faf5e6 0 21px,#dbd3bc 21px 22px);
+  font: italic 16px/22px Georgia, serif;
+  color: #234a57;
+  user-select: text;
+}
+.album-art {
+  height: 76px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: repeating-linear-gradient(110deg,#eaddc1 0 1px,#e9dcc0 1px 4px);
+}
+.album-art > div { position: relative; display: none; }
+[data-stop='iceCream'] .album-wrapper, [data-stop='swimmingPier'] .album-postcard,
+[data-stop='torysh'] .album-sketch, [data-stop='chaika'] .album-strip { display: block; }
+
+/* Print a waffle cup on a folded paper sleeve. */
+.album-wrapper {
+  width: 132px;
+  height: 56px;
+  transform: rotate(-5deg);
+  background:
+    linear-gradient(99deg, transparent 44%, #b1ab8e70 46%, transparent 49%),
+    repeating-linear-gradient(0deg,#277d79 0 2px,#f9ecd1 2px 5px,#277d79 5px 8px,#f9ecd1 8px 48px);
+  border: 1px solid #ae9c78;
+  border-inline: 5px double #c4b48d;
+  box-shadow: 2px 3px 0 #97866b5c;
+}
+.album-wrapper i { position: absolute; left: 50%; display: block; }
+.album-wrapper .scoop {
+  top: 8px;
+  width: 34px;
+  height: 17px;
+  margin-left: -17px;
+  border-radius: 50% 55% 15% 25%;
+  border: 2px solid #346a65;
+  background: #fff9e7;
+}
+.album-wrapper .waffle-cup {
+  top: 25px;
+  width: 36px;
+  height: 22px;
+  margin-left: -16px;
+  clip-path: polygon(0 0,100% 0,84% 100%,16% 100%);
+  background: repeating-linear-gradient(45deg,transparent 0 4px,#a1693b 4px 5px),repeating-linear-gradient(-45deg,#daba82 0 4px,#a1693b 4px 5px);
+}
+.album-wrapper .cup-sleeve {
+  top: 28px;
+  width: 34px;
+  height: 5px;
+  margin-left: -15px;
+  transform: rotate(-4deg);
+  background: #397670;
+}
+.album-postcard {
+  width: 141px;
+  height: 56px;
+  border: 4px solid #fff8df;
+  transform: rotate(3deg);
+  box-shadow: 1px 2px 2px #7a77676b;
+  background:
+    radial-gradient(circle at 77% 25%,#f1b775 0 6px,transparent 7px),
+    linear-gradient(0deg,#529091 0 22%,#67a8a6 22% 36%,#97c5bb 36% 40%,#f5d4ad 40% 44%,#afcecc 44%);
+}
+.album-postcard::after {
+  content: '';
+  position: absolute;
+  bottom: 7px;
+  right: 11px;
+  width: 22px;
+  height: 3px;
+  border-top: 2px solid #bde0cf;
+  border-radius: 50%;
+  box-shadow: -21px -4px 0 -1px #d0e7d8, 4px -6px 0 -1px #d0e7d8;
+}
+.pier-deck {
+  position: absolute;
+  top: 32px;
+  width: 86px;
+  height: 5px;
+  background: repeating-linear-gradient(90deg,#805d43 0 7px,#ad8b65 7px 8px);
+  transform: rotate(-5deg);
+}
+.pier-deck::after {
+  content: '';
+  position: absolute;
+  left: 22px;
+  top: 5px;
+  width: 4px;
+  height: 17px;
+  background: #6b6558;
+  box-shadow: 47px 0 #6b6558;
+}
+.pier-ladder {
+  position: absolute;
+  left: 74px;
+  top: 26px;
+  width: 9px;
+  height: 19px;
+  border: 2px solid #efe5ca;
+  border-radius: 6px 6px 0 0;
+  border-bottom: 0;
+  background: linear-gradient(0deg,transparent 2px,#efe5ca 2px 4px,transparent 4px 8px,#efe5ca 8px 10px,transparent 10px);
+}
+/* A pencil sketch on a leaf torn from a pocket notebook. */
+.album-sketch {
+  width: 142px;
+  height: 59px;
+  border-left: 5px dotted #cbbd9d;
+  transform: rotate(-3deg);
+  background: linear-gradient(176deg,transparent 46%,#beb49a 47%,transparent 50%),#f6edd4;
+  box-shadow: 1px 2px 1px #81765b6b;
+}
+.album-sketch i {
+  position: absolute;
+  left: 26px;
+  bottom: 11px;
+  width: 38px;
+  height: 35px;
+  border: 1px solid #756e5b;
+  border-radius: 46% 54% 43% 53%;
+  background: radial-gradient(ellipse at 40% 35%,#e9dec1 10%,transparent 59%),
+    repeating-linear-gradient(124deg,#948971 0 1px,#dbceb0 1px 3px);
+  box-shadow: -4px 5px 0 -2px #978e76;
+}
+.album-sketch i:nth-child(2) {
+  left: 75px;
+  width: 31px;
+  height: 24px;
+  transform: rotate(7deg);
+  background: linear-gradient(110deg,transparent 47%,#615e50 48% 50%,#e6d8b9 51% 54%,transparent 55%),
+    repeating-radial-gradient(ellipse at 36% 61%,#e6d9bb 0 3px,#94876c 3px 4px,#d9c9a9 4px 6px);
+}
+.album-sketch i:nth-child(3) {
+  left: 111px;
+  bottom: 20px;
+  width: 13px;
+  height: 10px;
+}
+.album-strip {
+  width: 146px;
+  height: 64px;
+  background: #2e3634;
+  transform: rotate(-2deg);
+  box-shadow: 2px 2px 1px #897d6759;
+}
+.album-strip::before, .album-strip::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  height: 4px;
+  background: repeating-linear-gradient(90deg,transparent 0 7px,#e8dabd 7px 12px);
+}
+.album-strip::before { top: 3px; }
+.album-strip::after { bottom: 3px; }
+.film-frame {
+  position: absolute;
+  inset: 10px 12px;
+  background: linear-gradient(96deg,#acac98,#ece4c9 52%,#a8a48f);
+  overflow: hidden;
+}
+.film-frame::after {
+  content: '';
+  position: absolute;
+  top: 23px;
+  right: 11px;
+  left: 9px;
+  height: 4px;
+  border-bottom: 2px solid #686b5d;
+  background: #444943;
+}
+.film-frame i {
+  position: absolute;
+  left: 15%;
+  top: 11px;
+  width: 16px;
+  height: 12px;
+  background: #4b5048;
+  border-radius: 2px 2px 6px 6px;
+}
+.film-frame i::before, .film-frame i::after {
+  content: '';
+  position: absolute;
+  background: #4b5048;
+}
+.film-frame i::before { left: 0; width: 16px; top: -3px; height: 2px; border-radius: 50%; }
+.film-frame i::after { left: -3px; right: -3px; height: 2px; top: 2px; }
+.film-frame i:nth-child(2) { left: 44%; background: #62675b; }
+.film-frame i:nth-child(3) { left: 72%; }
+.rewinding .film-frame i { animation: album-pot-return 850ms cubic-bezier(.23,.7,.3,1) both; }
+.rewinding .film-frame i:nth-child(2) { animation-delay: 150ms; }
+.rewinding .film-frame i:nth-child(3) { animation-delay: 300ms; }
+@keyframes album-pot-return {
+  from { transform: translate(9px,23px) rotate(95deg); }
+  67% { transform: translate(1px,-7px) rotate(-10deg); }
+  to { transform: translate(0,0); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .revisiting > div { animation: album-paper-settle 350ms ease-out; }
+  @keyframes album-paper-settle {
+    from { translate: 0 4px; rotate: -3deg; }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rewinding .film-frame i { animation: none; }
+}
+#city-sights:has(.walk-album:not([hidden])) {
+  max-height: calc(100dvh - 22px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}

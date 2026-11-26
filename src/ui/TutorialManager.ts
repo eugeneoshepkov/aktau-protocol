@@ -40,7 +40,7 @@ export class TutorialManager {
     scene: Scene,
     pipes: PipeManager,
     buildings: BuildingManager,
-    openSight: (id: SightId) => void
+    openSight: (id: SightId, readPress?: boolean) => void
   ) {
     this.buildPanel = buildPanel;
     this.pipes = pipes;
@@ -62,6 +62,7 @@ export class TutorialManager {
         <div class="plan-reserves" hidden>
           <div class="plan-reserve-status"></div>
           <div class="plan-reserve-actions"><button type="button" data-supply="freshWater"></button><button type="button" data-supply="heat"></button></div>
+          <button type="button" class="water-history" hidden>${t('press.waterInvite')} →</button>
         </div>
       </div>`;
     this.panelButton = this.panel.querySelector('button')!;
@@ -117,9 +118,16 @@ export class TutorialManager {
       choices.append(button);
     }
 
+    const waterHistory = this.panel.querySelector<HTMLButtonElement>('.water-history')!;
+    waterHistory.addEventListener('click', () => openSight('distiller', true));
     for (const resource of ['freshWater', 'heat'] as const) {
       this.panel.querySelector(`[data-supply="${resource}"]`)!.addEventListener('click', () => {
-        if (gameState.dispatchSupply(resource)) soundManager.play('success');
+        if (gameState.dispatchSupply(resource)) {
+          soundManager.play('success');
+          if (resource === 'freshWater') {
+            waterHistory.hidden = !gameState.getBuildings().some((b) => b.type === 'distiller');
+          }
+        }
       });
     }
 
@@ -168,6 +176,7 @@ export class TutorialManager {
     });
     gameState.on('buildingRemoved', () => {
       this.siteDirty = true;
+      if (!gameState.getBuildings().some((b) => b.type === 'distiller')) waterHistory.hidden = true;
     });
     gameState.on('resourceChange', () => this.update());
     gameState.on('gameOver', () => {

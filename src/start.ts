@@ -5,7 +5,7 @@ import { IntroScreen } from './ui/IntroScreen';
 import { i18n } from './i18n';
 
 document.documentElement.lang = i18n.getLocale();
-new IntroScreen(async (resume) => {
+new IntroScreen(async (resume, walk) => {
   const { initGame } = await import('./main');
-  await initGame(resume);
+  await initGame(resume, walk);
 });

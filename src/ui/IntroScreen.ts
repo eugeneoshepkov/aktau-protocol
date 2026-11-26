@@ -2,7 +2,7 @@ import { ICONS } from './Icons';
 import { t, i18n } from '../i18n';
 
 export class IntroScreen {
-  constructor(onStart: (resume: boolean) => Promise<void>) {
+  constructor(onStart: (resume: boolean, walk: boolean) => Promise<void>) {
     const screen = document.createElement('main');
     screen.id = 'intro-overlay';
     const hasSave = Boolean(localStorage.getItem('aktau-save'));
@@ -14,6 +14,7 @@ export class IntroScreen {
       <header class="title-bar">
         <div class="studio-mark"><span class="orbit-mark">${ICONS.atom}</span>CASPIAN ATOM</div>
         <nav class="title-options">
+          <button class="open-guide" title="${t('menu.guide')}" aria-label="${t('menu.guide')}">${ICONS.book}<span>${t('menu.guide')}</span></button>
           <button class="intro-lang-btn" title="${t('intro.language')}">${ICONS.globe}<span>${i18n.getLocale().toUpperCase()}</span></button>
           <button class="intro-mute-btn" aria-label="${t('intro.mute')}"></button>
         </nav>
@@ -26,7 +27,7 @@ export class IntroScreen {
           <div class="title-actions">
             <button class="start-city">${ICONS.play}${t(hasSave ? 'menu.continue' : 'menu.start')}</button>
             ${hasSave ? `<button class="new-city">${t('menu.new')}</button>` : ''}
-            <button class="open-guide">${ICONS.book}${t('menu.guide')}</button>
+            <button class="walk-city">${ICONS.pin}${t('walk.start')}</button>
           </div>
           <p class="launch-status" role="status"></p>
         </div>
@@ -72,15 +73,15 @@ export class IntroScreen {
     if (!audio.muted) void audio.play().catch(() => {});
 
     let starting = false;
-    const start = async (resume: boolean) => {
+    const start = async (resume: boolean, walk = false) => {
       if (starting) return;
       starting = true;
       audio.pause();
-      const primary = screen.querySelector<HTMLButtonElement>('.start-city')!;
+      const primary = screen.querySelector<HTMLButtonElement>(walk ? '.walk-city' : '.start-city')!;
       primary.disabled = true;
       primary.textContent = t('menu.loading');
       try {
-        await onStart(resume);
+        await onStart(resume, walk);
         screen.remove();
       } catch (error) {
         console.error('Could not start Aktau Protocol', error);
@@ -91,6 +92,7 @@ export class IntroScreen {
       }
     };
     screen.querySelector('.start-city')!.addEventListener('click', () => void start(hasSave));
+    screen.querySelector('.walk-city')!.addEventListener('click', () => void start(hasSave, true));
     screen.querySelector('.new-city')?.addEventListener('click', () => void start(false));
   }
 }

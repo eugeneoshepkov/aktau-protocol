@@ -24,6 +24,7 @@ export class IsometricCamera {
   private originalTarget: Vector3 | null = null;
   private home = Vector3.Zero();
   private beforeSight: { target: Vector3; alpha: number; beta: number; radius: number } | null = null;
+  private walkSight: AbstractMesh | null = null;
 
   constructor(scene: Scene, canvas: HTMLCanvasElement) {
     this.scene = scene;
@@ -53,6 +54,9 @@ export class IsometricCamera {
     this.camera.useNaturalPinchZoom = true;
 
     this.camera.panningAxis = new Vector3(1, 0, 1);
+    scene.getEngine().onResizeObservable.add(() => {
+      if (this.walkSight) this.fitSight(this.walkSight);
+    });
 
     const shouldIgnoreKeyboard = () => {
       const active = document.activeElement;
@@ -244,15 +248,25 @@ export class IsometricCamera {
       target: camera.target.clone(), alpha: camera.alpha, beta: camera.beta, radius: camera.radius
     };
     this.stopMotion();
-    const box = mesh.getBoundingInfo().boundingBox;
-    const height = box.maximum.y - box.minimum.y;
-    const span = Math.max(height, box.maximum.x - box.minimum.x, box.maximum.z - box.minimum.z);
-    const canvas = this.scene.getEngine().getRenderingCanvas()!;
-    const portrait = Math.max(1, 0.7 * canvas.clientHeight / Math.max(1, canvas.clientWidth));
+    this.walkSight = mesh.metadata?.neighbourhood ? mesh : null;
+    const { minimum, maximum } = mesh.getBoundingInfo().boundingBox;
+    const height = maximum.y - minimum.y;
     camera.setTarget(new Vector3(mesh.position.x, mesh.position.y + height * 0.46, mesh.position.z));
     camera.alpha = ISOMETRIC_ALPHA - mesh.rotation.y;
     camera.beta = ISOMETRIC_BETA;
+    this.fitSight(mesh);
+  }
+
+  private fitSight(mesh: AbstractMesh): void {
+    const camera = this.camera;
+    const { minimum, maximum } = mesh.getBoundingInfo().boundingBox;
+    const span = Math.max(maximum.x - minimum.x, maximum.y - minimum.y, maximum.z - minimum.z);
+    const canvas = this.scene.getEngine().getRenderingCanvas()!;
+    const portrait = Math.max(1, 0.7 * canvas.clientHeight / Math.max(1, canvas.clientWidth));
     camera.radius = Math.max(MIN_ZOOM + 0.6, span * 2.35) * portrait;
+    // The open album occupies the lower half of a phone. Project its subject above the paper.
+    const phoneWalk = this.walkSight && canvas.clientHeight > canvas.clientWidth;
+    camera.targetScreenOffset.y = phoneWalk ? camera.radius * Math.tan(camera.fov / 2) * 0.56 : 0;
   }
 
   public leaveSight(): void {
@@ -263,6 +277,8 @@ export class IsometricCamera {
     this.camera.alpha = saved.alpha;
     this.camera.beta = saved.beta;
     this.camera.radius = saved.radius;
+    this.camera.targetScreenOffset.y = 0;
+    this.walkSight = null;
     this.beforeSight = null;
   }
 

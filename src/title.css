@@ -299,7 +299,8 @@
   .title-options button {
     padding: 8px;
   }
-  .intro-mute-btn span {
+  .intro-mute-btn span,
+  .open-guide span {
     display: none;
   }
   .title-stage {

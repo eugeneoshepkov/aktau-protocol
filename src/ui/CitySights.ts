@@ -1,8 +1,10 @@
 import type { AbstractMesh } from '@babylonjs/core';
 import { t } from '../i18n';
 import { tickSystem } from '../simulation/TickSystem';
+import { gameState } from '../simulation/GameState';
 import { normalizeKey } from '../utils/keyboard';
 import { ICONS } from './Icons';
+import { NeighbourhoodAlbum, isWalkStop, walkStops, type WalkStop } from './NeighbourhoodAlbum';
 import './city-sights.css';
 
 const sights = [
@@ -15,7 +17,16 @@ const sights = [
   ['fieldTrace', 'https://www.ijsred.com/volume3/issue3/IJSRED-V3I3P169.pdf#page=4']
 ] as const;
 
-export type SightId = (typeof sights)[number][0];
+const onishchenko = 'https://www.lada.kz/columns/12499-aktau-onischenko.html';
+const walkSources: Record<WalkStop, string> = {
+  iceCream: onishchenko,
+  swimmingPier: 'https://otpannews.kz/ru/news/konferentsiia-neravnodushnykh-zhiteli-aktau-podelilis-svoimi-vospominaniiami-o-kaspii',
+  torysh: 'https://tour-mangystau.kz/ru/destinations/torysh',
+  chaika: onishchenko
+};
+const neighbourhood = walkStops.map((id) => [id, walkSources[id]] as const);
+
+export type SightId = (typeof sights)[number][0] | WalkStop;
 
 export class CitySights {
   private readonly launcher = document.createElement('button');
@@ -23,7 +34,10 @@ export class CitySights {
   private readonly closeButton: HTMLButtonElement;
   private readonly locate: (id: SightId) => AbstractMesh | null;
   private readonly focus: (mesh: AbstractMesh) => void;
-  private stops: (typeof sights)[number][] = [];
+  private stops: ReadonlyArray<readonly [SightId, string]> = [];
+  private readonly album: NeighbourhoodAlbum;
+  private readonly invitation = document.createElement('button');
+  private returnFocus: HTMLElement | null = null;
   private readonly leave: () => void;
   private index = 0;
 
@@ -50,12 +64,26 @@ export class CitySights {
     this.card.setAttribute('aria-labelledby', 'sight-name');
     this.card.innerHTML = `
       <div class="sight-header">
-        <span>${ICONS.pin}${t('sight.open')}</span>
+        <div class="sight-routes" role="group" aria-label="${t('walk.routes')}">
+          <button type="button" data-route="sights">${t('sight.open')}</button>
+          <button type="button" data-route="walk">${t('walk.label')}</button>
+        </div>
         <button type="button" class="sight-close" aria-label="${t('sight.close')}" title="${t('sight.close')}">${ICONS.close}</button>
       </div>
       <div aria-live="polite" aria-atomic="true">
         <h2 id="sight-name"></h2><p class="sight-description"></p>
       </div>
+      <div class="neighbourhood-album" hidden></div>
+      <details class="reactor-record" hidden>
+        <summary>${t('press.reactorSummary')}</summary>
+        <p>${t('press.reactor')} <a href="https://www-pub.iaea.org/MTCD/Publications/PDF/te_876_web.pdf#page=179" target="_blank" rel="noopener noreferrer">${t('press.reactorLink')} ↗</a></p>
+      </details>
+      <details class="maek-clipping" hidden>
+        <summary>${t('press.summary')}</summary>
+        <p>${t('press.early')} <a href="https://mangyshlak.kz/gazeta-pravda-%E2%84%9612-1967-god/" target="_blank" rel="noopener noreferrer">${t('press.earlyLink')} ↗</a></p>
+        <p>${t('press.water')} <a href="https://www.lada.kz/aktau_news/society/91530-zhiteli-aktau-do-nochi-stoyali-v-ocheredi-k-vodovozu.html" target="_blank" rel="noopener noreferrer">${t('press.waterLink')} ↗</a></p>
+        <p>${t('press.power')} <a href="https://www.kegoc.kz/ru/press-center/press-releases/161747/" target="_blank" rel="noopener noreferrer">${t('press.powerLink')} ↗</a></p>
+      </details>
       <div class="sight-footer">
         <a class="sight-source" target="_blank" rel="noopener noreferrer">${t('sight.source')} ↗</a>
         <div class="sight-pages">
@@ -64,6 +92,9 @@ export class CitySights {
           <button type="button" class="sight-next" aria-label="${t('sight.next')}" title="${t('sight.next')}">›</button>
         </div>
       </div>`;
+    this.album = new NeighbourhoodAlbum(this.card.querySelector('.neighbourhood-album')!);
+    this.card.querySelector('[data-route="sights"]')!.addEventListener('click', () => this.open());
+    this.card.querySelector('[data-route="walk"]')!.addEventListener('click', () => this.openWalk());
     this.closeButton = this.card.querySelector('.sight-close')!;
     this.closeButton.addEventListener('click', () => this.close());
     this.card
@@ -81,6 +112,8 @@ export class CitySights {
           event.stopImmediatePropagation();
           event.preventDefault();
           this.close();
+        } else if (event.target instanceof HTMLTextAreaElement) {
+          return;
         } else if (/^(?:[1-6xcчj ]|home|\?|f1)$/.test(normalizeKey(event.key))) {
           event.stopImmediatePropagation();
           if (event.key === 'F1') event.preventDefault();
@@ -94,11 +127,38 @@ export class CitySights {
     return !this.card.hidden;
   }
 
-  public open(id?: SightId): void {
-    this.stops = sights.filter(([key]) => this.locate(key));
-    const index = id ? this.stops.findIndex(([key]) => key === id) : 0;
-    if (index < 0 || !this.stops.length) return;
+  public openWalk(): void {
+    this.open(this.album.firstStop());
+  }
+
+  public mountInvitation(slot: HTMLElement): void {
+    this.invitation.type = 'button';
+    this.invitation.className = 'walk-invitation';
+    this.invitation.addEventListener('click', () => this.openWalk());
+    slot.append(this.invitation);
+    gameState.on('orderComplete', () => this.refreshInvitation());
+    gameState.on('seasonChange', () => this.refreshInvitation());
+    this.refreshInvitation();
+  }
+
+  private refreshInvitation(): void {
+    const stop = this.album.availableStop();
+    this.invitation.hidden = !stop || gameState.getCompletedOrders() < 1;
+    if (stop) this.invitation.textContent = t(`walk.${stop}.invite`) + ' →';
+  }
+
+  public open(id?: SightId, readPress = false): void {
+    const walking = id !== undefined && isWalkStop(id);
+    const route = walking ? neighbourhood : sights;
+    const stops = route.filter(([key]) => this.locate(key));
+    const index = id ? stops.findIndex(([key]) => key === id) : 0;
+    if (index < 0 || !stops.length) return;
+    this.stops = stops;
+    this.card.classList.toggle('neighbourhood-walk', walking);
+    this.card.querySelector('[data-route="sights"]')!.setAttribute('aria-pressed', String(!walking));
+    this.card.querySelector('[data-route="walk"]')!.setAttribute('aria-pressed', String(walking));
     if (!this.isOpen()) {
+      this.returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       const network = document.querySelector<HTMLDetailsElement>('.network-control');
       if (network) network.open = false;
       tickSystem.onModalOpen();
@@ -108,6 +168,9 @@ export class CitySights {
       this.closeButton.focus({ preventScroll: true });
     }
     this.show(index);
+    if (readPress && id === 'distiller') {
+      this.card.querySelector<HTMLDetailsElement>('.maek-clipping')!.open = true;
+    }
   }
 
   private show(index: number): void {
@@ -118,7 +181,18 @@ export class CitySights {
     this.focus(mesh);
     this.card.querySelector('#sight-name')!.textContent = t(`sight.${id}.name`);
     this.card.querySelector('.sight-description')!.textContent = t(`sight.${id}.description`);
-    this.card.querySelector<HTMLAnchorElement>('.sight-source')!.href = source;
+    const link = this.card.querySelector<HTMLAnchorElement>('.sight-source')!;
+    link.href = source;
+    link.textContent = t(id === 'torysh' ? 'walk.landscapeSource' : isWalkStop(id) ? 'walk.source' : 'sight.source') + ' ↗';
+    if (isWalkStop(id)) this.album.show(id);
+    else this.album.hide();
+    const clipping = this.card.querySelector<HTMLDetailsElement>('.maek-clipping')!;
+    clipping.open = false;
+    clipping.hidden = id !== 'distiller';
+    const record = this.card.querySelector<HTMLDetailsElement>('.reactor-record')!;
+    record.open = false;
+    record.hidden = id !== 'reactor';
+    this.card.scrollTop = 0;
     this.card.querySelector('.sight-count')!.textContent = `${this.index + 1} / ${this.stops.length}`;
   }
 
@@ -129,6 +203,10 @@ export class CitySights {
     document.body.classList.remove('sightseeing');
     this.leave();
     tickSystem.onModalClose();
-    this.launcher.focus({ preventScroll: true });
+    this.refreshInvitation();
+    const target = this.returnFocus;
+    (target?.isConnected && target.offsetParent !== null && target !== document.body
+      ? target
+      : this.launcher).focus({ preventScroll: true });
   }
 }

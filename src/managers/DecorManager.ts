@@ -11,6 +11,9 @@ import { CityModels, ModelParts } from '../models/CityModels';
 import { melovoyLighthouse, shevchenkoMonument } from '../models/ShevchenkoLandmarks';
 import { fertiliserWorks } from '../models/ShevchenkoFactory';
 import { melovoyeTower, melovoyeTrace } from '../models/MelovoyeField';
+import {
+  courtyardClub, enamelSign, firstMicrorayonPier, iceCreamCounter, summerAtThePier, toryshStones
+} from '../models/NeighbourhoodScenes';
 import type { SightId } from '../ui/CitySights';
 import {
   foliage,
@@ -33,6 +36,7 @@ class DecorManagerClass {
   private meshes: Set<AbstractMesh> = new Set();
   private material: StandardMaterial | null = null;
   private waterfrontRoofs: Mesh[] = [];
+  private beachgoers?: Mesh;
   private vegetation: { mesh: Mesh; positions: Float32Array; colors: Float32Array }[] = [];
   private buildingPlaced = (data: unknown) => {
     const { gridX, gridZ } = data as Building;
@@ -160,6 +164,22 @@ class DecorManagerClass {
     landmark('lighthouse', melovoyLighthouse(), 51.45, 10.35, -0.38);
     landmark('monument', shevchenkoMonument(), 55.2, 10.25, -1.9);
     landmark('factory', fertiliserWorks(), 52.55, 21.35, -0.12);
+    const kiosk = landmark('iceCream', iceCreamCounter(), 54, 15.45, -0.64);
+    enamelSign(kiosk, 'МОРОЖЕНОЕ', 0, 1.05, 0.118, 1.66, 0.205);
+    const club = landmark('chaika', courtyardClub(), 55.9, 19.72, 1.0);
+    enamelSign(club, 'ЧАЙКА', -0.78, 1.013, 0.504, 0.85, 0.183);
+    const pier = landmark('swimmingPier', firstMicrorayonPier(), 52.4, 6.65, -0.34);
+    this.beachgoers = finish(summerAtThePier(), 'summer on the pier');
+    this.beachgoers.parent = pier;
+    this.beachgoers.metadata = { sight: 'swimmingPier' };
+    this.beachgoers.isPickable = true;
+    const torysh = landmark('torysh', toryshStones(), 56.7, 45.1, -1.15);
+    for (const stop of [kiosk, club, pier, torysh]) stop.metadata.neighbourhood = true;
+    const outcrops = finish(toryshStones(true), 'outcrops at Torysh');
+    outcrops.parent = torysh;
+    outcrops.metadata = { sight: 'torysh' };
+    outcrops.isPickable = true;
+    this.waterfrontRoofs.push(outcrops);
 
     const trees = finish(foliage(true), 'Caspian poplar');
     const shrubs = finish(foliage(false), 'steppe shrub');
@@ -364,6 +384,7 @@ class DecorManagerClass {
   }
 
   public setSeason(season: Season): void {
+    this.beachgoers?.setEnabled(season === 'summer');
     const leaf = Color3.FromHexString(seasonalCoast[season].leaf);
     const winter = season === 'winter';
     for (const roof of this.waterfrontRoofs) {
