@@ -341,7 +341,7 @@ export const en = {
   // ============================================
   // Chronicle
   // ============================================
-  'chronicle.button': 'Historical Chronicle (J)',
+  'chronicle.button': 'The Shevchenko Chronicle (J)',
   'chronicle.learnMore': 'Learn more...',
   'chronicle.wikiLink': 'Read more on Wikipedia',
   'chronicle.paper': 'Read the Melovoye paper',
@@ -349,10 +349,20 @@ export const en = {
   'chronicle.material': 'Material',
   'chronicle.metal': 'Metal',
   'chronicle.backToArchive': 'Back to Chronicle',
-  'chronicle.archiveTitle': 'Historical Chronicle',
-  'chronicle.discovered': '{count} / {total} facts discovered',
+  'chronicle.archiveTitle': 'The Shevchenko Chronicle',
+  'chronicle.discovered': 'Collected {count} of {total}',
+  'chronicle.new': 'Unread',
+  'chronicle.illustration': 'Illustration for the game',
+  'chronicle.options': 'Album options',
+  'chronicle.confirmReset': 'Clear all the stories collected in this browser? Your city will stay as it is.',
+  'chronicle.clue.home': 'Connect a second block to water and heat to find the new family’s postcard.',
+  'chronicle.clue.pump': 'Place a pump in the shallows to discover how the city drew water from the Caspian.',
+  'chronicle.clue.distiller': 'Build a desalination plant to discover how seawater reached the kitchen tap.',
+  'chronicle.clue.tank': 'Build a water tank to discover where the city kept its drinking water.',
+  'chronicle.clue.day': 'On day {day}, look for “{title}” in the Chronicle.',
+  'chronicle.clue.residents': 'Make room for {count} residents to discover another city story.',
+  'chronicle.clue.winter': 'Keep the district warm through the first few days of winter to discover a seasonal story.',
   'chronicle.reset': 'Reset Discoveries',
-  'chronicle.locked': 'Not yet discovered',
 
   // Chronicle Categories
   'chronicle.category.city': 'City History',
@@ -419,7 +429,7 @@ export const en = {
   'shortcuts.reset': 'Reset view',
   'shortcuts.cancel': 'Cancel placement',
   'shortcuts.show': 'Show shortcuts',
-  'shortcuts.chronicle': 'Historical Chronicle',
+  'shortcuts.chronicle': 'The Shevchenko Chronicle',
   'shortcuts.pause': 'Pause/Resume',
   'shortcuts.mute': 'Mute/Unmute music',
   'shortcuts.close': 'Press <kbd>Esc</kbd> to close',
@@ -427,6 +437,27 @@ export const en = {
   // ============================================
   // Historical Facts
   // ============================================
+  // Chronicle illustrations
+  'fact.welcome-aktau.imageAlt': "Two newcomers look across the chalk coast toward the first apartment blocks.",
+  'fact.first-housing.imageAlt': "Two children write a postcard at the kitchen table of their new flat.",
+  'fact.closed-city.imageAlt': "A folder, notebook and pencil on a field trailer desk overlooking the steppe.",
+  'fact.five-buildings.imageAlt': "A shaded walkway runs between pale apartment blocks with deep balconies.",
+  'fact.mangyshlak-peninsula.imageAlt': "A herder and camels cross the dry steppe below pale limestone cliffs.",
+  'fact.bn350-intro.imageAlt': "A worker passes the long industrial hall near the Caspian coast.",
+  'fact.desalination-tech.imageAlt': "A waterworks technician draws a clear sample into a glass beaker.",
+  'fact.peak-population.imageAlt': "Residents with shopping bags wait for a red-and-cream bus beside the apartment blocks.",
+  'fact.caspian-sea.imageAlt': "Waves break over low chalk ledges where a lone angler faces the open Caspian.",
+  'fact.shutdown.imageAlt': "An older shift worker pauses at the quiet entrance of the power station.",
+  'fact.first-pump.imageAlt': "A worker looks down from the Caspian pumping pier to the water below.",
+  'fact.first-reactor.imageAlt': "A cyclist rides home past the power station toward the lights of the microrayon.",
+  'fact.first-distiller.imageAlt': "A worker stands on a walkway among the rows of vessels in a desalination hall.",
+  'fact.first-tank.imageAlt': "Large cylindrical drinking-water tanks stand at the edge of the desert city.",
+  'fact.ten-buildings.imageAlt': "Two plant employees pass a shift log across a table in the staff room.",
+  'fact.population-200.imageAlt': "A family steps down from a green passenger train onto a steppe platform with their luggage.",
+  'fact.population-500.imageAlt': "Residents walk by a fountain in a leafy square surrounded by apartment blocks.",
+  'fact.survive-winter.imageAlt': "A child warms up beside a cast-iron radiator as snow blows across the courtyard outside.",
+  'fact.reactor-warning.imageAlt': "Two shift operators look up at a signal in the power station control room.",
+
   // Day 1: Welcome to Aktau
   'fact.welcome-aktau.title': 'Welcome to Aktau',
   'fact.welcome-aktau.short':

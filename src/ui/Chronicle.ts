@@ -3,7 +3,8 @@ import { soundManager } from '../managers/SoundManager';
 import { gameState } from '../simulation/GameState';
 import type { DistrictOrder } from '../simulation/DistrictPlan';
 import { tickSystem } from '../simulation/TickSystem';
-import { HISTORICAL_FACTS, getFactByTrigger, type HistoricalFact } from '../data/historicalFacts';
+import { HISTORICAL_FACTS, getFactById, getFactByTrigger, type HistoricalFact } from '../data/historicalFacts';
+import { getChronicleClue } from './chronicleClue';
 import { t, td, i18n } from '../i18n';
 import { keyMatches } from '../utils/keyboard';
 
@@ -19,8 +20,8 @@ export class Chronicle {
   private notificationTimeout: number | null = null;
 
   private notificationEl!: HTMLDivElement;
-  private modalEl!: HTMLDivElement;
-  private archiveEl!: HTMLDivElement;
+  private modalEl!: HTMLDialogElement;
+  private archiveEl!: HTMLDialogElement;
   private archiveBtn!: HTMLButtonElement;
   private unreadBadge!: HTMLSpanElement;
 
@@ -128,18 +129,20 @@ export class Chronicle {
   }
 
   private createModalElement(): void {
-    this.modalEl = document.createElement('div');
+    this.modalEl = document.createElement('dialog');
     this.modalEl.id = 'chronicle-modal';
+    this.modalEl.setAttribute('aria-labelledby', 'chronicle-story-title');
     this.modalEl.innerHTML = `
       <div class="chronicle-modal-content">
         <div class="chronicle-modal-header">
           <span class="chronicle-modal-category"></span>
-          <button class="chronicle-modal-close">${ICONS.close}</button>
+          <button class="chronicle-modal-close" autofocus aria-label="${t('menu.close')}">${ICONS.close}</button>
         </div>
-        <h2 class="chronicle-modal-title"></h2>
-        <div class="chronicle-modal-image-container hidden">
+        <h2 id="chronicle-story-title" class="chronicle-modal-title"></h2>
+        <figure class="chronicle-modal-image-container">
           <img class="chronicle-modal-image" alt="" />
-        </div>
+          <figcaption class="chronicle-illustration-credit">${t('chronicle.illustration')}</figcaption>
+        </figure>
         <div class="chronicle-modal-body">
           <figure class="chronicle-field-report" hidden>
             <figcaption>${t('chronicle.slip')}</figcaption>
@@ -163,6 +166,10 @@ export class Chronicle {
     this.modalEl.addEventListener('click', (e) => {
       if (e.target === this.modalEl) this.hideModal();
     });
+    this.modalEl.addEventListener('cancel', (e) => {
+      e.preventDefault();
+      this.hideModal();
+    });
 
     const closeBtn = this.modalEl.querySelector('.chronicle-modal-close');
     closeBtn?.addEventListener('click', () => this.hideModal());
@@ -171,23 +178,17 @@ export class Chronicle {
     const backBtn = this.modalEl.querySelector('.chronicle-modal-back');
     backBtn?.addEventListener('click', () => {
       this.hideModal();
-      setTimeout(() => this.showArchive(), 200);
+      this.showArchive(this.modalEl.dataset.factId);
     });
 
     window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && this.modalEl.classList.contains('open')) {
-        this.hideModal();
-      }
-      if (e.key === 'Escape' && this.archiveEl.classList.contains('open')) {
-        this.hideArchive();
-      }
       // J for Journal/Chronicle archive
       const active = document.activeElement;
       if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) return;
       if (
         keyMatches(e.key, 'j') &&
-        !this.modalEl.classList.contains('open') &&
-        !this.archiveEl.classList.contains('open')
+        !this.modalEl.open &&
+        !this.archiveEl.open
       ) {
         this.showArchive();
         soundManager.play('click');
@@ -196,18 +197,25 @@ export class Chronicle {
   }
 
   private createArchiveElement(): void {
-    this.archiveEl = document.createElement('div');
+    this.archiveEl = document.createElement('dialog');
     this.archiveEl.id = 'chronicle-archive';
+    this.archiveEl.setAttribute('aria-labelledby', 'chronicle-archive-title');
     this.archiveEl.innerHTML = `
       <div class="chronicle-archive-content">
         <div class="chronicle-archive-header">
-          <h2><span class="chronicle-archive-icon">${ICONS.chronicle}</span> ${t('chronicle.archiveTitle')}</h2>
-          <button class="chronicle-archive-close">${ICONS.close}</button>
+          <div class="chronicle-archive-heading">
+            <h2 id="chronicle-archive-title">${t('chronicle.archiveTitle')}</h2>
+            <div class="chronicle-archive-stats"></div>
+          </div>
+          <button class="chronicle-archive-close" autofocus aria-label="${t('menu.close')}">${ICONS.close}</button>
         </div>
-        <div class="chronicle-archive-stats"></div>
-        <div class="chronicle-archive-list"></div>
-        <div class="chronicle-archive-footer">
-          <button class="chronicle-reset-btn">${t('chronicle.reset')}</button>
+        <div class="chronicle-archive-list">
+          <div class="chronicle-archive-entries"></div>
+          <div class="chronicle-archive-footer">
+            <details><summary>${t('chronicle.options')}</summary>
+              <button class="chronicle-reset-btn">${t('chronicle.reset')}</button>
+            </details>
+          </div>
         </div>
       </div>
     `;
@@ -217,6 +225,18 @@ export class Chronicle {
     this.archiveEl.addEventListener('click', (e) => {
       if (e.target === this.archiveEl) this.hideArchive();
     });
+    this.archiveEl.addEventListener('cancel', (e) => {
+      e.preventDefault();
+      this.hideArchive();
+    });
+
+    this.archiveEl.querySelector('.chronicle-archive-entries')!.addEventListener('click', (e) => {
+      const card = e.target instanceof Element && e.target.closest<HTMLButtonElement>('[data-fact-id]');
+      const fact = card && getFactById(card.dataset.factId!);
+      if (!fact) return;
+      this.hideArchive();
+      this.showModal(fact);
+    });
 
     const closeBtn = this.archiveEl.querySelector('.chronicle-archive-close');
     closeBtn?.addEventListener('click', () => this.hideArchive());
@@ -224,8 +244,11 @@ export class Chronicle {
     // Reset button handler
     const resetBtn = this.archiveEl.querySelector('.chronicle-reset-btn');
     resetBtn?.addEventListener('click', () => {
+      if (!window.confirm(t('chronicle.confirmReset'))) return;
       this.reset();
       this.updateArchiveContent();
+      this.archiveEl.querySelector<HTMLDetailsElement>('details')!.open = false;
+      this.archiveEl.querySelector<HTMLElement>('summary')!.focus();
       soundManager.play('click');
     });
   }
@@ -391,8 +414,11 @@ export class Chronicle {
     this.notificationEl.classList.remove('visible');
     this.currentNotification = null;
 
-    // Show next in queue after a short delay
-    setTimeout(() => this.showNextNotification(), 500);
+    if (this.notificationQueue.length) {
+      setTimeout(() => {
+        if (!this.currentNotification) this.showNextNotification();
+      }, 500);
+    }
   }
 
   private showModal(fact: HistoricalFact): void {
@@ -400,7 +426,7 @@ export class Chronicle {
     const titleEl = this.modalEl.querySelector('.chronicle-modal-title');
     const bodyEl = this.modalEl.querySelector('.chronicle-modal-text');
     const source = this.modalEl.querySelector<HTMLAnchorElement>('.chronicle-modal-wiki')!;
-    const footerEl = this.modalEl.querySelector('.chronicle-modal-footer');
+
     const imageContainer = this.modalEl.querySelector('.chronicle-modal-image-container');
     const imageEl = this.modalEl.querySelector('.chronicle-modal-image') as HTMLImageElement;
 
@@ -413,17 +439,10 @@ export class Chronicle {
     const report = this.modalEl.querySelector<HTMLElement>('.chronicle-field-report')!;
     report.hidden = fact.id !== 'closed-city';
     if (imageContainer && imageEl) {
-      imageContainer.classList.add('hidden');
-      if (report.hidden) {
-        imageEl.onload = () => imageContainer.classList.remove('hidden');
-        imageEl.onerror = () => imageContainer.classList.add('hidden');
-        imageEl.src = `/pictures/chronicle/${fact.id}.png`;
-        imageEl.alt = td(`fact.${fact.id}.title`);
-      } else {
-        imageEl.onload = null;
-        imageEl.onerror = null;
-        imageEl.removeAttribute('src');
-      }
+      imageContainer.classList.remove('hidden');
+      imageEl.onerror = () => imageContainer.classList.add('hidden');
+      imageEl.alt = td(`fact.${fact.id}.imageAlt`);
+      imageEl.src = `/pictures/chronicle/${fact.id}.webp`;
     }
 
     if (bodyEl) {
@@ -435,122 +454,87 @@ export class Chronicle {
         .join('');
     }
 
-    if (footerEl) {
-      const locale = i18n.getLocale();
-      const url = fact.articleUrl ?? fact.wikiUrls?.[locale] ?? fact.wikiUrls?.en;
-      if (url) {
-        source.href = url;
-        const label = fact.articleUrl ? 'sight.source' : 'chronicle.wikiLink';
-        source.querySelector('span')!.textContent = t(fact.id === 'closed-city' ? 'chronicle.paper' : label);
-        footerEl.classList.remove('hidden');
-      } else {
-        footerEl.classList.add('hidden');
-      }
+    const url = fact.articleUrl ?? fact.wikiUrls?.[i18n.getLocale()] ?? fact.wikiUrls?.en;
+    source.hidden = !url;
+    if (url) {
+      source.href = url;
+      const label = fact.articleUrl ? 'sight.source' : 'chronicle.wikiLink';
+      source.querySelector('span')!.textContent = t(fact.id === 'closed-city' ? 'chronicle.paper' : label);
     }
 
     // Mark as read when modal is opened
     this.markAsRead(fact.id);
 
+    this.modalEl.dataset.factId = fact.id;
     this.modalEl.classList.add('open');
+    this.modalEl.showModal();
+    this.modalEl.querySelector('.chronicle-modal-content')!.scrollTop = 0;
     tickSystem.onModalOpen();
   }
 
   private hideModal(): void {
+    this.modalEl.close();
     this.modalEl.classList.remove('open');
     tickSystem.onModalClose();
   }
 
-  private showArchive(): void {
+  private showArchive(focusFactId?: string): void {
     this.updateArchiveContent();
+    this.archiveEl.querySelector<HTMLDetailsElement>('details')!.open = false;
     this.archiveEl.classList.add('open');
+    this.archiveEl.showModal();
+    if (focusFactId) {
+      this.archiveEl.querySelector<HTMLButtonElement>(`[data-fact-id="${focusFactId}"]`)?.focus();
+    } else {
+      this.archiveEl.querySelector('.chronicle-archive-list')!.scrollTop = 0;
+    }
     tickSystem.onModalOpen();
   }
 
   private hideArchive(): void {
+    this.archiveEl.close();
     this.archiveEl.classList.remove('open');
     tickSystem.onModalClose();
   }
 
   private updateArchiveContent(): void {
-    const statsEl = this.archiveEl.querySelector('.chronicle-archive-stats');
-    const listEl = this.archiveEl.querySelector('.chronicle-archive-list');
-
-    const discovered = this.discoveredFacts.size;
+    // The saved discovery order puts the player's latest clipping on the cover.
+    const stories = Array.from(this.discoveredFacts, getFactById)
+      .filter((fact): fact is HistoricalFact => fact !== undefined)
+      .reverse();
     const total = HISTORICAL_FACTS.length;
+    this.archiveEl.querySelector('.chronicle-archive-stats')!.innerHTML = `
+      <span class="archive-progress-text">${t('chronicle.discovered', { count: stories.length, total })}</span>
+      <div class="archive-progress" aria-hidden="true"><div class="archive-progress-bar" style="width:${100 * stories.length / total}%"></div></div>`;
 
-    if (statsEl) {
-      statsEl.innerHTML = `
-        <div class="archive-progress">
-          <div class="archive-progress-bar" style="width: ${(discovered / total) * 100}%"></div>
-        </div>
-        <div class="archive-progress-text">${t('chronicle.discovered', { count: discovered, total })}</div>
-      `;
-    }
-
-    if (listEl) {
-      const categories: Record<string, HistoricalFact[]> = {
-        city: [],
-        reactor: [],
-        water: [],
-        life: [],
-        geography: []
-      };
-
-      // Group facts by category
-      for (const fact of HISTORICAL_FACTS) {
-        categories[fact.category].push(fact);
-      }
-
-      listEl.innerHTML = Object.entries(categories)
-        .filter(([, facts]) => facts.length > 0)
-        .map(
-          ([category, facts]) => `
-          <div class="archive-category">
-            <h3>${td(`chronicle.category.${category}`)}</h3>
-            <div class="archive-facts">
-              ${facts
-                .map((fact) => {
-                  const isDiscovered = this.discoveredFacts.has(fact.id);
-                  const isRead = this.readFacts.has(fact.id);
-                  const isUnread = isDiscovered && !isRead;
-                  const factTitle = td(`fact.${fact.id}.title`);
-                  const factShort = td(`fact.${fact.id}.short`);
-                  const classes = [
-                    'archive-fact',
-                    isDiscovered ? 'discovered' : 'locked',
-                    isUnread ? 'unread' : ''
-                  ]
-                    .filter(Boolean)
-                    .join(' ');
-                  return `
-                  <div class="${classes}"
-                       ${isDiscovered ? `data-fact-id="${fact.id}"` : ''}>
-                    <span class="archive-fact-title">${isDiscovered ? factTitle : '???'}${isUnread ? '<span class="unread-dot"></span>' : ''}</span>
-                    ${isDiscovered ? `<span class="archive-fact-preview">${factShort.slice(0, 60)}...</span>` : `<span class="archive-fact-locked">${t('chronicle.locked')}</span>`}
-                  </div>
-                `;
-                })
-                .join('')}
-            </div>
-          </div>
-        `
-        )
-        .join('');
-
-      // Add click handlers for discovered facts
-      listEl.querySelectorAll('.archive-fact.discovered').forEach((el) => {
-        el.addEventListener('click', () => {
-          const factId = el.getAttribute('data-fact-id');
-          if (factId) {
-            const fact = HISTORICAL_FACTS.find((f) => f.id === factId);
-            if (fact) {
-              this.hideArchive();
-              setTimeout(() => this.showModal(fact), 200);
-            }
-          }
-        });
+    const sections: string[] = [];
+    for (const category of new Set(stories.map((fact) => fact.category))) {
+      const entries = stories.filter((fact) => fact.category === category);
+      const cards = entries.map(({ id }) => {
+        const unread = !this.readFacts.has(id);
+        const thumbnail = `/pictures/chronicle/thumbnail/${id}.webp`;
+        const cover = id === stories[0].id
+          ? `srcset="${thumbnail} 320w, /pictures/chronicle/${id}.webp 960w" sizes="(max-width: 660px) calc(100vw - 60px), 370px"`
+          : '';
+        return `<button type="button" class="archive-fact discovered${unread ? ' unread' : ''}" data-fact-id="${id}">
+          <img class="archive-fact-image" src="${thumbnail}" ${cover} alt="" loading="lazy" decoding="async">
+          <span class="archive-fact-copy">
+            ${unread ? `<span class="archive-fact-new">${t('chronicle.new')}</span>` : ''}
+            <span class="archive-fact-title">${td(`fact.${id}.title`)}</span>
+            <span class="archive-fact-preview">${td(`fact.${id}.short`)}</span>
+          </span>
+        </button>`;
       });
+      sections.push(`<section class="archive-category">
+        <h3>${td(`chronicle.category.${category}`)}</h3>
+        <div class="archive-facts">${cards.join('')}</div>
+      </section>`);
     }
+
+    const clue = getChronicleClue(this.discoveredFacts);
+    this.archiveEl.querySelector('.chronicle-archive-entries')!.innerHTML =
+      (clue ? `<p class="archive-clue"><span aria-hidden="true">${ICONS.pin}</span>${clue}</p>` : '') +
+      sections.join('');
   }
 
   // Public method to manually trigger a fact (for testing)
@@ -563,6 +547,8 @@ export class Chronicle {
 
   // Reset discovered facts (for testing)
   public reset(): void {
+    this.notificationQueue = [];
+    this.hideNotification();
     this.discoveredFacts.clear();
     this.saveDiscoveredFacts();
     this.readFacts.clear();
