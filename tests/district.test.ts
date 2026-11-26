@@ -1,10 +1,12 @@
-import { expect, spyOn, test } from 'bun:test';
+import { expect, mock, spyOn, test } from 'bun:test';
 import { NullEngine, Scene } from '@babylonjs/core';
 import { getTileTypeAt } from '../src/grid/TileTypes';
 import { PipeManager } from '../src/managers/PipeManager';
 import {
   CIVIC_PROJECTS,
   DISTRICT_ORDERS,
+  FIELD_HOUSING,
+  FIELD_RETURN_DELAY,
   STARTER_DISTRICT,
   type CivicProjectKind
 } from '../src/simulation/DistrictPlan';
@@ -12,7 +14,7 @@ import { gameState } from '../src/simulation/GameState';
 import { eventSystem } from '../src/simulation/EventSystem';
 import type { BuildingType } from '../src/types';
 
-test('the suggested district can earn its charter, with real utility connections and one-time grants', () => {
+test('the suggested district can earn its charter and host the Melovoye field season with connected housing', () => {
   using random = spyOn(Math, 'random').mockReturnValue(0.9999);
   const storage = new Map<string, string>();
   Object.defineProperty(globalThis, 'localStorage', {
@@ -35,6 +37,7 @@ test('the suggested district can earn its charter, with real utility connections
 
   for (const { type, x, z } of STARTER_DISTRICT) place(type, x, z);
   expect(gameState.getCompletedOrders()).toBe(0);
+  expect(gameState.startFieldSeason()).toBe(false);
   expect(gameState.commissionCivicProject('public_garden')).toBe(false);
   expect(gameState.getOrderProgress(DISTRICT_ORDERS[0])).toBe(1);
   const offGridHouse = place('microrayon', 25, 25);
@@ -113,6 +116,69 @@ test('the suggested district can earn its charter, with real utility connections
     gameState.load();
     expect(gameState.isDistrictEstablished()).toBe(true);
 
+    if (kind === 'public_garden') {
+      const established = JSON.parse(storage.get('aktau-save')!);
+      delete established.fieldSeason; // District saved before the field chapter existed.
+      storage.set('aktau-save', JSON.stringify({ ...established, day: 151 }));
+      expect(gameState.load()).toBe(true);
+      expect(gameState.startFieldSeason()).toBe(false);
+      storage.set('aktau-save', JSON.stringify(established));
+      expect(gameState.load()).toBe(true);
+      expect(gameState.getFieldSeason()).toBeNull();
+      expect(gameState.startFieldSeason()).toBe(true);
+      expect(gameState.startFieldSeason()).toBe(false);
+      expect(gameState.chooseFieldCrew(false)).toBe(false);
+      const [x, z] = FIELD_HOUSING.sites![0];
+      expect(pipes.wouldBeOperational('microrayon', x, z)).toBe(true);
+      place('microrayon', x, z);
+      expect(gameState.getOrderProgress(FIELD_HOUSING)).toBe(6);
+
+      gameState.save();
+      const housing = storage.get('aktau-save')!;
+      for (const send of [true, false]) {
+        storage.set('aktau-save', housing);
+        expect(gameState.load()).toBe(true);
+        expect(gameState.getFieldSeason()).toEqual({ phase: 'housing' });
+        const day = gameState.getDay();
+        if (!send) {
+          expect(gameState.dispatchSupply('freshWater')).toBe(true);
+          expect(gameState.chooseFieldCrew(true)).toBe(false);
+        }
+        const nextDispatch = gameState.getNextDispatchDay();
+        const power = gameState.getResources().electricity;
+        const completionDay = day + (send ? 10 : 20);
+        expect(gameState.chooseFieldCrew(send)).toBe(true);
+        expect(gameState.chooseFieldCrew(!send)).toBe(false);
+        expect(gameState.getNextDispatchDay()).toBe(send ? day + 10 : nextDispatch);
+        expect(gameState.getResources().electricity).toBe(power);
+        if (send) expect(gameState.dispatchSupply('freshWater')).toBe(false);
+
+        gameState.save();
+        gameState.load();
+        expect(gameState.getFieldSeason()).toEqual({ phase: 'trial', sentCrew: send, completionDay });
+        for (let d = day; d < completionDay - 1; d++) gameState.tick();
+        expect(gameState.getFieldSeason()?.phase).toBe('trial');
+        gameState.tick();
+        expect(gameState.getFieldSeason()?.phase).toBe('tower');
+        gameState.save();
+        const tower = JSON.parse(storage.get('aktau-save')!);
+        storage.set('aktau-save', JSON.stringify({ ...tower, day: completionDay + FIELD_RETURN_DELAY - 1 }));
+        expect(gameState.load()).toBe(true);
+        expect(gameState.getFieldSeason()?.phase).toBe('tower');
+        const fieldChanged = mock(() => {});
+        gameState.on('fieldSeasonChange', fieldChanged);
+        gameState.tick();
+        gameState.tick();
+        expect(fieldChanged).toHaveBeenCalledTimes(1);
+        gameState.off('fieldSeasonChange', fieldChanged);
+        expect(gameState.getFieldSeason()?.phase).toBe('returned');
+        gameState.save();
+        expect(gameState.load()).toBe(true);
+        expect(gameState.getFieldSeason()?.phase).toBe('returned');
+        expect(gameState.startFieldSeason()).toBe(false);
+      }
+    }
+
     // Compare one day of operation on identical uncapped reserves.
     const starting = { ...city.resources, freshWater: 90, heat: 60 };
     const use = (withProject: boolean) => {
@@ -148,6 +214,7 @@ test('the suggested district can earn its charter, with real utility connections
     { ...city, civicProject: { kind: 'other', gridX: 33, gridZ: 12 } },
     { ...city, civicProject: { kind: 'public_garden', gridX: 38, gridZ: 12 } },
     { ...city, districtEstablished: true, civicProject: null },
+    { ...city, fieldSeason: { phase: 'housing' } },
     { ...city, day: 1, buildings: malformedBuildings },
     { ...city, day: 1, weather: { daysSinceLastEvent: 2, activeEvents: [{ id: 'unknown' }] } }
   ]) {
@@ -166,6 +233,7 @@ test('the suggested district can earn its charter, with real utility connections
   expect(gameState.load()).toBe(true);
   expect(eventSystem.getActiveEvents()).toHaveLength(0);
   expect(gameState.getNextDispatchDay()).toBe(0);
+  expect(gameState.getFieldSeason()).toBeNull();
   expect(gameState.getResources()).toEqual(city.resources);
 
   for (const building of [...gameState.getBuildings()]) {

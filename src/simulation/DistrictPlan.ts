@@ -85,3 +85,11 @@ export const WATERFRONT_EXPANSION: Record<'homes' | 'residents', DistrictOrder> 
   homes: { id: 'fifth', measure: 'microrayon', target: 5, sites: [[37, 10]] },
   residents: { id: 'settle', measure: 'population', target: 250 }
 };
+
+export const FIELD_HOUSING: DistrictOrder = {
+  id: 'sixth', measure: 'microrayon', target: 6, sites: [[38, 17]]
+};
+export const FIELD_RETURN_DELAY = 121;
+export type FieldSeason =
+  | { phase: 'housing' }
+  | { phase: 'trial' | 'tower' | 'returned'; sentCrew: boolean; completionDay: number };

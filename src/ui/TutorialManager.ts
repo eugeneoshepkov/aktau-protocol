@@ -19,6 +19,8 @@ import { gameState, RESERVE_SUPPLIES, RESERVE_POWER_COST } from '../simulation/G
 import { GRID_SIZE, RESOURCE_CAPS, type BuildingType } from '../types';
 import type { BuildPanel } from './BuildPanel';
 import { feedbackManager } from './FeedbackManager';
+import { FieldSeasonPanel } from './FieldSeasonPanel';
+import type { SightId } from './CitySights';
 import { t, td } from '../i18n';
 import './district-plan.css';
 
@@ -31,12 +33,14 @@ export class TutorialManager {
   private readonly pipes: PipeManager;
   private readonly positionMarker: () => void;
   private siteDirty = true;
+  private readonly fieldPanel: FieldSeasonPanel;
 
   constructor(
     buildPanel: BuildPanel,
     scene: Scene,
     pipes: PipeManager,
-    buildings: BuildingManager
+    buildings: BuildingManager,
+    openSight: (id: SightId) => void
   ) {
     this.buildPanel = buildPanel;
     this.pipes = pipes;
@@ -52,6 +56,7 @@ export class TutorialManager {
         <p class="plan-description"></p>
         <div class="plan-track" aria-hidden="true"><span></span></div>
         <div class="plan-stats"><span class="plan-count"></span><span class="plan-grant"></span></div>
+        <div class="field-actions" hidden></div>
         <div class="plan-projects" hidden></div>
         <div class="plan-landmark" hidden></div>
         <div class="plan-reserves" hidden>
@@ -65,6 +70,15 @@ export class TutorialManager {
       this.panelButton.setAttribute('aria-expanded', String(!expanded));
       this.panel.querySelector<HTMLElement>('#plan-details')!.hidden = expanded;
     });
+
+    this.fieldPanel = new FieldSeasonPanel(this.panel.querySelector('.field-actions')!, () => {
+      const site = this.site;
+      if (!site) return;
+      if (window.matchMedia('(max-width: 700px)').matches && this.panelButton.getAttribute('aria-expanded') === 'true') {
+        this.panelButton.click();
+      }
+      getCameraInstance()?.focusOn(getTileCenter(site.x, site.z));
+    }, openSight);
 
     const choices = this.panel.querySelector<HTMLElement>('.plan-projects')!;
     for (const kind of Object.keys(CIVIC_PROJECTS) as CivicProjectKind[]) {
@@ -162,6 +176,10 @@ export class TutorialManager {
     gameState.on('civicProjectChange', () => {
       this.siteDirty = true;
     });
+    gameState.on('fieldSeasonChange', () => {
+      this.siteDirty = true;
+      this.update();
+    });
     gameState.on('districtEstablished', () => {
       feedbackManager.showToast(t('plan.established.title'), 'success');
       soundManager.play('success');
@@ -193,19 +211,20 @@ export class TutorialManager {
       expanding && gameState.getOperationalCount('microrayon') < WATERFRONT_EXPANSION.homes.target
         ? WATERFRONT_EXPANSION.homes
         : WATERFRONT_EXPANSION.residents;
-    const order = DISTRICT_ORDERS[completed] ?? (expanding ? expansion : null);
+    const field = this.fieldPanel.update(established);
+    const order = DISTRICT_ORDERS[completed] ?? (expanding ? expansion : field?.order);
     const count = order ? Math.min(order.target, gameState.getOrderProgress(order)) : 0;
     this.panel.querySelector('.plan-step')!.textContent = chartered
-      ? t('civic.stage')
+      ? t(established ? 'field.stage' : 'civic.stage')
       : String(completed + 1).padStart(2, '0') +
         ' / ' +
         String(DISTRICT_ORDERS.length).padStart(2, '0');
 
     const key = order?.id ?? (established ? 'established' : 'complete');
     const title = this.panel.querySelector('.plan-title')!;
-    const text = td(`plan.${key}.title`);
+    const text = field?.title ?? td(`plan.${key}.title`);
     if (title.textContent !== text) title.textContent = text;
-    this.panel.querySelector('.plan-description')!.textContent = td(`plan.${key}.desc`);
+    this.panel.querySelector('.plan-description')!.textContent = field?.description ?? td(`plan.${key}.desc`);
     this.panel.querySelector<HTMLElement>('.plan-track')!.hidden = !order;
     this.panel.querySelector<HTMLElement>('.plan-stats')!.hidden = !order;
     if (order) {
@@ -229,7 +248,7 @@ export class TutorialManager {
       }
     }
     const landmark = this.panel.querySelector<HTMLElement>('.plan-landmark')!;
-    landmark.hidden = !project;
+    landmark.hidden = !project || !!gameState.getFieldSeason();
     if (project)
       landmark.textContent =
         td('civic.' + project.kind + '.name') +

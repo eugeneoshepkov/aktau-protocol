@@ -172,12 +172,12 @@ export async function initGame(resume: boolean): Promise<void> {
     } else {
       mesh = scene.getMeshByName(id);
     }
-    if (!mesh) return false;
+    return mesh?.isEnabled() && mesh.isVisible ? mesh : null;
+  }, (mesh) => {
     gridManager.hideHighlight();
     buildingManager.hideGhostPreview();
     pipeManager.hideConnectionPreview();
     camera.visitSight(mesh);
-    return true;
   }, () => camera.leaveSight());
 
   const inputManager = new InputManager(
@@ -263,7 +263,7 @@ export async function initGame(resume: boolean): Promise<void> {
   const hud = new HUD();
   const buildPanel = new BuildPanel(buildingManager);
   new Chronicle();
-  new TutorialManager(buildPanel, scene, pipeManager, buildingManager);
+  new TutorialManager(buildPanel, scene, pipeManager, buildingManager, (id) => sights.open(id));
 
   feedbackManager.initialize();
   if (resume && !restored) feedbackManager.showToast(t('menu.saveUnavailable'), 'warning');

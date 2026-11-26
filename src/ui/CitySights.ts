@@ -1,3 +1,4 @@
+import type { AbstractMesh } from '@babylonjs/core';
 import { t } from '../i18n';
 import { tickSystem } from '../simulation/TickSystem';
 import { normalizeKey } from '../utils/keyboard';
@@ -9,7 +10,9 @@ const sights = [
   ['monument', 'https://adilet.zan.kz/rus/docs/V20M0004310'],
   ['factory', 'https://www.lada.kz/aktau_news/society/51049-predpriyatiya-shevchenko.html'],
   ['reactor', 'https://www-pub.iaea.org/MTCD/Publications/PDF/TE-1769_web.pdf#page=26'],
-  ['distiller', 'https://www-pub.iaea.org/MTCD/Publications/PDF/te_1642_web.pdf#page=107']
+  ['distiller', 'https://www-pub.iaea.org/MTCD/Publications/PDF/te_1642_web.pdf#page=107'],
+  ['fieldTower', 'https://www.ijsred.com/volume3/issue3/IJSRED-V3I3P169.pdf#page=5'],
+  ['fieldTrace', 'https://www.ijsred.com/volume3/issue3/IJSRED-V3I3P169.pdf#page=4']
 ] as const;
 
 export type SightId = (typeof sights)[number][0];
@@ -18,11 +21,14 @@ export class CitySights {
   private readonly launcher = document.createElement('button');
   private readonly card = document.createElement('section');
   private readonly closeButton: HTMLButtonElement;
-  private readonly focus: (id: SightId) => boolean;
+  private readonly locate: (id: SightId) => AbstractMesh | null;
+  private readonly focus: (mesh: AbstractMesh) => void;
+  private stops: (typeof sights)[number][] = [];
   private readonly leave: () => void;
   private index = 0;
 
-  constructor(focus: (id: SightId) => boolean, leave: () => void) {
+  constructor(locate: (id: SightId) => AbstractMesh | null, focus: (mesh: AbstractMesh) => void, leave: () => void) {
+    this.locate = locate;
     this.focus = focus;
     this.leave = leave;
     const controls = document.createElement('div');
@@ -62,10 +68,10 @@ export class CitySights {
     this.closeButton.addEventListener('click', () => this.close());
     this.card
       .querySelector('.sight-prev')!
-      .addEventListener('click', () => this.show(this.index - 1, -1));
+      .addEventListener('click', () => this.show(this.index - 1));
     this.card
       .querySelector('.sight-next')!
-      .addEventListener('click', () => this.show(this.index + 1, 1));
+      .addEventListener('click', () => this.show(this.index + 1));
     document.body.append(controls, this.card);
     window.addEventListener(
       'keydown',
@@ -89,6 +95,9 @@ export class CitySights {
   }
 
   public open(id?: SightId): void {
+    this.stops = sights.filter(([key]) => this.locate(key));
+    const index = id ? this.stops.findIndex(([key]) => key === id) : 0;
+    if (index < 0 || !this.stops.length) return;
     if (!this.isOpen()) {
       const network = document.querySelector<HTMLDetailsElement>('.network-control');
       if (network) network.open = false;
@@ -98,22 +107,19 @@ export class CitySights {
       document.body.classList.add('sightseeing');
       this.closeButton.focus({ preventScroll: true });
     }
-    this.show(id ? sights.findIndex(([key]) => key === id) : 0, 1);
+    this.show(index);
   }
 
-  private show(start: number, direction: number): void {
-    for (let offset = 0; offset < sights.length; offset++) {
-      const index = (start + direction * offset + sights.length) % sights.length;
-      const [id, source] = sights[index];
-      if (!this.focus(id)) continue;
-      this.index = index;
-      this.card.querySelector('#sight-name')!.textContent = t(`sight.${id}.name`);
-      this.card.querySelector('.sight-description')!.textContent = t(`sight.${id}.description`);
-      this.card.querySelector<HTMLAnchorElement>('.sight-source')!.href = source;
-      this.card.querySelector('.sight-count')!.textContent = `${index + 1} / ${sights.length}`;
-      return;
-    }
-    this.close();
+  private show(index: number): void {
+    this.index = (index + this.stops.length) % this.stops.length;
+    const [id, source] = this.stops[this.index];
+    const mesh = this.locate(id);
+    if (!mesh) return this.close();
+    this.focus(mesh);
+    this.card.querySelector('#sight-name')!.textContent = t(`sight.${id}.name`);
+    this.card.querySelector('.sight-description')!.textContent = t(`sight.${id}.description`);
+    this.card.querySelector<HTMLAnchorElement>('.sight-source')!.href = source;
+    this.card.querySelector('.sight-count')!.textContent = `${this.index + 1} / ${this.stops.length}`;
   }
 
   public close(): void {

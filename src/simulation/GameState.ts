@@ -27,6 +27,9 @@ import {
   CIVIC_MATERIAL_COST,
   CIVIC_SAVINGS,
   WATERFRONT_EXPANSION,
+  FIELD_HOUSING,
+  FIELD_RETURN_DELAY,
+  type FieldSeason,
   type DistrictOrder,
   type CivicProject,
   type CivicProjectKind
@@ -63,7 +66,8 @@ export type GameEventType =
   | 'seasonChange'
   | 'orderComplete'
   | 'civicProjectChange'
-  | 'districtEstablished';
+  | 'districtEstablished'
+  | 'fieldSeasonChange';
 
 export type GameEventCallback = (data: unknown) => void;
 
@@ -100,6 +104,7 @@ export interface EventModifiers {
 }
 
 export const RESERVE_POWER_COST = 60;
+export const RESERVE_CREW_DAYS = 10;
 export const RESERVE_SUPPLIES = { freshWater: 50, heat: 75 };
 export type ReserveSupply = keyof typeof RESERVE_SUPPLIES;
 
@@ -119,6 +124,7 @@ interface CitySave {
   weather?: unknown;
   civicProject?: CivicProject | null;
   districtEstablished?: boolean;
+  fieldSeason?: FieldSeason | null;
 }
 
 function isCitySave(value: unknown): value is CitySave {
@@ -184,7 +190,25 @@ function isCitySave(value: unknown): value is CitySave {
   if (value.districtEstablished !== undefined && typeof value.districtEstablished !== 'boolean')
     return false;
   if (value.districtEstablished && !project) return false;
+  const field = value.fieldSeason;
+  if (field != null) {
+    if (!value.districtEstablished || !record(field)) return false;
+    if (field.phase !== 'housing') {
+      const { completionDay, sentCrew } = field;
+      if (!whole(completionDay) || completionDay < 1 || typeof sentCrew !== 'boolean') return false;
+      if (field.phase !== fieldPhaseOn(day, completionDay)) return false;
+      if (
+        field.phase === 'trial' && sentCrew &&
+        (!whole(nextDispatchDay) || nextDispatchDay < completionDay)
+      ) return false;
+    }
+  }
   return true;
+}
+
+function fieldPhaseOn(day: number, completionDay: number): 'trial' | 'tower' | 'returned' {
+  if (day < completionDay) return 'trial';
+  return day < completionDay + FIELD_RETURN_DELAY ? 'tower' : 'returned';
 }
 
 export class GameState {
@@ -198,6 +222,7 @@ export class GameState {
   private nextDispatchDay = 0;
   private civicProject: CivicProject | null = null;
   private districtEstablished = false;
+  private fieldSeason: FieldSeason | null = null;
   private weatherPersistence?: WeatherPersistence;
   private gameOver: boolean = false;
   private gameOverReason?: GameOverReason;
@@ -314,7 +339,7 @@ export class GameState {
     if (amount <= 0 || this.resources.electricity < RESERVE_POWER_COST) return false;
     this.resources.electricity -= RESERVE_POWER_COST;
     this.resources[resource] += amount;
-    this.nextDispatchDay = this.day + 10;
+    this.nextDispatchDay = this.day + RESERVE_CREW_DAYS;
     this.emit('resourceChange', this.resources);
     return true;
   }
@@ -325,6 +350,41 @@ export class GameState {
 
   public isDistrictEstablished(): boolean {
     return this.districtEstablished;
+  }
+
+  public getFieldSeason(): Readonly<FieldSeason> | null {
+    return this.fieldSeason;
+  }
+
+  public startFieldSeason(): boolean {
+    if (this.gameOver || !this.districtEstablished || this.fieldSeason || this.getSeason() !== 'spring') {
+      return false;
+    }
+    this.fieldSeason = { phase: 'housing' };
+    this.emit('fieldSeasonChange', this.fieldSeason);
+    return true;
+  }
+
+  public chooseFieldCrew(send: boolean): boolean {
+    if (this.gameOver || this.fieldSeason?.phase !== 'housing') return false;
+    if (this.getOrderProgress(FIELD_HOUSING) < FIELD_HOUSING.target) return false;
+    if (send && this.day < this.nextDispatchDay) return false;
+
+    const completionDay = this.day + (send ? RESERVE_CREW_DAYS : 2 * RESERVE_CREW_DAYS);
+    if (send) this.nextDispatchDay = completionDay;
+    this.fieldSeason = { phase: 'trial', sentCrew: send, completionDay };
+    this.emit('fieldSeasonChange', this.fieldSeason);
+    return true;
+  }
+
+  private advanceFieldSeason(): void {
+    const field = this.fieldSeason;
+    if (!field || field.phase === 'housing' || field.phase === 'returned') return;
+    const phase = fieldPhaseOn(this.day, field.completionDay);
+    if (phase !== field.phase) {
+      this.fieldSeason = { ...field, phase };
+      this.emit('fieldSeasonChange', this.fieldSeason);
+    }
   }
 
   public commissionCivicProject(kind: CivicProjectKind): boolean {
@@ -669,6 +729,7 @@ export class GameState {
       this.day++;
       this.advanceOrders();
       this.checkDistrictGoal();
+      this.advanceFieldSeason();
       this.calculateTrend();
 
       const newSeason = this.getSeason();
@@ -927,6 +988,8 @@ export class GameState {
     this.nextDispatchDay = 0;
     this.civicProject = null;
     this.districtEstablished = false;
+    this.fieldSeason = null;
+    this.emit('fieldSeasonChange', null);
     this.emit('civicProjectChange', null);
     this.weatherPersistence?.restore(undefined);
     this.gameOver = false;
@@ -952,6 +1015,7 @@ export class GameState {
         nextDispatchDay: this.nextDispatchDay,
         civicProject: this.civicProject,
         districtEstablished: this.districtEstablished,
+        fieldSeason: this.fieldSeason,
         weather: this.weatherPersistence?.save(),
         buildingIdCounter: this.buildingIdCounter
       };
@@ -981,6 +1045,7 @@ export class GameState {
       this.nextDispatchDay = data.nextDispatchDay ?? 0;
       this.civicProject = data.civicProject ?? null;
       this.districtEstablished = data.districtEstablished ?? false;
+      this.fieldSeason = data.fieldSeason ?? null;
       this.day = data.day;
       this.buildingIdCounter = data.buildingIdCounter ?? 0;
       for (const { id } of data.buildings) {
@@ -1012,6 +1077,7 @@ export class GameState {
       // Legacy cities keep their saved balances while receiving credit for existing infrastructure.
       this.advanceOrders(data.completedOrders !== undefined);
       this.emit('civicProjectChange', this.civicProject);
+      this.emit('fieldSeasonChange', this.fieldSeason);
       this.checkDistrictGoal();
       this.emit('resourceChange', this.resources);
       this.emit('seasonChange', {

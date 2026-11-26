@@ -276,3 +276,27 @@
     transition: none;
   }
 }
+
+.field-actions {
+  display: grid;
+  gap: 5px;
+  margin-top: 8px;
+}
+.field-actions button {
+  padding: 7px 9px;
+  border: 1px solid #8aa4a2;
+  border-radius: 3px;
+  background: #244347;
+  color: #f4f1df;
+  text-align: left;
+  font: 600 12px var(--sans);
+  cursor: pointer;
+}
+.field-actions button:hover:enabled,
+.field-actions button:focus-visible {
+  border-color: var(--flare);
+}
+.field-actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

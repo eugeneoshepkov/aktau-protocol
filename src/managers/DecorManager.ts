@@ -10,6 +10,7 @@ import {
 import { CityModels, ModelParts } from '../models/CityModels';
 import { melovoyLighthouse, shevchenkoMonument } from '../models/ShevchenkoLandmarks';
 import { fertiliserWorks } from '../models/ShevchenkoFactory';
+import { melovoyeTower, melovoyeTrace } from '../models/MelovoyeField';
 import type { SightId } from '../ui/CitySights';
 import {
   foliage,
@@ -154,6 +155,7 @@ class DecorManagerClass {
       mesh.metadata = { sight: id };
       mesh.isPickable = true;
       this.waterfrontRoofs.push(mesh);
+      return mesh;
     };
     landmark('lighthouse', melovoyLighthouse(), 51.45, 10.35, -0.38);
     landmark('monument', shevchenkoMonument(), 55.2, 10.25, -1.9);
@@ -253,6 +255,51 @@ class DecorManagerClass {
     roads.freezeWorldMatrix();
 
     const bus = finish(workersBus(), 'shift bus');
+    const fieldBus = bus.createInstance('Melovoye shift bus');
+    fieldBus.isPickable = false;
+    this.meshes.add(fieldBus);
+    const parkInTown = () => {
+      if (gameState.getFieldSeason()?.phase !== 'housing') return;
+      // Keep the visitors by the sixth block, or use the old-town stop if a saved city built across the street.
+      const sites = [...gameState.getBuildings(), gameState.getCivicProject()];
+      const occupied = sites.some(
+        (site) =>
+          site &&
+          Math.abs(site.gridX + 0.5 - 40.6) < 1.65 &&
+          Math.abs(site.gridZ + 0.5 - 18.1) < 1.35
+      );
+      fieldBus.unfreezeWorldMatrix();
+      place(fieldBus, occupied ? 53.14 : 40.6, 0.19, 18.1, Math.PI / 2, 1.24);
+    };
+    const tower = landmark('fieldTower', melovoyeTower(), 54.8, 30.3, -0.21);
+    const trace = landmark('fieldTrace', melovoyeTrace(), 52.25, 26.8, 0.33);
+    const updateField = () => {
+      const phase = gameState.getFieldSeason()?.phase;
+      fieldBus.setEnabled(phase === 'housing' || phase === 'trial');
+      if (phase === 'housing') parkInTown();
+      if (phase === 'trial') {
+        fieldBus.unfreezeWorldMatrix();
+        place(fieldBus, 53.44, 0.15, 30.28, -0.28, 1.24);
+      }
+      tower.setEnabled(phase === 'tower' || phase === 'returned');
+      trace.setEnabled(phase === 'returned');
+      for (const site of [tower, trace]) {
+        site.isPickable = site.isEnabled();
+        site.metadata = site.isPickable ? { sight: site.name } : null;
+      }
+    };
+    updateField();
+    gameState.on('fieldSeasonChange', updateField);
+    gameState.on('buildingPlaced', parkInTown);
+    gameState.on('buildingRemoved', parkInTown);
+    gameState.on('civicProjectChange', parkInTown);
+    tower.onDisposeObservable.addOnce(() => {
+      gameState.off('fieldSeasonChange', updateField);
+      gameState.off('buildingPlaced', parkInTown);
+      gameState.off('buildingRemoved', parkInTown);
+      gameState.off('civicProjectChange', parkInTown);
+    });
+
     // The route is one circuit of the existing streets. The bus disappears
     // behind any construction that extends into its lane.
     let travelled = 2;
@@ -320,7 +367,7 @@ class DecorManagerClass {
     const leaf = Color3.FromHexString(seasonalCoast[season].leaf);
     const winter = season === 'winter';
     for (const roof of this.waterfrontRoofs) {
-      if (!roof.isDisposed()) snowOnRoofs(roof, winter);
+      if (!roof.isDisposed()) snowOnRoofs(roof, winter, roof.name === 'fieldTrace' ? 0 : undefined);
     }
     for (const plant of this.vegetation) {
       const colors = new Float32Array(plant.colors);

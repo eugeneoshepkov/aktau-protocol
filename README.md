@@ -32,7 +32,11 @@ You take charge of a working waterfront with 50 residents. Your first order is t
 
 ![The completed Shevchenko waterfront with five housing blocks and the BN-350 reactor hall](public/pictures/screenshots/waterfront.webp)
 
-Earn the district charter by expanding both supply lines, housing 180 residents, and reaching spring on day 121. Once four blocks are connected, emergency shifts let you spend surplus power on water or heat. After the charter, choose a waterfront reed garden to save household water or district heating works to cut heat demand. Connect a fifth housing block and settle 250 residents to complete the waterfront. You can keep building in free play.
+Earn the district charter by expanding both supply lines, housing 180 residents, and reaching spring on day 121. Once four blocks are connected, emergency shifts let you spend surplus power on water or heat. After the charter, choose a waterfront reed garden to save household water or district heating works to cut heat demand. Connect a fifth housing block and settle 250 residents to complete the waterfront. You can keep building in free play or host the Melovoye research team when spring arrives.
+
+For the optional field season, connect a sixth housing block. Send the waterfront’s reserve crew inland for ten days or keep it home and let the field team finish the trial in twenty. The trial unlocks a visit to the surface tower. Return just over a game year later to see where the ground settled beneath a pipe. The crew decision is fictional. The two sights are based on [Gregory Abramov’s account of Melovoye](https://www.ijsred.com/volume3/issue3/IJSRED-V3I3P169.pdf).
+
+![The Melovoye field tower and a later visit to the pipe above the settled ground](public/pictures/screenshots/melovoye.webp)
 
 Open **City sights** to visit the Melovoy rooftop lighthouse, the Shevchenko monument, the fertiliser works, the BN-350 reactor hall and the MAEK desalination works. Each stop includes a historical reference. The buildings share a compressed waterfront map.
 

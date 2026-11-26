@@ -138,6 +138,30 @@ export const en = {
   'calendar.autumn': 'Autumn',
   'calendar.winter': 'Winter',
   'calendar.next': '{season} begins on day {day}',
+  'sight.fieldTower.name': "Melovoye field tower",
+  'sight.fieldTower.description': "Gregory Abramov called these skid-mounted surface towers “robots.” His 2020 paper shows the field team’s machines in Figure 7.",
+  'sight.fieldTrace.name': "The old field plot",
+  'sight.fieldTrace.description': "In Figure 6 of Abramov’s paper, a pipe crosses a shallow hollow. The ground settled more than a year after the team left that plot.",
+  'field.stage': "Melovoye",
+  'field.invitation': "The spring bus from the research institute is due. Host the Melovoye team for an optional field season, or keep building the waterfront.",
+  'field.nextSpring': "The waterfront is yours to develop. The Melovoye field team can visit when spring returns on day {day}.",
+  'field.host': "Host the field team",
+  'field.housing.title': "Rooms for the field team",
+  'field.housing.desc': "Abramov recalled staying in the second microrayon during field season. Connect a sixth apartment block to water and heat for the visiting team.",
+  'field.shift.title': "The night shift calls",
+  'field.shift.desc': "Melovoye worked three shifts. In this scenario, sending your crew finishes the trial in 10 days and leaves the city without emergency shifts until then. The field team can finish alone in 20 days.",
+  'field.send': "Send the reserve crew · 10 days",
+  'field.keep': "Keep the crew in town · 20-day trial",
+  'field.trial.title': "Field trial under way",
+  'field.trial.sent': "The reserve crew took the bus inland. The trial ends and the crew returns on day {day}.",
+  'field.trial.kept': "The visiting team is covering its own shifts. The trial ends on day {day}.",
+  'field.tower.title': "The field tower is ready",
+  'field.tower.desc': "Visit the tower the team nicknamed a robot. The team plans to revisit the old plot on day {day}.",
+  'field.visitTower': "Visit the field tower",
+  'field.return.title': "A year at the old plot",
+  'field.return.desc': "A stretch of pipe now hangs above a dip in the steppe where the field crew worked. Look back at what changed.",
+  'field.visitTrace': "Revisit the field plot",
+
   'menu.genre': "City-building survival game",
   'menu.premise': "Build a city on the edge of the Caspian Sea. Turn seawater into drinking water, settle the coast, and keep the heat on through winter.",
   'menu.start': "Start game",
@@ -254,6 +278,10 @@ export const en = {
   'chronicle.button': 'Historical Chronicle (J)',
   'chronicle.learnMore': 'Learn more...',
   'chronicle.wikiLink': 'Read more on Wikipedia',
+  'chronicle.paper': 'Read Abramov’s paper',
+  'chronicle.slip': 'Field report · game illustration',
+  'chronicle.material': 'Material',
+  'chronicle.metal': 'Metal',
   'chronicle.backToArchive': 'Back to Chronicle',
   'chronicle.archiveTitle': 'Historical Chronicle',
   'chronicle.discovered': '{count} / {total} facts discovered',
@@ -373,15 +401,15 @@ The steam is captured and condensed into pure fresh water, while concentrated br
 
 At peak operation, Aktau's desalination complex produced 120,000 cubic meters of fresh water per day—enough to fill 48 Olympic swimming pools. This made it the largest nuclear desalination facility ever built, a record it held until the plant's closure in 1999.`,
 
-  // Day 30: Closed City
-  'fact.closed-city.title': 'The Secret City',
+  // Day 30. Keep the discovery ID so existing players retain this entry.
+  'fact.closed-city.title': 'The report said “metal”',
   'fact.closed-city.short':
-    'Until 1991, Aktau was a "closed city" known only as Shevchenko, invisible on Soviet maps.',
-  'fact.closed-city.full': `For nearly three decades, Aktau didn't officially exist. From 1964 to 1991, it was designated a "closed city"—one of dozens of secret Soviet settlements hidden from maps and forbidden to foreigners.
+    'Gregory Abramov recalled that his group called uranium “metal,” even in its confidential annual reports.',
+  'fact.closed-city.full': `Gregory Abramov spent field seasons at Melovoye, about 20 kilometres from Shevchenko. In his letters he recalled a rule his research group followed. When they spoke about uranium, they called it “metal.” They used the same word in their confidential annual reports.
 
-The city was known only by its code name: Shevchenko, after the Ukrainian poet Taras Shevchenko, who was exiled to the Mangyshlak region in the 1850s. Residents needed special permits to live there, and even Soviet citizens from other regions couldn't visit without authorization.
+Abramov also remembered Adolf Oshchepkov, who worked in the design bureau at PGMK, the local mining and metallurgical combine. He credited Oshchepkov with helping to design the group’s equipment, especially the surface control tower the crew called a robot.
 
-The secrecy wasn't just about the nuclear reactor. Aktau was also home to uranium enrichment facilities and a fast breeder research program that had military implications. Only after the Soviet collapse in 1991 was the city opened and renamed Aktau.`,
+In his 2020 paper about Melovoye, Abramov credits the scientists, engineers and specialists from Kazakhstan and Russia who worked on the trials.`,
 
   // Day 50: Peak Population
   'fact.peak-population.title': 'City of 150,000',

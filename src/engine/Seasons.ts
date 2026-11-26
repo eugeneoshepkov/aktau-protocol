@@ -18,7 +18,7 @@ export const seasonalCoast = {
 // Geometry is shared between blocks of the same design, so recolor the prototype
 // only when winter starts/ends. New winter construction uses the same roof treatment.
 const originalPaint = new WeakMap<Mesh, Float32Array>();
-export function snowOnRoofs(mesh: Mesh, snowy: boolean): void {
+export function snowOnRoofs(mesh: Mesh, snowy: boolean, minimumHeight = 0.22): void {
   const dry = originalPaint.get(mesh);
   if (!snowy) {
     if (dry) {
@@ -36,7 +36,7 @@ export function snowOnRoofs(mesh: Mesh, snowy: boolean): void {
   const winter = Float32Array.from(colors);
   const snow = Color3.FromHexString('#e2eced');
   for (let p = 0, c = 0; p < positions.length; p += 3, c += 4) {
-    if (positions[p + 1] < 0.22 || normals[p + 1] < 0.72) continue;
+    if (positions[p + 1] < minimumHeight || normals[p + 1] < 0.72) continue;
     const drift = 0.72 + 0.17 * Math.sin(positions[p] * 5 - positions[p + 2] * 3);
     winter[c] += (snow.r - winter[c]) * drift;
     winter[c + 1] += (snow.g - winter[c + 1]) * drift;

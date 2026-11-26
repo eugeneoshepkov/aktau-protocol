@@ -4,6 +4,7 @@ export interface HistoricalFact {
   title: string;
   shortText: string;
   fullText: string;
+  articleUrl?: string;
   wikiUrls?: {
     en?: string;
     ru?: string;
@@ -87,18 +88,15 @@ At peak operation, Aktau's desalination complex produced 120,000 cubic meters of
   {
     id: 'closed-city',
     category: 'life',
-    title: 'The Secret City',
+    title: 'The report said “metal”',
     shortText:
-      'Until 1991, Aktau was a "closed city" known only as Shevchenko, invisible on Soviet maps.',
-    fullText: `For nearly three decades, Aktau didn't officially exist. From 1964 to 1991, it was designated a "closed city"—one of dozens of secret Soviet settlements hidden from maps and forbidden to foreigners.
+      'Gregory Abramov recalled that his group called uranium “metal,” even in its confidential annual reports.',
+    fullText: `Gregory Abramov spent field seasons at Melovoye, about 20 kilometres from Shevchenko. In his letters he recalled a rule his research group followed. When they spoke about uranium, they called it “metal.” They used the same word in their confidential annual reports.
 
-The city was known only by its code name: Shevchenko, after the Ukrainian poet Taras Shevchenko, who was exiled to the Mangyshlak region in the 1850s. Residents needed special permits to live there, and even Soviet citizens from other regions couldn't visit without authorization.
+Abramov also remembered Adolf Oshchepkov, who worked in the design bureau at PGMK, the local mining and metallurgical combine. He credited Oshchepkov with helping to design the group’s equipment, especially the surface control tower the crew called a robot.
 
-The secrecy wasn't just about the nuclear reactor. Aktau was also home to uranium enrichment facilities and a fast breeder research program that had military implications. Only after the Soviet collapse in 1991 was the city opened and renamed Aktau.`,
-    wikiUrls: {
-      en: 'https://en.wikipedia.org/wiki/Closed_city',
-      ru: 'https://ru.wikipedia.org/wiki/Закрытое_административно-территориальное_образование'
-    },
+In his 2020 paper about Melovoye, Abramov credits the scientists, engineers and specialists from Kazakhstan and Russia who worked on the trials.`,
+    articleUrl: 'https://www.ijsred.com/volume3/issue3/IJSRED-V3I3P169.pdf',
     trigger: { type: 'day', value: 30 }
   },
   {

@@ -60,7 +60,10 @@ export class InputManager {
       this.scene.activeCamera
     );
     if (!this.isPlacing()) {
-      const facade = this.scene.pickWithRay(ray, (mesh) => Boolean(mesh.metadata?.buildingId || mesh.metadata?.sight));
+      const facade = this.scene.pickWithRay(ray, (mesh) =>
+        mesh.isPickable && mesh.isEnabled() && mesh.isVisible &&
+        Boolean(mesh.metadata?.buildingId || mesh.metadata?.sight)
+      );
       const tile = facade?.pickedMesh?.metadata;
       if (tile?.sight) return { sight: tile.sight };
       if (tile) return { x: tile.gridX, z: tile.gridZ };

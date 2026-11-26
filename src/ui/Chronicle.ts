@@ -137,15 +137,21 @@ export class Chronicle {
         </div>
         <h2 class="chronicle-modal-title"></h2>
         <div class="chronicle-modal-image-container hidden">
-          <img class="chronicle-modal-image" src="" alt="" />
+          <img class="chronicle-modal-image" alt="" />
         </div>
-        <div class="chronicle-modal-body"></div>
+        <div class="chronicle-modal-body">
+          <figure class="chronicle-field-report" hidden>
+            <figcaption>${t('chronicle.slip')}</figcaption>
+            <dl><dt>${t('chronicle.material')}</dt><dd>${t('chronicle.metal')}</dd></dl>
+          </figure>
+          <div class="chronicle-modal-text"></div>
+        </div>
         <div class="chronicle-modal-footer">
           <button class="chronicle-modal-back">
             ← ${t('chronicle.backToArchive')}
           </button>
           <a class="chronicle-modal-wiki" href="#" target="_blank" rel="noopener noreferrer">
-            ${ICONS.externalLink} ${t('chronicle.wikiLink')}
+            ${ICONS.externalLink} <span></span>
           </a>
         </div>
       </div>
@@ -384,8 +390,8 @@ export class Chronicle {
   private showModal(fact: HistoricalFact): void {
     const categoryEl = this.modalEl.querySelector('.chronicle-modal-category');
     const titleEl = this.modalEl.querySelector('.chronicle-modal-title');
-    const bodyEl = this.modalEl.querySelector('.chronicle-modal-body');
-    const wikiEl = this.modalEl.querySelector('.chronicle-modal-wiki') as HTMLAnchorElement;
+    const bodyEl = this.modalEl.querySelector('.chronicle-modal-text');
+    const source = this.modalEl.querySelector<HTMLAnchorElement>('.chronicle-modal-wiki')!;
     const footerEl = this.modalEl.querySelector('.chronicle-modal-footer');
     const imageContainer = this.modalEl.querySelector('.chronicle-modal-image-container');
     const imageEl = this.modalEl.querySelector('.chronicle-modal-image') as HTMLImageElement;
@@ -396,17 +402,20 @@ export class Chronicle {
 
     if (titleEl) titleEl.textContent = td(`fact.${fact.id}.title`);
 
-    // Handle image - try to load from /pictures/chronicle/{fact.id}.png
+    const report = this.modalEl.querySelector<HTMLElement>('.chronicle-field-report')!;
+    report.hidden = fact.id !== 'closed-city';
     if (imageContainer && imageEl) {
-      const imagePath = `/pictures/chronicle/${fact.id}.png`;
-      imageEl.onload = () => {
-        imageContainer.classList.remove('hidden');
-      };
-      imageEl.onerror = () => {
-        imageContainer.classList.add('hidden');
-      };
-      imageEl.src = imagePath;
-      imageEl.alt = td(`fact.${fact.id}.title`);
+      imageContainer.classList.add('hidden');
+      if (report.hidden) {
+        imageEl.onload = () => imageContainer.classList.remove('hidden');
+        imageEl.onerror = () => imageContainer.classList.add('hidden');
+        imageEl.src = `/pictures/chronicle/${fact.id}.png`;
+        imageEl.alt = td(`fact.${fact.id}.title`);
+      } else {
+        imageEl.onload = null;
+        imageEl.onerror = null;
+        imageEl.removeAttribute('src');
+      }
     }
 
     if (bodyEl) {
@@ -418,11 +427,12 @@ export class Chronicle {
         .join('');
     }
 
-    if (wikiEl && footerEl) {
+    if (footerEl) {
       const locale = i18n.getLocale();
-      const wikiUrl = fact.wikiUrls?.[locale] || fact.wikiUrls?.en;
-      if (wikiUrl) {
-        wikiEl.href = wikiUrl;
+      const url = fact.articleUrl ?? fact.wikiUrls?.[locale] ?? fact.wikiUrls?.en;
+      if (url) {
+        source.href = url;
+        source.querySelector('span')!.textContent = t(fact.articleUrl ? 'chronicle.paper' : 'chronicle.wikiLink');
         footerEl.classList.remove('hidden');
       } else {
         footerEl.classList.add('hidden');
