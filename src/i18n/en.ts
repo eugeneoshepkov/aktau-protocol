@@ -13,6 +13,14 @@ export const en = {
   'hud.power': 'Power',
   'hud.temp': "Core strain",
   'hud.mood': 'Morale',
+  'hud.status': 'City status',
+  'hud.lowFreshWater': 'Drinking water is low. Check the desalination plants supplying homes.',
+  'hud.lowSeawater': 'Seawater is low. Check the sea pumps feeding the desalination plants.',
+  'hud.lowHeat': 'Heat is low. A thermal plant can top up the heat supply.',
+  'hud.lowPower': 'Power is low. Save electricity for the pumps before building again.',
+  'hud.lowMorale': 'Morale is low. Connect homes to drinking water and heat.',
+  'hud.highStrain': 'Reactor strain is high. Connect another desalination plant to cool it.',
+  'hud.dismissWarning': 'Dismiss warning',
   'hud.save': 'Save Game',
   'hud.load': 'Load Game',
   'hud.volume': 'Music volume',
@@ -27,11 +35,11 @@ export const en = {
   'hud.tooltip.day': 'Current game day. Seasons change every 30 days.',
   'hud.tooltip.population': 'City population. Grows when happy and resources are stable. Larger populations consume more per person. Fleeing citizens = game over.',
   'hud.tooltip.freshWater': 'Fresh drinking water. Produced by desalination plants. Consumed by housing.',
-  'hud.tooltip.seawater': 'Raw seawater from Caspian Sea. Extracted by pumps. Used by desalination plants.',
-  'hud.tooltip.heat': 'Thermal energy. Produced by reactor and thermal plants. Consumed by desalination and housing. ×2 in winter! Winters grow harsher each year.',
-  'hud.tooltip.electricity': 'Electrical power. Produced by reactor. Consumed by all buildings for maintenance.',
-  'hud.tooltip.temp': "Reactor strain rises one point per day. Each working desalination plant offsets 0.8 points. At 100% the reactor fails.",
-  'hud.tooltip.happiness': 'Citizen happiness. Affected by water supply and housing connections. Zero = revolt!',
+  'hud.tooltip.seawater': 'Sea pumps draw water from the Caspian for the desalination plants.',
+  'hud.tooltip.heat': 'The reactor and thermal plants heat homes and run desalination. Demand doubles in the first winter.',
+  'hud.tooltip.electricity': 'The reactor and thermal plants supply power for pumping, upkeep and construction.',
+  'hud.tooltip.temp': 'Strain rises by 1 each day. Each working desalination plant offsets 0.8. At 100% the reactor fails.',
+  'hud.tooltip.happiness': 'Morale rises when homes have water and heat. At zero, the district revolts.',
 
   // Seasons
   'season.spring': 'Spring (Heat ×{mult})',
@@ -127,13 +135,13 @@ export const en = {
   'walk.torysh.invite': "Take a day trip to Torysh",
   'walk.chaika.invite': "Catch a film at Chaika",
   'sight.iceCream.name': "Twenty kopecks for a plombir",
-  'sight.iceCream.description': "Denis Onishchenko remembers the local dairy’s plombir in a waffle cup. It cost twenty kopecks. Returning empty bottles gave the children money for a trip to the ice-cream café.",
+  'sight.iceCream.description': "Twenty kopecks bought a waffle cup of plombir from the local dairy. The kids cashed in empty bottles for a trip to the café, where the same ice cream came in a metal dish with raspberry jam.",
   'sight.swimmingPier.name': "The First Microrayon pier",
-  'sight.swimmingPier.description': "Viktor Malyuk remembers the beach by the yacht club. There were rides and playgrounds on shore, and wooden piers that took you out over the Caspian.",
+  'sight.swimmingPier.description': "The city’s first beach was by the yacht club in the First Microrayon. There were rides and playgrounds on shore. When it was time for a swim, you could climb down from a wooden pier into the Caspian.",
   'sight.torysh.name': "Torysh, the Valley of Stone Balls",
   'sight.torysh.description': "A day trip out of town takes you into the open Mangystau steppe. At Torysh, round stones sit half buried on the slopes. Where one has split, you can see the layers inside.",
   'sight.chaika.name': "A backwards film at Chaika",
-  'sight.chaika.description': "In winter, Denis Onishchenko and his friends warmed up at Chaika, the courtyard club in the Eleventh Microrayon. They sometimes ran their only reel of Operation Y backwards to watch the scattered pots jump back into line.",
+  'sight.chaika.description': "In winter the kids ducked into Chaika, the courtyard club in the Eleventh Microrayon, to warm up. There was just one reel, Operation Y. Run it backwards and the scattered pots on screen jump back into line.",
   'album.count': "Keepsakes · {count}/4",
   'album.iceCream.take': "Who’s last in line?",
   'album.iceCream.queue': "Behind me. There’s one more person at the window.",
@@ -176,6 +184,8 @@ export const en = {
   'sight.source': 'Historical source',
   'sight.lighthouse.name': 'Melovoy Lighthouse',
   'sight.lighthouse.description': 'In 1974 an octagonal beacon was installed on the roof of an apartment block overlooking Cape Melovoy.',
+  'sight.abayPalace.name': 'Abay Palace of Culture',
+  'sight.abayPalace.description': 'At their old club, the Altair dancers practised holding on to the backs of chairs. When the palace opened in the fourth microdistrict in 1974, they had a studio with mirrors and ballet barres. By the 1980s, five-year-olds were taking their first dance lessons here too.',
   'sight.monument.name': 'Taras Shevchenko monument',
   'sight.monument.description': 'The monument to the Ukrainian poet opened in 1982 in the square between the fourth and fifth microdistricts.',
   'sight.factory.name': 'PGMK fertiliser works',
@@ -191,15 +201,15 @@ export const en = {
   'calendar.winter': 'Winter',
   'calendar.next': '{season} begins on day {day}',
   'sight.fieldTower.name': "Melovoye field tower",
-  'sight.fieldTower.description': "Gregory Abramov called these skid-mounted surface towers “robots.” His 2020 paper shows the field team’s machines in Figure 7.",
+  'sight.fieldTower.description': "The Melovoye field crew called these towers on runners “robots.” Figure 7 in the study shows the machines out on the field site.",
   'sight.fieldTrace.name': "The old field plot",
-  'sight.fieldTrace.description': "In Figure 6 of Abramov’s paper, a pipe crosses a shallow hollow. The ground settled more than a year after the team left that plot.",
+  'sight.fieldTrace.description': "A pipe hangs over a shallow hollow. The ground settled more than a year after the field team left this plot. Figure 6 in the Melovoye study shows the gap beneath the pipe.",
   'field.stage': "Melovoye",
   'field.invitation': "The spring bus from the research institute is due. Host the Melovoye team for an optional field season, or keep building the waterfront.",
   'field.nextSpring': "The waterfront is yours to develop. The Melovoye field team can visit when spring returns on day {day}.",
   'field.host': "Host the field team",
   'field.housing.title': "Rooms for the field team",
-  'field.housing.desc': "Abramov recalled staying in the second microrayon during field season. Connect a sixth apartment block to water and heat for the visiting team.",
+  'field.housing.desc': "One of the Melovoye researchers stayed in the Second Microrayon during field season. Connect a sixth apartment block to water and heat so the visiting crew has a place to stay.",
   'field.shift.title': "The night shift calls",
   'field.shift.desc': "Melovoye worked three shifts. In this scenario, sending your crew finishes the trial in 10 days and leaves the city without emergency shifts until then. The field team can finish alone in 20 days.",
   'field.send': "Send the reserve crew · 10 days",
@@ -227,6 +237,7 @@ export const en = {
   'menu.loadFailed': "The 3D district could not start. Check that WebGL is enabled, then reload.",
   'menu.soundOn': "Sound on",
   'menu.soundOff': "Sound off",
+  'menu.playSound': "Play sound",
   'menu.place': 'Shevchenko, Kazakh SSR',
   'menu.era': '1980s',
   'guide.water': "Bring the sea inland",
@@ -297,7 +308,10 @@ export const en = {
   'plan.count.distiller': '{count}/{target} plants',
   'plan.count.population': '{count}/{target} residents',
   'plan.count.day': 'Day {count}/{target}',
-  'plan.build': 'Build on this lot · {building}',
+  'plan.showLot': 'Show lot',
+  'plan.build.microrayon': 'Build housing',
+  'plan.build.pump': 'Build pump',
+  'plan.build.distiller': 'Build desalination plant',
 
 
   // Welcome Overlay
@@ -330,7 +344,7 @@ export const en = {
   'chronicle.button': 'Historical Chronicle (J)',
   'chronicle.learnMore': 'Learn more...',
   'chronicle.wikiLink': 'Read more on Wikipedia',
-  'chronicle.paper': 'Read Abramov’s paper',
+  'chronicle.paper': 'Read the Melovoye paper',
   'chronicle.slip': 'Field report · game illustration',
   'chronicle.material': 'Material',
   'chronicle.metal': 'Metal',
@@ -456,8 +470,8 @@ At peak operation, Aktau's desalination complex produced 120,000 cubic meters of
   // Day 30. Keep the discovery ID so existing players retain this entry.
   'fact.closed-city.title': 'The report said “metal”',
   'fact.closed-city.short':
-    'Gregory Abramov recalled that his group called uranium “metal,” even in its confidential annual reports.',
-  'fact.closed-city.full': `Gregory Abramov spent field seasons at Melovoye, about 20 kilometres from Shevchenko. In his letters he recalled a rule his research group followed. When they spoke about uranium, they called it “metal.” They used the same word in their confidential annual reports.
+    'The Melovoye field team called uranium “metal,” even in its confidential annual reports.',
+  'fact.closed-city.full': `Gregory Abramov was one of the researchers who spent field seasons at Melovoye, about 20 kilometres from Shevchenko. In his letters he recalled a rule his group followed. When they spoke about uranium, they called it “metal.” They used the same word in their confidential annual reports.
 
 Abramov also remembered Adolf Oshchepkov, who worked in the design bureau at PGMK, the local mining and metallurgical combine. He credited Oshchepkov with helping to design the group’s equipment, especially the surface control tower the crew called a robot.
 
@@ -523,15 +537,12 @@ This multi-stage flash (MSF) process was remarkably efficient. By using 40 or mo
 
 The plants ran continuously for decades, producing water that met strict Soviet drinking standards. Operators monitored hundreds of valves, pumps, and sensors to keep the delicate balance of temperature and pressure across all stages.`,
 
-  // Building: First Housing
-  'fact.first-housing.title': 'Soviet Microrayons',
-  'fact.first-housing.short':
-    "Aktau's apartment blocks, called microrayons, were designed to house entire neighborhoods as self-contained units.",
-  'fact.first-housing.full': `The residential buildings of Aktau followed the Soviet "microrayon" model—self-contained neighborhood units with housing, schools, shops, and services all within walking distance. Each microrayon housed 5,000-15,000 residents.
+  // The first family moves in
+  'fact.first-housing.title': 'Three numbers on a postcard',
+  'fact.first-housing.short': 'A family moves into your new block. The children have three numbers to learn by heart.',
+  'fact.first-housing.full': `The suitcases are still in the hall. At the kitchen table, the children write Grandma a postcard with the address of their new flat.
 
-These prefabricated concrete buildings could be assembled quickly using standardized panels. While often criticized for their uniformity, they provided modern amenities—central heating, running water, electricity—that were luxuries in much of the Soviet Union.
-
-In Aktau, these buildings had special significance: their central heating came directly from the reactor's steam system, and their water from nuclear-powered desalination. Residents lived intimately connected to the technology that made their desert home possible.`,
+In Shevchenko’s numbered neighbourhoods you gave the microdistrict first, then the building, then the flat. Once you knew those three numbers, you could tell a friend from school exactly where to find you.`,
 
   // Building: First Tank
   'fact.first-tank.title': 'Desert Water Storage',

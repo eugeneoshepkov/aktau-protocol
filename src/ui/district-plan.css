@@ -30,6 +30,7 @@
   cursor: pointer;
 }
 .plan-summary:focus-visible,
+.plan-locate:focus-visible,
 .plan-site:focus-visible {
   outline: 2px solid white;
   outline-offset: 4px;
@@ -69,12 +70,38 @@
 .plan-summary[aria-expanded='false'] .plan-chevron {
   transform: rotate(45deg);
 }
+.plan-objective {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+}
 .plan-title {
-  grid-column: 1 / -1;
   font-size: 21px;
   line-height: 1.16;
   font-weight: 650;
   letter-spacing: -0.035em;
+}
+.plan-locate {
+  flex: none;
+  border: 0;
+  border-bottom: 1px dotted currentColor;
+  padding: 3px 0;
+  background: transparent;
+  color: #ffc0ac;
+  font: 600 12px var(--sans);
+  cursor: pointer;
+}
+/* The title and its visible map action are one tap target. */
+.plan-locate::after {
+  content: '';
+  position: absolute;
+  inset: -2px 0;
+}
+.plan-locate:hover {
+  color: white;
 }
 .plan-description {
   margin: 7px 0 13px;
@@ -195,11 +222,14 @@
 }
 .plan-site {
   position: fixed;
+  left: var(--lot-x);
+  /* Keep the label on screen while its tip follows the exact lot. */
+  --tip: clamp(calc(var(--lot-x) - 100vw + 100%), 50%, var(--lot-x));
   padding: 7px;
   margin: 0;
   border: 0;
   background: transparent;
-  transform: translate(-50%, -100%);
+  transform: translate(calc(0px - var(--tip)), -100%);
   z-index: 6;
   cursor: pointer;
   touch-action: manipulation;
@@ -210,24 +240,21 @@
   display: none;
 }
 .plan-site span {
-  display: grid;
-  place-items: center;
-  width: 29px;
-  height: 29px;
+  display: block;
+  padding: 6px 10px;
   box-sizing: border-box;
-  border-radius: 50%;
+  border-radius: 5px;
   border: 2px solid #fff5e7;
-  background: #b8462a;
+  background: #a33e28;
   color: white;
   box-shadow: 0 2px 6px #16232b80;
-  font:
-    500 24px/0.9 Arial,
-    sans-serif;
+  white-space: nowrap;
+  font: 650 13px/1.15 var(--sans);
 }
 .plan-site::after {
   content: '';
   position: absolute;
-  left: calc(50% - 4px);
+  left: calc(var(--tip) - 4px);
   bottom: 2px;
   border: 4px solid transparent;
   border-top-color: #fff5e7;
@@ -235,8 +262,7 @@
 }
 .plan-site:hover span,
 .plan-site:focus-visible span {
-  background: #d55232;
-  transform: translateY(-2px);
+  background: #88321f;
 }
 .build-button.plan-target:not(.selected) {
   border-color: #e67e62;

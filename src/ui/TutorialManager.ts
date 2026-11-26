@@ -29,6 +29,7 @@ export class TutorialManager {
   private marker = document.createElement('button');
   private site: { type: BuildingType; x: number; z: number } | null = null;
   private readonly panelButton: HTMLButtonElement;
+  private readonly locateButton: HTMLButtonElement;
   private readonly buildPanel: BuildPanel;
   private readonly pipes: PipeManager;
   private readonly positionMarker: () => void;
@@ -50,8 +51,11 @@ export class TutorialManager {
       <button type="button" class="plan-summary" aria-expanded="true" aria-controls="plan-details">
         <span class="plan-kicker"><span class="plan-beacon"></span>${t('plan.label')}</span>
         <span class="plan-step"></span><span class="plan-chevron" aria-hidden="true"></span>
-        <strong class="plan-title" aria-live="polite"></strong>
       </button>
+      <div class="plan-objective">
+        <strong id="plan-title" class="plan-title" aria-live="polite"></strong>
+        <button type="button" class="plan-locate" aria-describedby="plan-title" hidden>${t('plan.showLot')}</button>
+      </div>
       <div id="plan-details">
         <p class="plan-description"></p>
         <div class="plan-track" aria-hidden="true"><span></span></div>
@@ -72,14 +76,19 @@ export class TutorialManager {
       this.panel.querySelector<HTMLElement>('#plan-details')!.hidden = expanded;
     });
 
-    this.fieldPanel = new FieldSeasonPanel(this.panel.querySelector('.field-actions')!, () => {
+    const focusLot = () => {
       const site = this.site;
       if (!site) return;
       if (window.matchMedia('(max-width: 700px)').matches && this.panelButton.getAttribute('aria-expanded') === 'true') {
         this.panelButton.click();
       }
       getCameraInstance()?.focusOn(getTileCenter(site.x, site.z));
-    }, openSight);
+    };
+    this.locateButton = this.panel.querySelector('.plan-locate')!;
+    this.locateButton.addEventListener('click', focusLot);
+    this.fieldPanel = new FieldSeasonPanel(
+      this.panel.querySelector('.field-actions')!, focusLot, openSight
+    );
 
     const choices = this.panel.querySelector<HTMLElement>('.plan-projects')!;
     for (const kind of Object.keys(CIVIC_PROJECTS) as CivicProjectKind[]) {
@@ -133,7 +142,7 @@ export class TutorialManager {
 
     this.marker.type = 'button';
     this.marker.className = 'plan-site';
-    this.marker.innerHTML = '<span aria-hidden="true">+</span>';
+    this.marker.append(document.createElement('span'));
     this.marker.addEventListener('click', () => {
       if (!this.site || gameState.isGameOver()) return;
       const { type, x, z } = this.site;
@@ -166,7 +175,7 @@ export class TutorialManager {
         point.x > view.width ||
         point.y < 0 ||
         point.y > view.height;
-      this.marker.style.left = Math.round(point.x) + 'px';
+      this.marker.style.setProperty('--lot-x', Math.round(point.x) + 'px');
       this.marker.style.top = Math.round(point.y) + 'px';
     };
     scene.onAfterRenderObservable.add(this.positionMarker);
@@ -180,7 +189,8 @@ export class TutorialManager {
     });
     gameState.on('resourceChange', () => this.update());
     gameState.on('gameOver', () => {
-      this.marker.hidden = true;
+      this.site = null;
+      this.marker.hidden = this.locateButton.hidden = true;
     });
     gameState.on('civicProjectChange', () => {
       this.siteDirty = true;
@@ -195,11 +205,13 @@ export class TutorialManager {
     });
     gameState.on('orderComplete', (data) => {
       const order = data as DistrictOrder;
-      const reward = this.rewardLabel(order);
-      const title = td(`plan.${order.id}.title`);
-      feedbackManager.showToast(reward ? title + '  ·  ' + reward : title + ' ✓', 'success');
-      soundManager.play('success');
       this.siteDirty = true;
+      if (order.id !== 'homes') {
+        const reward = this.rewardLabel(order);
+        const title = td(`plan.${order.id}.title`);
+        feedbackManager.showToast(reward ? title + '  ·  ' + reward : title + ' ✓', 'success');
+        soundManager.play('success');
+      }
     });
     this.update();
   }
@@ -286,18 +298,20 @@ export class TutorialManager {
       }
     }
 
-    if (this.siteDirty || !this.site || this.site.type !== order?.measure) {
-      const target = order?.measure;
+    const target =
+      order && order.measure !== 'day' && order.measure !== 'population' ? order.measure : null;
+    const cost = target && gameState.getEffectiveCost(target);
+    const resources = gameState.getResources();
+    const affordable = cost && Object.entries(cost).every(
+      ([resource, amount]) => resources[resource as keyof typeof cost] >= amount
+    );
+    if (!affordable || this.siteDirty || !this.site || this.site.type !== target) {
       this.site =
-        target && target !== 'day' && target !== 'population'
-          ? this.findSite(target, order.sites ?? [])
-          : null;
+        affordable && target && !gameState.isGameOver() ? this.findSite(target, order?.sites ?? []) : null;
       this.siteDirty = false;
-      this.marker.hidden = !this.site;
+      this.marker.hidden = this.locateButton.hidden = !this.site;
       if (this.site) {
-        const label = t('plan.build', { building: td(`building.${this.site.type}.name`) });
-        this.marker.setAttribute('aria-label', label);
-        this.marker.title = label;
+        this.marker.firstElementChild!.textContent = td(`plan.build.${this.site.type}`);
         this.positionMarker();
       }
       for (const type of ['pump', 'distiller', 'microrayon'] as const) {
@@ -307,15 +321,6 @@ export class TutorialManager {
   }
 
   private findSite(type: BuildingType, preferred: [number, number][]) {
-    const cost = gameState.getEffectiveCost(type);
-    if (
-      !cost ||
-      Object.entries(cost).some(
-        ([resource, amount]) => gameState.getResources()[resource as keyof typeof cost] < amount
-      )
-    )
-      return null;
-
     const viable = (x: number, z: number) =>
       x >= 0 &&
       z >= 0 &&

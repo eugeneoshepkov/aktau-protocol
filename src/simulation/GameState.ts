@@ -54,6 +54,7 @@ function overlapsSite(site: { gridX: number; gridZ: number }, x: number, z: numb
 // ============================================
 
 export type GameEventType =
+  | 'cityLoaded'
   | 'resourceChange'
   | 'resourceTrend'
   | 'buildingPlaced'
@@ -1085,6 +1086,7 @@ export class GameState {
         multiplier: this.getSeasonMultiplier()
       });
       this.emit('resourceTrend', this.resourceTrend);
+      this.emit('cityLoaded');
       return true;
     } catch {
       return false;

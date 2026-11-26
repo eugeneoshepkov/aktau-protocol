@@ -216,7 +216,10 @@ export async function initGame(resume: boolean, walk = false): Promise<void> {
   const tooltip = new Tooltip();
   tooltip.setPipeManager(pipeManager);
 
-  const diagnosticManager = new DiagnosticManager();
+  const notices = document.createElement('div');
+  notices.className = 'city-notices';
+  document.body.append(notices);
+  const diagnosticManager = new DiagnosticManager(notices);
   diagnosticManager.setPipeManager(pipeManager);
   diagnosticManager.setBuildingManager(buildingManager);
 
@@ -268,7 +271,7 @@ export async function initGame(resume: boolean, walk = false): Promise<void> {
 
   const hud = new HUD();
   const buildPanel = new BuildPanel(buildingManager);
-  new Chronicle();
+  new Chronicle(notices);
   new TutorialManager(buildPanel, scene, pipeManager, buildingManager, (id, readPress) => sights.open(id, readPress));
   sights.mountInvitation(document.querySelector('#plan-details')!);
 

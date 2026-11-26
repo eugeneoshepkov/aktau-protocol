@@ -35,27 +35,10 @@ export class GameEngine {
     this.scene.fogColor = new Color3(0.67, 0.79, 0.76);
 
     this.setupLighting();
-    this.preventBrowserZoom();
 
     window.addEventListener('resize', () => {
       this.engine.resize();
     });
-  }
-
-  private preventBrowserZoom(): void {
-    this.canvas.addEventListener(
-      'wheel',
-      (e: WheelEvent) => {
-        if (e.ctrlKey) {
-          e.preventDefault();
-        }
-      },
-      { passive: false }
-    );
-
-    this.canvas.addEventListener('gesturestart', (e) => e.preventDefault());
-    this.canvas.addEventListener('gesturechange', (e) => e.preventDefault());
-    this.canvas.addEventListener('gestureend', (e) => e.preventDefault());
   }
 
   private setupLighting(): void {

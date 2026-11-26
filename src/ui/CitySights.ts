@@ -9,6 +9,7 @@ import './city-sights.css';
 
 const sights = [
   ['lighthouse', 'https://www.gov.kz/org/akimat-goroda-aktau/press/news/details/762966'],
+  ['abayPalace', 'https://www.lada.kz/istoriya-v-fotografiyah/36820-v-aktau-ansamblyu-tanca-altair-ispolnilos-50-let.html'],
   ['monument', 'https://adilet.zan.kz/rus/docs/V20M0004310'],
   ['factory', 'https://www.lada.kz/aktau_news/society/51049-predpriyatiya-shevchenko.html'],
   ['reactor', 'https://www-pub.iaea.org/MTCD/Publications/PDF/TE-1769_web.pdf#page=26'],

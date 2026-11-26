@@ -5,7 +5,7 @@ import type { Building } from '../types';
 import { getTileCenter } from '../grid/GridCoords';
 import { getCameraInstance } from '../engine/Camera';
 import { Vector3 } from '@babylonjs/core';
-import { td } from '../i18n';
+import { t, td } from '../i18n';
 import { ICONS, icon } from './Icons';
 
 interface DiagnosticIssue {
@@ -24,8 +24,8 @@ export class DiagnosticManager {
   private checkInterval: number | null = null;
   private dismissedIssues: Set<string> = new Set();
 
-  constructor() {
-    this.createHintBar();
+  constructor(notices: HTMLElement) {
+    this.createHintBar(notices);
   }
 
   public setPipeManager(pipeManager: PipeManager): void {
@@ -35,24 +35,26 @@ export class DiagnosticManager {
 
   public setBuildingManager(buildingManager: BuildingManager): void {
     this.buildingManager = buildingManager;
+    this.checkIssues(gameState.getResourceTrend());
   }
 
-  private createHintBar(): void {
+  private createHintBar(notices: HTMLElement): void {
     this.hintBar = document.createElement('div');
     this.hintBar.id = 'hint-bar';
+    this.hintBar.inert = true;
     this.hintBar.innerHTML = `
       <span class="hint-icon">${ICONS.warning}</span>
-      <span class="hint-text"></span>
-      <button class="hint-dismiss">${ICONS.close}</button>
+      <span class="hint-text" role="status"></span>
+      <button class="hint-dismiss" aria-label="${t('hud.dismissWarning')}">${ICONS.close}</button>
     `;
-    document.body.appendChild(this.hintBar);
+    notices.append(this.hintBar);
 
     const dismissBtn = this.hintBar.querySelector('.hint-dismiss');
     dismissBtn?.addEventListener('click', (e) => {
       e.stopPropagation();
       if (this.currentIssue) {
         this.dismissedIssues.add(this.currentIssue.message);
-        this.hideHint();
+        this.checkIssues(gameState.getResourceTrend());
       }
     });
 
@@ -68,8 +70,8 @@ export class DiagnosticManager {
   }
 
   private startMonitoring(): void {
-    gameState.on('resourceTrend', (data) => {
-      this.checkIssues(data as ResourceTrend);
+    gameState.on('resourceChange', () => {
+      this.checkIssues(gameState.getResourceTrend());
     });
 
     gameState.on('buildingPlaced', () => {
@@ -91,6 +93,24 @@ export class DiagnosticManager {
     const resources = gameState.getResources();
     const buildings = gameState.getBuildings();
     const issues: DiagnosticIssue[] = [];
+
+    const strain = gameState.getReactorState().temperature;
+    if (strain >= 50) {
+      issues.push({
+        priority: strain >= 80 ? 0 : 3,
+        message: t('hud.highStrain'),
+        buildings: buildings.filter((building) => building.type === 'reactor')
+      });
+    }
+    for (const [resource, message, priority] of [
+      ['freshWater', 'hud.lowFreshWater', 1],
+      ['heat', 'hud.lowHeat', 1],
+      ['seawater', 'hud.lowSeawater', 3],
+      ['electricity', 'hud.lowPower', 3],
+      ['happiness', 'hud.lowMorale', 3]
+    ] as const) {
+      if (resources[resource] < 10) issues.push({ priority, message: t(message), buildings: [] });
+    }
 
     const distillers = buildings.filter((b) => b.type === 'distiller');
     const microrayons = buildings.filter((b) => b.type === 'microrayon');
@@ -159,17 +179,13 @@ export class DiagnosticManager {
       });
     }
 
-    if (issues.length > 0) {
-      issues.sort((a, b) => a.priority - b.priority);
-      const topIssue = issues[0];
-
-      if (!this.dismissedIssues.has(topIssue.message)) {
-        this.showHint(topIssue);
-      }
-    } else {
-      this.hideHint();
-      this.dismissedIssues.clear();
+    for (const message of this.dismissedIssues) {
+      if (!issues.some((issue) => issue.message === message)) this.dismissedIssues.delete(message);
     }
+    const topIssue = issues.sort((a, b) => a.priority - b.priority)
+      .find((issue) => !this.dismissedIssues.has(issue.message));
+    if (topIssue) this.showHint(topIssue);
+    else this.hideHint();
   }
 
   /**
@@ -235,11 +251,12 @@ export class DiagnosticManager {
   private showHint(issue: DiagnosticIssue): void {
     if (!this.hintBar) return;
 
-    this.currentIssue = issue;
+    this.hintBar.inert = false;
     const textEl = this.hintBar.querySelector('.hint-text');
-    if (textEl) {
+    if (textEl && issue.message !== this.currentIssue?.message) {
       textEl.innerHTML = issue.message;
     }
+    this.currentIssue = issue;
 
     this.hintBar.classList.add('show');
 
@@ -257,6 +274,7 @@ export class DiagnosticManager {
     if (!this.hintBar) return;
 
     this.hintBar.classList.remove('show');
+    this.hintBar.inert = true;
     this.currentIssue = null;
 
     // Clear highlights

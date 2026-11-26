@@ -98,7 +98,10 @@ class FeedbackManagerClass {
     const elementId = resourceMap[resource];
     if (!elementId) return;
 
-    const element = document.getElementById(elementId);
+    const reading = document.getElementById(elementId);
+    const element = reading?.closest('#city-status:not(:popover-open)')
+      ? document.getElementById('hud-status-toggle')
+      : reading;
     if (!element) return;
 
     element.classList.add('resource-pulse');

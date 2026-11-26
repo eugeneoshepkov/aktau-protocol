@@ -90,8 +90,8 @@ At peak operation, Aktau's desalination complex produced 120,000 cubic meters of
     category: 'life',
     title: 'The report said “metal”',
     shortText:
-      'Gregory Abramov recalled that his group called uranium “metal,” even in its confidential annual reports.',
-    fullText: `Gregory Abramov spent field seasons at Melovoye, about 20 kilometres from Shevchenko. In his letters he recalled a rule his research group followed. When they spoke about uranium, they called it “metal.” They used the same word in their confidential annual reports.
+      'The Melovoye field team called uranium “metal,” even in its confidential annual reports.',
+    fullText: `Gregory Abramov was one of the researchers who spent field seasons at Melovoye, about 20 kilometres from Shevchenko. In his letters he recalled a rule his group followed. When they spoke about uranium, they called it “metal.” They used the same word in their confidential annual reports.
 
 Abramov also remembered Adolf Oshchepkov, who worked in the design bureau at PGMK, the local mining and metallurgical combine. He credited Oshchepkov with helping to design the group’s equipment, especially the surface control tower the crew called a robot.
 
@@ -206,19 +206,13 @@ The plants ran continuously for decades, producing water that met strict Soviet 
   {
     id: 'first-housing',
     category: 'life',
-    title: 'Soviet Microrayons',
-    shortText:
-      "Aktau's apartment blocks, called microrayons, were designed to house entire neighborhoods as self-contained units.",
-    fullText: `The residential buildings of Aktau followed the Soviet "microrayon" model—self-contained neighborhood units with housing, schools, shops, and services all within walking distance. Each microrayon housed 5,000-15,000 residents.
+    title: 'Three numbers on a postcard',
+    shortText: 'A family moves into your new block. The children have three numbers to learn by heart.',
+    fullText: `The suitcases are still in the hall. At the kitchen table, the children write Grandma a postcard with the address of their new flat.
 
-These prefabricated concrete buildings could be assembled quickly using standardized panels. While often criticized for their uniformity, they provided modern amenities—central heating, running water, electricity—that were luxuries in much of the Soviet Union.
-
-In Aktau, these buildings had special significance: their central heating came directly from the reactor's steam system, and their water from nuclear-powered desalination. Residents lived intimately connected to the technology that made their desert home possible.`,
-    wikiUrls: {
-      en: 'https://en.wikipedia.org/wiki/Microdistrict',
-      ru: 'https://ru.wikipedia.org/wiki/Микрорайон'
-    },
-    trigger: { type: 'building', value: 'microrayon' }
+In Shevchenko’s numbered neighbourhoods you gave the microdistrict first, then the building, then the flat. Once you knew those three numbers, you could tell a friend from school exactly where to find you.`,
+    articleUrl: 'https://tengrinews.kz/curious/pochemu-aktau-nazvaniy-ulits-unikalnaya-sistema-adresatsii-540363/',
+    trigger: { type: 'milestone', value: 'first_move_in' }
   },
   {
     id: 'first-tank',

@@ -24,7 +24,7 @@ export class IsometricCamera {
   private originalTarget: Vector3 | null = null;
   private home = Vector3.Zero();
   private beforeSight: { target: Vector3; alpha: number; beta: number; radius: number } | null = null;
-  private walkSight: AbstractMesh | null = null;
+  private sightAboveCard: AbstractMesh | null = null;
 
   constructor(scene: Scene, canvas: HTMLCanvasElement) {
     this.scene = scene;
@@ -41,8 +41,9 @@ export class IsometricCamera {
       scene
     );
 
-    this.camera.attachControl(true, false, 0);
+    this.camera.inputs.removeByType('ArcRotateCameraMouseWheelInput');
     this.camera.inputs.removeByType('ArcRotateCameraKeyboardMoveInput');
+    this.camera.attachControl(true, false, 0);
 
     this.camera.lowerRadiusLimit = MIN_ZOOM;
     this.camera.upperRadiusLimit = MAX_ZOOM;
@@ -50,12 +51,25 @@ export class IsometricCamera {
     this.camera.lowerBetaLimit = ISOMETRIC_BETA;
     this.camera.upperBetaLimit = ISOMETRIC_BETA;
 
-    this.camera.wheelDeltaPercentage = 0.015;
     this.camera.useNaturalPinchZoom = true;
+    // Trackpads report small, frequent deltas and already supply their own scroll momentum.
+    const onWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      let pixelsPerUnit = 1;
+      if (event.deltaMode === WheelEvent.DOM_DELTA_LINE) pixelsPerUnit = 16;
+      if (event.deltaMode === WheelEvent.DOM_DELTA_PAGE) pixelsPerUnit = canvas.clientHeight;
+      const sensitivity = event.ctrlKey ? 0.015 : 0.0035;
+      // Limit a single mouse-wheel notch while preserving fractional trackpad movement.
+      const step = Math.max(-0.22, Math.min(0.22, event.deltaY * pixelsPerUnit * sensitivity));
+      const radius = this.camera.radius * Math.exp(step);
+      this.camera.radius = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, radius));
+    };
+    canvas.addEventListener('wheel', onWheel, { passive: false });
+    this.camera.onDisposeObservable.addOnce(() => canvas.removeEventListener('wheel', onWheel));
 
     this.camera.panningAxis = new Vector3(1, 0, 1);
     scene.getEngine().onResizeObservable.add(() => {
-      if (this.walkSight) this.fitSight(this.walkSight);
+      if (this.sightAboveCard) this.fitSight(this.sightAboveCard);
     });
 
     const shouldIgnoreKeyboard = () => {
@@ -248,7 +262,7 @@ export class IsometricCamera {
       target: camera.target.clone(), alpha: camera.alpha, beta: camera.beta, radius: camera.radius
     };
     this.stopMotion();
-    this.walkSight = mesh.metadata?.neighbourhood ? mesh : null;
+    this.sightAboveCard = mesh.metadata?.frameAboveCard ? mesh : null;
     const { minimum, maximum } = mesh.getBoundingInfo().boundingBox;
     const height = maximum.y - minimum.y;
     camera.setTarget(new Vector3(mesh.position.x, mesh.position.y + height * 0.46, mesh.position.z));
@@ -264,9 +278,9 @@ export class IsometricCamera {
     const canvas = this.scene.getEngine().getRenderingCanvas()!;
     const portrait = Math.max(1, 0.7 * canvas.clientHeight / Math.max(1, canvas.clientWidth));
     camera.radius = Math.max(MIN_ZOOM + 0.6, span * 2.35) * portrait;
-    // The open album occupies the lower half of a phone. Project its subject above the paper.
-    const phoneWalk = this.walkSight && canvas.clientHeight > canvas.clientWidth;
-    camera.targetScreenOffset.y = phoneWalk ? camera.radius * Math.tan(camera.fov / 2) * 0.56 : 0;
+    // The sight card occupies the lower half of a phone. Frame the building above it.
+    const aboveCard = this.sightAboveCard && canvas.clientHeight > canvas.clientWidth;
+    camera.targetScreenOffset.y = aboveCard ? camera.radius * Math.tan(camera.fov / 2) * 0.56 : 0;
   }
 
   public leaveSight(): void {
@@ -278,7 +292,7 @@ export class IsometricCamera {
     this.camera.beta = saved.beta;
     this.camera.radius = saved.radius;
     this.camera.targetScreenOffset.y = 0;
-    this.walkSight = null;
+    this.sightAboveCard = null;
     this.beforeSight = null;
   }
 
@@ -293,6 +307,7 @@ export class IsometricCamera {
   }
 
   public focusOn(target: Vector3, duration: number = 500): void {
+    this.stopMotion();
     const startTarget = this.camera.target.clone();
     const frameRate = 60;
     const totalFrames = Math.round((duration / 1000) * frameRate);

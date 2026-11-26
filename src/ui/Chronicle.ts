@@ -1,6 +1,7 @@
 import { ICONS } from './Icons';
 import { soundManager } from '../managers/SoundManager';
 import { gameState } from '../simulation/GameState';
+import type { DistrictOrder } from '../simulation/DistrictPlan';
 import { tickSystem } from '../simulation/TickSystem';
 import { HISTORICAL_FACTS, getFactByTrigger, type HistoricalFact } from '../data/historicalFacts';
 import { t, td, i18n } from '../i18n';
@@ -28,16 +29,16 @@ export class Chronicle {
   private hasShownWinterFact = false;
   private hasShownReactorWarning = false;
 
-  constructor() {
+  constructor(notices: HTMLElement) {
     this.loadDiscoveredFacts();
     this.loadReadFacts();
-    this.createNotificationElement();
+    this.createNotificationElement(notices);
     this.createModalElement();
     this.createArchiveElement();
     this.createArchiveButton();
     this.setupEventListeners();
 
-    if (gameState.getDay() === 1) this.checkDayTrigger(1);
+    if (gameState.getDay() === 1) this.triggerFact('day', 1, false);
   }
 
   private loadDiscoveredFacts(): void {
@@ -100,7 +101,7 @@ export class Chronicle {
     }
   }
 
-  private createNotificationElement(): void {
+  private createNotificationElement(notices: HTMLElement): void {
     this.notificationEl = document.createElement('div');
     this.notificationEl.id = 'chronicle-notification';
     this.notificationEl.innerHTML = `
@@ -111,7 +112,7 @@ export class Chronicle {
       </div>
       <button class="chronicle-notif-close">${ICONS.close}</button>
     `;
-    document.body.appendChild(this.notificationEl);
+    notices.append(this.notificationEl);
 
     // Event listeners
     const moreBtn = this.notificationEl.querySelector('.chronicle-notif-more');
@@ -254,7 +255,7 @@ export class Chronicle {
   private setupEventListeners(): void {
     // Day advance - check for day-based facts
     gameState.on('dayAdvance', (day) => {
-      this.checkDayTrigger(day as number);
+      this.triggerFact('day', day as number);
       this.checkSeasonMilestone();
     });
 
@@ -264,7 +265,16 @@ export class Chronicle {
       this.checkBuildingTrigger(b.type);
     });
 
-    // Resource changes - check for population milestones
+    gameState.on('orderComplete', (order) => {
+      if ((order as DistrictOrder).id === 'homes') this.triggerFact('milestone', 'first_move_in');
+    });
+
+    // A save can be restored either before the Chronicle starts or later from the HUD.
+    const restoreMoveIn = () => {
+      if (gameState.getCompletedOrders() > 0) this.triggerFact('milestone', 'first_move_in', false);
+    };
+    restoreMoveIn();
+    gameState.on('cityLoaded', restoreMoveIn);
     gameState.on('resourceChange', () => {
       this.checkPopulationMilestones();
     });
@@ -276,13 +286,6 @@ export class Chronicle {
         this.triggerFact('milestone', 'reactor_warning');
       }
     });
-  }
-
-  private checkDayTrigger(day: number): void {
-    const fact = getFactByTrigger('day', day);
-    if (fact && !this.discoveredFacts.has(fact.id)) {
-      this.queueNotification(fact);
-    }
   }
 
   private checkBuildingTrigger(buildingType: string): void {
@@ -327,20 +330,25 @@ export class Chronicle {
     }
   }
 
-  private triggerFact(type: string, value: string | number): void {
+  private triggerFact(
+    type: HistoricalFact['trigger']['type'],
+    value: string | number,
+    notify = gameState.getCompletedOrders() > 0
+  ): void {
     const fact = getFactByTrigger(type, value);
     if (fact && !this.discoveredFacts.has(fact.id)) {
-      this.queueNotification(fact);
+      this.discover(fact, notify);
     }
   }
 
-  private queueNotification(fact: HistoricalFact): void {
+  private discover(fact: HistoricalFact, notify: boolean): void {
     // Mark as discovered
     this.discoveredFacts.add(fact.id);
     this.saveDiscoveredFacts();
 
     // Update unread badge
     this.updateUnreadBadge();
+    if (!notify) return;
 
     // Add to queue
     this.notificationQueue.push(fact);
@@ -432,7 +440,8 @@ export class Chronicle {
       const url = fact.articleUrl ?? fact.wikiUrls?.[locale] ?? fact.wikiUrls?.en;
       if (url) {
         source.href = url;
-        source.querySelector('span')!.textContent = t(fact.articleUrl ? 'chronicle.paper' : 'chronicle.wikiLink');
+        const label = fact.articleUrl ? 'sight.source' : 'chronicle.wikiLink';
+        source.querySelector('span')!.textContent = t(fact.id === 'closed-city' ? 'chronicle.paper' : label);
         footerEl.classList.remove('hidden');
       } else {
         footerEl.classList.add('hidden');
@@ -548,7 +557,7 @@ export class Chronicle {
   public showFact(factId: string): void {
     const fact = HISTORICAL_FACTS.find((f) => f.id === factId);
     if (fact) {
-      this.queueNotification(fact);
+      this.discover(fact, true);
     }
   }
 

@@ -7,7 +7,7 @@ import type { Resources } from '../types';
 import { t, td } from '../i18n';
 
 // Tooltip content for each HUD resource
-type HudTooltipKey = 'population' | 'freshWater' | 'seawater' | 'heat' | 'electricity' | 'temp' | 'happiness';
+type HudTooltipKey = 'population' | 'freshWater';
 
 export class HUD {
   private container: HTMLDivElement;
@@ -19,6 +19,7 @@ export class HUD {
   private pauseButton: HTMLButtonElement | null = null;
   private speedButtons: HTMLButtonElement[] = [];
   private tooltip: HTMLDivElement;
+  private popoverLayout?: ResizeObserver;
   private readonly speeds = [1000, 500, 250];
 
   private readonly seasonIcons: Record<Season, string> = {
@@ -102,21 +103,8 @@ export class HUD {
   }
 
   private getTooltipContent(key: HudTooltipKey): string {
-    const iconColors: Record<string, string> = {
-      seawater: '#4a90a4',
-      water: '#88ccff',
-      heat: '#ff8844',
-      electricity: '#ffcc00',
-      happiness: '#88ff88',
-      nuclear: '#88ff88',
-      population: '#ffffff',
-      calendar: '#aaaaaa'
-    };
-
-    const colorIcon = (name: string, size = 14): string => {
-      const color = iconColors[name] || 'currentColor';
-      return `<span style="color:${color}">${icon(name as any, size)}</span>`;
-    };
+    const colorIcon = (name: 'water' | 'population'): string =>
+      `<span class="icon-${name}">${icon(name, 14)}</span>`;
 
     switch (key) {
       case 'population':
@@ -133,48 +121,6 @@ export class HUD {
             <div class="tooltip-consumes">${colorIcon('population')} ${td('building.microrayon.name')}</div>
           </div>
         `;
-      case 'seawater':
-        return `
-          <div class="tooltip-header">${colorIcon('seawater')} ${t('hud.sea')}</div>
-          <div class="tooltip-desc">${t('hud.tooltip.seawater')}</div>
-          <div class="tooltip-row">
-            <div class="tooltip-produces">${colorIcon('seawater')} ${td('building.pump.name')}</div>
-            <div class="tooltip-consumes">${colorIcon('water')} ${td('building.distiller.name')}</div>
-          </div>
-        `;
-      case 'heat':
-        return `
-          <div class="tooltip-header">${colorIcon('heat')} ${t('hud.heat')}</div>
-          <div class="tooltip-desc">${t('hud.tooltip.heat')}</div>
-          <div class="tooltip-row">
-            <div class="tooltip-produces">${colorIcon('nuclear')} ${td('building.reactor.name')}, ${td('building.thermal_plant.name')}</div>
-            <div class="tooltip-consumes">${colorIcon('water')} ${td('building.distiller.name')}, ${colorIcon('population')} ${td('building.microrayon.name')}</div>
-          </div>
-        `;
-      case 'electricity':
-        return `
-          <div class="tooltip-header">${colorIcon('electricity')} ${t('hud.power')}</div>
-          <div class="tooltip-desc">${t('hud.tooltip.electricity')}</div>
-          <div class="tooltip-row">
-            <div class="tooltip-produces">${colorIcon('nuclear')} ${td('building.reactor.name')}, ${td('building.thermal_plant.name')}</div>
-            <div class="tooltip-consumes">All buildings (maintenance)</div>
-          </div>
-        `;
-      case 'temp':
-        const reactor = gameState.getReactorState();
-        const tempColor = reactor.temperature >= 80 ? '#ff4444' : reactor.temperature >= 50 ? '#ffaa00' : '#88ff88';
-        return `
-          <div class="tooltip-header">${colorIcon('nuclear')} ${t('hud.temp')}</div>
-          <div class="tooltip-desc">${t('hud.tooltip.temp')}</div>
-          <div class="tooltip-special" style="color: ${tempColor}">
-            ${colorIcon('nuclear')} ${t('tooltip.temp', { temp: Math.floor(reactor.temperature) })}
-          </div>
-        `;
-      case 'happiness':
-        return `
-          <div class="tooltip-header">${colorIcon('happiness')} ${t('hud.mood')}</div>
-          <div class="tooltip-desc">${t('hud.tooltip.happiness')}</div>
-        `;
       default:
         return '';
     }
@@ -183,6 +129,13 @@ export class HUD {
   private createHUD(): HTMLDivElement {
     const container = document.createElement('div');
     container.id = 'hud';
+    const readings = [
+      ['seawater', 'seawater', 'hud.sea'],
+      ['heat', 'heat', 'hud.heat'],
+      ['electricity', 'electricity', 'hud.power'],
+      ['temp', 'nuclear', 'hud.temp'],
+      ['happiness', 'happiness', 'hud.mood']
+    ] as const;
     container.innerHTML = `
       <div class="hud-top">
         <div class="district-name"><span>${ICONS.atom}</span>AKTAU</div>
@@ -202,31 +155,9 @@ export class HUD {
           <span id="hud-freshWater" class="hud-value">0</span>
           <span id="hud-trend-freshWater" class="hud-trend"></span>
         </div>
-        <div class="hud-section" data-tooltip="seawater">
-          <span class="hud-label"><span class="icon-wrap icon-seawater">${ICONS.seawater}</span> ${t('hud.sea')}</span>
-          <span id="hud-seawater" class="hud-value">0</span>
-          <span id="hud-trend-seawater" class="hud-trend"></span>
-        </div>
-        <div class="hud-section" data-tooltip="heat">
-          <span class="hud-label"><span class="icon-wrap icon-heat">${ICONS.heat}</span> ${t('hud.heat')}</span>
-          <span id="hud-heat" class="hud-value">0</span>
-          <span id="hud-trend-heat" class="hud-trend"></span>
-        </div>
-        <div class="hud-section" data-tooltip="electricity">
-          <span class="hud-label"><span class="icon-wrap icon-electricity">${ICONS.electricity}</span> ${t('hud.power')}</span>
-          <span id="hud-electricity" class="hud-value">0</span>
-          <span id="hud-trend-electricity" class="hud-trend"></span>
-        </div>
-        <div class="hud-section reactor-temp" data-tooltip="temp">
-          <span class="hud-label"><span class="icon-wrap icon-nuclear">${ICONS.nuclear}</span> ${t('hud.temp')}</span>
-          <span id="hud-temp" class="hud-value">0</span>
-          <span class="hud-unit">%</span>
-        </div>
-        <div class="hud-section" data-tooltip="happiness">
-          <span class="hud-label"><span class="icon-wrap icon-happiness">${ICONS.happiness}</span> ${t('hud.mood')}</span>
-          <span id="hud-happiness" class="hud-value">0</span>
-          <span id="hud-trend-happiness" class="hud-trend"></span>
-        </div>
+        <button type="button" id="hud-status-toggle" popovertarget="city-status" aria-controls="city-status">
+          ${t('hud.status')}<span class="status-chevron" aria-hidden="true"></span>
+        </button>
         </div>
         <div class="hud-controls">
           <button id="hud-pause" class="hud-button" title="${t('hud.pause')}"><span class="icon-wrap pause-icon">${ICONS.pause}</span></button>
@@ -243,6 +174,17 @@ export class HUD {
           </div></details>
         </div>
       </div>
+      <section id="city-status" popover="auto" aria-labelledby="city-status-heading">
+        <header><h2 id="city-status-heading">${t('hud.status')}</h2>
+          <button type="button" class="hud-button" aria-label="${t('menu.close')}" popovertarget="city-status" popovertargetaction="hide" autofocus>${icon('close')}</button>
+        </header>
+        ${readings.map(([key, symbol, label]) => `
+          <div class="hud-reading">
+            <span class="reading-label"><span class="icon-wrap icon-${symbol}">${ICONS[symbol]}</span> ${t(label)}</span>
+            <span class="reading-measure"><strong class="hud-value" id="hud-${key}">0</strong>${key === 'temp' ? '%' : ` <span id="hud-trend-${key}" class="hud-trend"></span>`}</span>
+            <p>${t(`hud.tooltip.${key}`)}</p>
+          </div>`).join('')}
+      </section>
     `;
 
     const calendar = document.createElement('div');
@@ -250,11 +192,25 @@ export class HUD {
     calendar.setAttribute('popover', 'auto');
     calendar.innerHTML = '<strong id="calendar-demand"></strong><span id="calendar-next"></span>';
     container.appendChild(calendar);
+    const status = container.querySelector<HTMLElement>('#city-status')!;
+    const statusButton = container.querySelector<HTMLButtonElement>('#hud-status-toggle')!;
     const calendarButton = container.querySelector<HTMLButtonElement>('.hud-calendar')!;
-    calendar.addEventListener('beforetoggle', () => {
-      const bounds = calendarButton.getBoundingClientRect();
-      calendar.style.left = `${Math.max(8, Math.min(bounds.left, window.innerWidth - 244))}px`;
-      calendar.style.top = `${bounds.bottom + 9}px`;
+    const positionPopovers = () => {
+      for (const [button, panel, width] of [[calendarButton, calendar, 244], [statusButton, status, 310]] as const) {
+        const bounds = button.getBoundingClientRect();
+        panel.style.left = `${Math.max(8, Math.min(bounds.left, window.innerWidth - width - 8))}px`;
+        panel.style.top = `${bounds.bottom + 7}px`;
+      }
+    };
+    this.popoverLayout = new ResizeObserver(([entry]) => {
+      document.documentElement.style.setProperty('--hud-height', `${entry.contentRect.height}px`);
+      positionPopovers();
+    });
+    this.popoverLayout.observe(container);
+    calendar.addEventListener('beforetoggle', positionPopovers);
+    status.addEventListener('beforetoggle', positionPopovers);
+    status.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') event.stopPropagation();
     });
     this.dayElement = container.querySelector('#hud-day');
     this.seasonElement = container.querySelector('#hud-season');
@@ -527,6 +483,7 @@ export class HUD {
   }
 
   public dispose(): void {
+    this.popoverLayout?.disconnect();
     this.container.remove();
     this.tooltip.remove();
   }

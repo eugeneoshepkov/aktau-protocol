@@ -9,6 +9,7 @@ import {
 } from '@babylonjs/core';
 import { CityModels, ModelParts } from '../models/CityModels';
 import { melovoyLighthouse, shevchenkoMonument } from '../models/ShevchenkoLandmarks';
+import { abayPalace } from '../models/AbayPalace';
 import { fertiliserWorks } from '../models/ShevchenkoFactory';
 import { melovoyeTower, melovoyeTrace } from '../models/MelovoyeField';
 import { createLimestoneShore } from '../models/LimestoneShore';
@@ -186,6 +187,7 @@ class DecorManagerClass {
       return mesh;
     };
     landmark('lighthouse', melovoyLighthouse(), 51.45, 10.35, -0.38);
+    const palace = landmark('abayPalace', abayPalace(), 59.6, 15.45, -Math.PI / 2);
     landmark('monument', shevchenkoMonument(), 55.2, 10.25, -1.9);
     landmark('factory', fertiliserWorks(), 52.55, 21.35, -0.12);
     const kiosk = landmark('iceCream', iceCreamCounter(), 54, 15.45, -0.64);
@@ -198,7 +200,7 @@ class DecorManagerClass {
     this.beachgoers.metadata = { sight: 'swimmingPier' };
     this.beachgoers.isPickable = true;
     const torysh = landmark('torysh', toryshStones(), 56.7, 45.1, -1.15);
-    for (const stop of [kiosk, club, pier, torysh]) stop.metadata.neighbourhood = true;
+    for (const stop of [kiosk, club, pier, torysh, palace]) stop.metadata.frameAboveCard = true;
     const outcrops = finish(toryshStones(true), 'outcrops at Torysh');
     outcrops.parent = torysh;
     outcrops.metadata = { sight: 'torysh' };
@@ -272,6 +274,15 @@ class DecorManagerClass {
     boulevard(57.35, 17.26, 11.57, false);
     boulevard(54.18, 23.03, 6.34, true);
     streets.box(52.71, 21.52, 0.15, 4.62, 2.94, 0.018, '#b8b4a3');
+    // Paved walks and clipped planting beds wrapped around the palace steps in Shevchenko.
+    streets.box(57.89, 15.45, 0.15, 0.54, 3.8, 0.021, '#ccbda2');
+    streets.box(58.92, 12.86, 0.15, 2.6, 1.38, 0.021, '#ccbda2');
+    for (const x of [58.25, 59.56]) {
+      streets.box(x, 13.15, 0.171, 0.94, 0.36, 0.045, '#968a73');
+      streets.box(x, 13.15, 0.216, 0.86, 0.28, 0.012, '#807b61');
+      for (const dx of [-0.28, 0, 0.28]) plant(shrubs, x + dx, 0.224, 13.15, x, 0.62);
+    }
+    for (const x of [57.98, 58.6, 59.22, 59.84]) plant(shrubs, x, 0.171, 12.48, x, 1.25);
     // A limestone promenade joins the lighthouse block and the poet's square.
     streets.box(53.85, 10.52, 0.15, 7.05, 2.28, 0.023, '#cec4ab');
     streets.box(53.85, 9.30, 0.15, 7.05, 0.22, 0.013, '#bcb49c');

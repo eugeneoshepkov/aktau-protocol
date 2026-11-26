@@ -7,6 +7,7 @@ export class IntroScreen {
     screen.id = 'intro-overlay';
     const hasSave = Boolean(localStorage.getItem('aktau-save'));
     const audio = new Audio('/audio/title.mp3');
+    audio.loop = true;
     audio.volume = 0.4;
     audio.muted = localStorage.getItem('aktau-muted') === 'true';
 
@@ -57,25 +58,40 @@ export class IntroScreen {
     screen.querySelector('.intro-lang-btn')!.addEventListener('click', () => i18n.toggleLocale());
 
     const mute = screen.querySelector<HTMLButtonElement>('.intro-mute-btn')!;
+    let starting = false;
     const showSound = () => {
-      mute.innerHTML =
-        (audio.muted ? ICONS.volumeOff : ICONS.volumeOn) +
-        `<span>${t(audio.muted ? 'menu.soundOff' : 'menu.soundOn')}</span>`;
-      mute.setAttribute('aria-pressed', String(audio.muted));
+      const playing = !audio.muted && !audio.paused;
+      const label = t(audio.muted ? 'menu.soundOff' : playing ? 'menu.soundOn' : 'menu.playSound');
+      mute.innerHTML = (playing ? ICONS.volumeOn : ICONS.volumeOff) + `<span>${label}</span>`;
+      mute.title = label;
+      mute.setAttribute('aria-label', audio.paused && !audio.muted ? label : t('intro.mute'));
+      mute.setAttribute('aria-pressed', String(playing));
+    };
+    const playTitle = () => {
+      if (starting || audio.muted || !audio.paused) return;
+      void audio.play().then(showSound, showSound);
+    };
+    const playOnKey = (event: KeyboardEvent) => {
+      // Enter and Space on a button will deliver a click with that button's own action.
+      if ((event.key === 'Enter' || event.key === ' ') && event.target instanceof HTMLButtonElement) return;
+      playTitle();
     };
     showSound();
     mute.addEventListener('click', () => {
-      audio.muted = !audio.muted;
+      if (starting) return;
+      audio.muted = !audio.muted && !audio.paused;
       localStorage.setItem('aktau-muted', String(audio.muted));
-      if (!audio.muted) void audio.play().catch(() => {});
+      if (audio.muted) audio.pause();
       showSound();
     });
-    if (!audio.muted) void audio.play().catch(() => {});
+    screen.addEventListener('click', playTitle);
+    document.addEventListener('keydown', playOnKey);
+    playTitle();
 
-    let starting = false;
     const start = async (resume: boolean, walk = false) => {
       if (starting) return;
       starting = true;
+      document.removeEventListener('keydown', playOnKey);
       audio.pause();
       const primary = screen.querySelector<HTMLButtonElement>(walk ? '.walk-city' : '.start-city')!;
       primary.disabled = true;

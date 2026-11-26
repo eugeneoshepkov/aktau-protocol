@@ -28,11 +28,13 @@ The **BN-350 fast breeder reactor** wasn't just generating power. It was *desali
 
 ## Gameplay
 
-You take charge of a working waterfront with 50 residents. Your first order is to connect a second housing block to water and heat. Click the suggested lot, or pick a building from the construction menu and choose your own site.
+You take charge of a working waterfront with 50 residents. Click **Build housing** on the map to connect a second block to water and heat, or choose your own site from the construction menu. **Show lot** in the district plan brings the suggested site back into view. When the new residents move in, their first postcard appears in the Chronicle.
+
+The top bar shows the day, residents and drinking water. Open **City status** for seawater, heat, power, core strain and morale. Urgent warnings appear on the map while you play.
 
 Choose **Walk through Shevchenko** on the title screen to step into the ice-cream queue. Summer opens the wooden bathing pier in the First Microrayon, autumn brings a day trip to the stone balls at Torysh, and winter brings a backwards film screening at the Chaika courtyard club. Each outing leaves something for your album. Turn a keepsake over to write your own memory. The album stays in this browser when you start a new city.
 
-The ice-cream and film scenes draw on [Denis Onishchenko’s childhood memories](https://www.lada.kz/columns/12499-aktau-onischenko.html). The pier draws on [Viktor Malyuk’s recollection of the first city beach](https://otpannews.kz/ru/news/konferentsiia-neravnodushnykh-zhiteli-aktau-podelilis-svoimi-vospominaniiami-o-kaspii). The in-game walk places these scenes on a compressed map, including the [out-of-town landscape at Torysh](https://tour-mangystau.kz/ru/destinations/torysh).
+The ice-cream and film scenes draw on [childhood memories published by Lada.kz](https://www.lada.kz/columns/12499-aktau-onischenko.html). The pier draws on [a local recollection of the first city beach in Otpan News](https://otpannews.kz/ru/news/konferentsiia-neravnodushnykh-zhiteli-aktau-podelilis-svoimi-vospominaniiami-o-kaspii). The in-game walk places these scenes on a compressed map, including the [out-of-town landscape at Torysh](https://tour-mangystau.kz/ru/destinations/torysh).
 
 ![The ice-cream counter, bathing pier, stone balls at Torysh and Chaika courtyard club in the game](public/pictures/screenshots/neighbourhood.webp)
 
@@ -40,11 +42,11 @@ The ice-cream and film scenes draw on [Denis Onishchenko’s childhood memories]
 
 Earn the district charter by expanding both supply lines, housing 180 residents, and reaching spring on day 121. Once four blocks are connected, emergency shifts let you spend surplus power on water or heat. After the charter, choose a waterfront reed garden to save household water or district heating works to cut heat demand. Connect a fifth housing block and settle 250 residents to complete the waterfront. You can keep building in free play or host the Melovoye research team when spring arrives.
 
-For the optional field season, connect a sixth housing block. Send the waterfront’s reserve crew inland for ten days or keep it home and let the field team finish the trial in twenty. The trial unlocks a visit to the surface tower. Return just over a game year later to see where the ground settled beneath a pipe. The crew decision is fictional. The two sights are based on [Gregory Abramov’s account of Melovoye](https://www.ijsred.com/volume3/issue3/IJSRED-V3I3P169.pdf).
+For the optional field season, connect a sixth housing block. Send the waterfront’s reserve crew inland for ten days or keep it home and let the field team finish the trial in twenty. The trial unlocks a visit to the surface tower. Return just over a game year later to see where the ground settled beneath a pipe. The crew decision is fictional. The two sights are based on [a field researcher’s published account of Melovoye](https://www.ijsred.com/volume3/issue3/IJSRED-V3I3P169.pdf).
 
 ![The Melovoye field tower and a later visit to the pipe above the settled ground](public/pictures/screenshots/melovoye.webp)
 
-Open **City sights** to visit the Melovoy rooftop lighthouse, the Shevchenko monument, the fertiliser works, the BN-350 reactor hall and the MAEK desalination works. Each stop includes a historical reference. The buildings share a compressed waterfront map.
+Open **City sights** to visit the Melovoy rooftop lighthouse, the Abay Palace of Culture, the Shevchenko monument, the fertiliser works, the BN-350 reactor hall and the MAEK desalination works. Each stop includes a historical reference. The buildings share a compressed waterfront map.
 
 At the desalination works, open the press clippings to read about the town’s water queues and the July 2023 thermal power outage. Dispatching an emergency water shift also opens a link to those clippings. The reactor hall has a separate operating record from February 1975.
 
