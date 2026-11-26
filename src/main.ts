@@ -110,12 +110,18 @@ export async function initGame(resume: boolean, walk = false): Promise<void> {
 
   await ambientManager.initialize(scene, gridManager);
 
+  const buildingManager = new BuildingManager(scene, gridManager);
+  const isPlacing = () =>
+    buildingManager.getSelectedBuildingType() !== null &&
+    !tickSystem.hasOpenModal() &&
+    !gameState.isGameOver();
+
   scene.registerBeforeRender(() => {
+    gridManager.setSurveyVisible(isPlacing());
     const deltaTime = scene.getEngine().getDeltaTime() / 1000;
     ambientManager.update(deltaTime);
   });
 
-  const buildingManager = new BuildingManager(scene, gridManager);
   const pipeManager = new PipeManager(scene);
   const particleManager = new ParticleManager(scene);
 
@@ -183,7 +189,7 @@ export async function initGame(resume: boolean, walk = false): Promise<void> {
   const inputManager = new InputManager(
     scene,
     gridManager,
-    () => !sights.isOpen() && buildingManager.getSelectedBuildingType() !== null,
+    isPlacing,
     (id) => {
       if (!buildingManager.isDemolishMode() || sights.isOpen()) sights.open(id);
     }

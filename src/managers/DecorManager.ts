@@ -11,6 +11,8 @@ import { CityModels, ModelParts } from '../models/CityModels';
 import { melovoyLighthouse, shevchenkoMonument } from '../models/ShevchenkoLandmarks';
 import { fertiliserWorks } from '../models/ShevchenkoFactory';
 import { melovoyeTower, melovoyeTrace } from '../models/MelovoyeField';
+import { createLimestoneShore } from '../models/LimestoneShore';
+import { createNeighbourhoodPaths } from '../models/NeighbourhoodPaths';
 import {
   courtyardClub, enamelSign, firstMicrorayonPier, iceCreamCounter, summerAtThePier, toryshStones
 } from '../models/NeighbourhoodScenes';
@@ -35,8 +37,10 @@ class DecorManagerClass {
   private hiddenByCivicProject = new Set<AbstractMesh>();
   private meshes: Set<AbstractMesh> = new Set();
   private material: StandardMaterial | null = null;
+  private shoreMaterial?: StandardMaterial;
   private waterfrontRoofs: Mesh[] = [];
   private beachgoers?: Mesh;
+  private paths?: Mesh;
   private vegetation: { mesh: Mesh; positions: Float32Array; colors: Float32Array }[] = [];
   private buildingPlaced = (data: unknown) => {
     const { gridX, gridZ } = data as Building;
@@ -94,11 +98,31 @@ class DecorManagerClass {
     place(dockShed, 33.95, 0.15, 11.65, Math.PI / 2, 0.72);
     this.waterfrontRoofs = [dock, customs, canteen, market, dockShed];
     // Clearing any intersecting construction lot clears the entire landmark.
-    for (const mesh of [dock, tug, light, customs, canteen, market, dockShed]) {
+    const registerFootprint = (mesh: Mesh) => {
       const { minimumWorld: min, maximumWorld: max } = mesh.getBoundingInfo().boundingBox;
-      for (let x = Math.floor(min.x); x <= Math.floor(max.x); x++)
-        for (let z = Math.floor(min.z); z <= Math.floor(max.z); z++) register(mesh, x, z);
+      const lastX = Math.min(GRID_SIZE - 1, Math.floor(max.x));
+      const lastZ = Math.min(GRID_SIZE - 1, Math.floor(max.z));
+      for (let x = Math.max(0, Math.floor(min.x)); x <= lastX; x++) {
+        for (let z = Math.max(0, Math.floor(min.z)); z <= lastZ; z++) register(mesh, x, z);
+      }
+    };
+    for (const mesh of [dock, tug, light, customs, canteen, market, dockShed]) {
+      registerFootprint(mesh);
     }
+    this.shoreMaterial = this.material.clone('limestone and dune grass');
+    this.shoreMaterial.backFaceCulling = false;
+    for (const shelf of createLimestoneShore(scene)) {
+      shelf.material = this.shoreMaterial;
+      shelf.isPickable = false;
+      shelf.receiveShadows = true;
+      shelf.freezeWorldMatrix();
+      shadowMap?.renderList?.push(shelf);
+      this.meshes.add(shelf);
+      this.waterfrontRoofs.push(shelf);
+      registerFootprint(shelf);
+    }
+    this.paths = createNeighbourhoodPaths(scene);
+    this.meshes.add(this.paths);
 
     // The harbor tug leaves its mooring, circles the breakwater, then returns.
     // Its two fading wake lines follow the stern without extra water simulation.
@@ -385,6 +409,7 @@ class DecorManagerClass {
 
   public setSeason(season: Season): void {
     this.beachgoers?.setEnabled(season === 'summer');
+    if (this.paths) this.paths.visibility = season === 'winter' ? 0.34 : 1;
     const leaf = Color3.FromHexString(seasonalCoast[season].leaf);
     const winter = season === 'winter';
     for (const roof of this.waterfrontRoofs) {
@@ -461,6 +486,7 @@ class DecorManagerClass {
     this.hiddenByCivicProject.clear();
     this.meshes.clear();
     this.material?.dispose();
+    this.shoreMaterial?.dispose();
   }
 }
 

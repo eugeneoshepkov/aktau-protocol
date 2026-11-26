@@ -15,6 +15,11 @@ export function getCoastlineZ(x: number): number {
   return SEA_ROWS + primaryWave + secondaryWave + tertiaryWave;
 }
 
+// Tile classification samples cell centres. Props and the land and sea meshes share this waterline.
+export function shoreAt(worldX: number): number {
+  return getCoastlineZ(worldX - 0.5) + 0.5;
+}
+
 /**
  * Determine tile type based on grid position
  * - Sea tiles based on organic coastline

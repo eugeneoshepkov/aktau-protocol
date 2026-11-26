@@ -65,6 +65,10 @@ export class TickSystem {
     return this.isPaused;
   }
 
+  public hasOpenModal(): boolean {
+    return this.openModalCount > 0;
+  }
+
   /**
    * Called when a modal opens. Pauses the game if not already paused by modal.
    */

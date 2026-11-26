@@ -12,17 +12,13 @@ import {
 } from '@babylonjs/core';
 import { GRID_SIZE, TILE_SIZE } from '../types';
 import type { TileType } from '../types';
-import { generateTileMap, getCoastlineZ } from './TileTypes';
+import { generateTileMap, shoreAt } from './TileTypes';
+import { coastalGround, groundColor, STRAND_LENGTH, STRAND_WIDTH } from './CoastalGround';
 import type { Season } from '../simulation/GameState';
 import { seasonalCoast } from '../engine/Seasons';
 
 const LAND_Y = 0.15;
 const SEA_Y = -0.04;
-
-function shoreAt(x: number): number {
-  // TileTypes classifies tile centers. Keep the drawn shoreline on the same sample.
-  return getCoastlineZ(x - 0.5) + 0.5;
-}
 
 const waterVertex = `
   precision highp float;
@@ -75,6 +71,7 @@ export class GridManager {
   private tileMap: TileType[][] = [];
   private land: Mesh | null = null;
   private water: Mesh | null = null;
+  private survey: Mesh | null = null;
   private dryGround: Float32Array | null = null;
   private highlight: Mesh | null = null;
   private highlightMaterial: StandardMaterial | null = null;
@@ -87,6 +84,7 @@ export class GridManager {
     this.tileMap = generateTileMap();
     this.land = this.createLand();
     this.water = this.createWater();
+    this.survey = this.createSurvey();
 
     this.highlight = MeshBuilder.CreateGround(
       'selection tile',
@@ -105,6 +103,7 @@ export class GridManager {
     const positions: number[] = [],
       colors: number[] = [],
       uvs: number[] = [],
+      shorelineUVs: number[] = [],
       indices: number[] = [];
     // Smaller sections keep the waterline smooth, longer sections carry the
     // landscape to the horizon without drawing an edge around the city.
@@ -116,9 +115,6 @@ export class GridManager {
     for (let z = 0; z <= GRID_SIZE + 1; z++) rows.push(z);
     for (let z = GRID_SIZE + 4; z < 206; z += 4) rows.push(z);
 
-    const warmSand = Color3.FromHexString('#d9c6a4');
-    const beach = Color3.FromHexString('#e4d3ae');
-    const steppe = Color3.FromHexString('#baa98a');
     for (let col = 0; col < columns.length - 1; col++) {
       const left = columns[col],
         right = columns[col + 1];
@@ -128,12 +124,6 @@ export class GridManager {
         const bottom = rows[row],
           top = rows[row + 1];
         if (top < Math.min(leftShore, rightShore)) continue;
-        const ix = Math.floor(left),
-          iz = Math.floor(bottom);
-        const inside = this.isInBounds(ix, iz);
-        const tone = inside ? warmSand : steppe;
-        const fleck = Math.sin(ix * 32.617 + iz * 78.23) * 1364.56;
-        const variation = 0.98 + (fleck - Math.floor(fleck)) * 0.032;
         const index = positions.length / 3;
         for (const [x, z, coast] of [
           [left, bottom, leftShore],
@@ -150,10 +140,11 @@ export class GridManager {
             SEA_Y +
             Math.min(1, distance / 0.47) * (LAND_Y - SEA_Y) +
             hills * Math.min(1, distance / 4);
-          const color = Color3.Lerp(beach, tone, Math.min(1, distance / 2.5));
+          const color = groundColor(x, wz, distance);
           positions.push(x * TILE_SIZE, y, wz * TILE_SIZE);
-          colors.push(color.r * variation, color.g * variation, color.b * variation, 1);
-          uvs.push(x / 4, wz / 4);
+          colors.push(color.r, color.g, color.b, 1);
+          uvs.push(x / 8, wz / 8);
+          shorelineUVs.push(x / STRAND_LENGTH, distance / STRAND_WIDTH);
         }
         indices.push(index, index + 2, index + 1, index + 2, index + 3, index + 1);
       }
@@ -161,51 +152,72 @@ export class GridManager {
     const data = new VertexData();
     const normals: number[] = [];
     VertexData.ComputeNormals(positions, indices, normals);
-    Object.assign(data, { positions, normals, colors, uvs, indices });
+    Object.assign(data, { positions, normals, colors, uvs, uvs2: shorelineUVs, indices });
     const mesh = new Mesh('landMesh', this.scene);
     data.applyToMesh(mesh);
     this.dryGround = Float32Array.from(colors);
-    const mat = new StandardMaterial('steppe limestone', this.scene);
-    mat.specularColor = Color3.Black();
-    mat.diffuseTexture = this.createSurveyTexture();
-    mat.backFaceCulling = false;
-    mesh.material = mat;
+    mesh.material = coastalGround(this.scene);
     mesh.receiveShadows = true;
     mesh.freezeWorldMatrix();
     return mesh;
   }
 
-  private createSurveyTexture(): DynamicTexture {
-    const texture = new DynamicTexture(
-      'land survey',
+  private createSurvey(): Mesh {
+    const positions: number[] = [],
+      uvs: number[] = [],
+      indices: number[] = [];
+    // One narrow strip of triangles follows the shoreline and ends at the construction boundary.
+    for (let x = 0; x <= GRID_SIZE; x += 0.5) {
+      const coast = shoreAt(x) + 0.47; // Start on level sand above the wash.
+      const i = positions.length / 3;
+      positions.push(
+        x * TILE_SIZE,
+        LAND_Y + 0.002,
+        coast * TILE_SIZE,
+        x * TILE_SIZE,
+        LAND_Y + 0.002,
+        GRID_SIZE * TILE_SIZE
+      );
+      uvs.push(x / 4, coast / 4, x / 4, GRID_SIZE / 4);
+      if (i > 0) indices.push(i - 2, i, i - 1, i, i + 1, i - 1);
+    }
+    const mesh = new Mesh('construction survey', this.scene);
+    const data = new VertexData();
+    Object.assign(data, { positions, uvs, indices });
+    data.applyToMesh(mesh);
+    const crosses = new DynamicTexture(
+      'survey crosses',
       256,
       this.scene,
       true,
       Texture.TRILINEAR_SAMPLINGMODE
     );
-    const ctx = texture.getContext();
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, 256, 256);
-    // Fine grain and small crosses give players a grid without obscuring the sand.
-    let seed = 1963;
-    const random = () => {
-      seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
-      return seed / 4294967296;
-    };
-    ctx.fillStyle = 'rgba(99,84,65,.12)';
-    for (let n = 0; n < 2600; n++)
-      ctx.fillRect(random() * 256, random() * 256, 0.6 + random() * 1.4, 0.7);
+    const ctx = crosses.getContext();
+    ctx.fillStyle = 'rgba(81,73,61,.28)';
     for (let x = 0; x <= 256; x += 64) {
       for (let z = 0; z <= 256; z += 64) {
-        ctx.fillStyle = 'rgba(81,73,61,.28)';
         ctx.fillRect(x - 2.7, z - 0.55, 5.4, 1.1);
         ctx.fillRect(x - 0.55, z - 2.7, 1.1, 5.4);
       }
     }
-    texture.wrapU = Texture.WRAP_ADDRESSMODE;
-    texture.wrapV = Texture.WRAP_ADDRESSMODE;
-    texture.update();
-    return texture;
+    crosses.hasAlpha = true;
+    crosses.wrapU = crosses.wrapV = Texture.WRAP_ADDRESSMODE;
+    crosses.update();
+    const material = new StandardMaterial('survey ink', this.scene);
+    material.disableLighting = true;
+    material.emissiveColor = Color3.White();
+    material.diffuseTexture = crosses;
+    material.useAlphaFromDiffuseTexture = true;
+    material.backFaceCulling = false;
+    mesh.material = material;
+    mesh.isPickable = false;
+    mesh.isVisible = false;
+    mesh.freezeWorldMatrix();
+    return mesh;
+  }
+
+  public setSurveyVisible(visible: boolean): void {
+    if (this.survey && this.survey.isVisible !== visible) this.survey.isVisible = visible;
   }
 
   private createWater(): Mesh {
@@ -256,13 +268,14 @@ export class GridManager {
     if (!this.dryGround || !positions || !this.land) return;
     const colors = new Float32Array(this.dryGround);
     const sand = Color3.FromHexString(climate.sand);
+    const summer = Color3.FromHexString(seasonalCoast.summer.sand);
     const snow = Color3.FromHexString('#e1e9e7');
     for (let i = 0, c = 0; i < positions.length; i += 3, c += 4) {
       const x = positions[i],
         z = positions[i + 2];
-      colors[c] *= sand.r / (217 / 255);
-      colors[c + 1] *= sand.g / (198 / 255);
-      colors[c + 2] *= sand.b / (164 / 255);
+      colors[c] *= sand.r / summer.r;
+      colors[c + 1] *= sand.g / summer.g;
+      colors[c + 2] *= sand.b / summer.b;
       if (season === 'winter') {
         // Wind scours the shore and leaves long, uneven drifts further inland.
         const ripple =
@@ -301,6 +314,7 @@ export class GridManager {
   public dispose(): void {
     this.land?.dispose(false, true);
     this.water?.dispose(false, true);
+    this.survey?.dispose(false, true);
     this.highlight?.dispose(false, true);
   }
 }
