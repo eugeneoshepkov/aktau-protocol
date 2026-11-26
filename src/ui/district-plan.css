@@ -326,3 +326,19 @@
   opacity: 0.5;
   cursor: default;
 }
+
+.compact-city .district-plan {
+  left: var(--side-left);
+  top: calc(var(--hud-height, 50px) + 8px);
+  width: min(265px, calc(100vw - var(--side-left) - var(--side-right)));
+  padding: 0 11px;
+  max-height: calc(100dvh - var(--hud-height, 50px) - var(--dock-top) - 16px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.compact-city .plan-summary { min-height: 34px; }
+.compact-city .plan-objective { margin: 0 0 5px; min-height: 34px; }
+.compact-city .plan-title { font: 650 17px/1.15 var(--sans); }
+.compact-city .plan-locate { font-size: 13px; }
+.compact-city #plan-details { max-height: none; overflow: visible; padding-bottom: 10px; }
+.compact-city .field-actions button, .compact-city .plan-reserve-actions button { min-height: 44px; }

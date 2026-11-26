@@ -45,7 +45,7 @@ export class IntroScreen {
           <dt>${t('guide.housing')}</dt><dd>${t('guide.housing.info')}</dd>
           <dt>${t('guide.winter')}</dt><dd>${t('guide.winter.info')}</dd>
         </dl>
-        <p>${t('guide.controls')}</p>
+        <p>${t(matchMedia('(pointer: coarse)').matches ? 'guide.touchControls' : 'guide.controls')}</p>
       </dialog>`;
     document.body.append(screen);
 

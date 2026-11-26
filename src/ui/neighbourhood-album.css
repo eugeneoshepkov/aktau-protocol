@@ -274,8 +274,28 @@
 @media (prefers-reduced-motion: reduce) {
   .rewinding .film-frame i { animation: none; }
 }
-#city-sights:has(.walk-album:not([hidden])) {
-  max-height: calc(100dvh - 22px);
-  overflow-y: auto;
-  overscroll-behavior: contain;
+@media (max-width: 700px), (max-height: 540px) and (orientation: landscape) {
+  .neighbourhood-walk .sight-story {
+    display: grid;
+    grid-auto-rows: max-content;
+  }
+  .neighbourhood-walk .sight-story > [aria-live],
+  .neighbourhood-walk .walk-album:not([hidden]) {
+    display: contents;
+  }
+  .neighbourhood-walk .album-line {
+    margin-top: 7px;
+    padding-block: 4px;
+    border-block: 1px dashed #b4ab98;
+  }
+  .neighbourhood-walk .sight-description {
+    order: 1;
+  }
+  #city-sights .walk-album button {
+    min-height: 44px;
+    font-size: 14px;
+  }
+  .album-count {
+    font-size: 12px;
+  }
 }

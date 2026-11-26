@@ -112,6 +112,8 @@ You can't build infinitely. Plan carefully.
 
 ## Controls
 
+On a phone, drag with one finger to move the map. Pinch to zoom and twist two fingers to rotate. Tap a landmark to visit it, or tap the marked lot to build the next district building. **Build** opens the construction tray for choosing your own site.
+
 | Key | Action |
 |-----|--------|
 | `WASD` (or `ЦФЫВ`) | Pan camera |

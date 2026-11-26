@@ -34,7 +34,7 @@ export class CitySights {
   private readonly card = document.createElement('section');
   private readonly closeButton: HTMLButtonElement;
   private readonly locate: (id: SightId) => AbstractMesh | null;
-  private readonly focus: (mesh: AbstractMesh) => void;
+  private readonly focus: (mesh: AbstractMesh, card: HTMLElement) => void;
   private stops: ReadonlyArray<readonly [SightId, string]> = [];
   private readonly album: NeighbourhoodAlbum;
   private readonly invitation = document.createElement('button');
@@ -42,7 +42,7 @@ export class CitySights {
   private readonly leave: () => void;
   private index = 0;
 
-  constructor(locate: (id: SightId) => AbstractMesh | null, focus: (mesh: AbstractMesh) => void, leave: () => void) {
+  constructor(locate: (id: SightId) => AbstractMesh | null, focus: (mesh: AbstractMesh, card: HTMLElement) => void, leave: () => void) {
     this.locate = locate;
     this.focus = focus;
     this.leave = leave;
@@ -54,7 +54,7 @@ export class CitySights {
     this.launcher.setAttribute('aria-label', t('sight.open'));
     this.launcher.setAttribute('aria-expanded', 'false');
     this.launcher.setAttribute('aria-controls', 'city-sights');
-    this.launcher.innerHTML = `${ICONS.pin}<span>${t('sight.open')}</span>`;
+    this.launcher.innerHTML = `${ICONS.pin}<span class="sight-full">${t('sight.open')}</span><span class="mobile-menu-label">${t('sight.short')}</span>`;
     this.launcher.addEventListener('click', () => this.open());
     controls.append(this.launcher);
     const network = document.querySelector<HTMLDetailsElement>('.network-control');
@@ -71,20 +71,22 @@ export class CitySights {
         </div>
         <button type="button" class="sight-close" aria-label="${t('sight.close')}" title="${t('sight.close')}">${ICONS.close}</button>
       </div>
-      <div aria-live="polite" aria-atomic="true">
-        <h2 id="sight-name"></h2><p class="sight-description"></p>
+      <div class="sight-story">
+        <div aria-live="polite" aria-atomic="true">
+          <h2 id="sight-name"></h2><p class="sight-description"></p>
+        </div>
+        <div class="neighbourhood-album" hidden></div>
+        <details class="reactor-record" hidden>
+          <summary>${t('press.reactorSummary')}</summary>
+          <p>${t('press.reactor')} <a href="https://www-pub.iaea.org/MTCD/Publications/PDF/te_876_web.pdf#page=179" target="_blank" rel="noopener noreferrer">${t('press.reactorLink')} ↗</a></p>
+        </details>
+        <details class="maek-clipping" hidden>
+          <summary>${t('press.summary')}</summary>
+          <p>${t('press.early')} <a href="https://mangyshlak.kz/gazeta-pravda-%E2%84%9612-1967-god/" target="_blank" rel="noopener noreferrer">${t('press.earlyLink')} ↗</a></p>
+          <p>${t('press.water')} <a href="https://www.lada.kz/aktau_news/society/91530-zhiteli-aktau-do-nochi-stoyali-v-ocheredi-k-vodovozu.html" target="_blank" rel="noopener noreferrer">${t('press.waterLink')} ↗</a></p>
+          <p>${t('press.power')} <a href="https://www.kegoc.kz/ru/press-center/press-releases/161747/" target="_blank" rel="noopener noreferrer">${t('press.powerLink')} ↗</a></p>
+        </details>
       </div>
-      <div class="neighbourhood-album" hidden></div>
-      <details class="reactor-record" hidden>
-        <summary>${t('press.reactorSummary')}</summary>
-        <p>${t('press.reactor')} <a href="https://www-pub.iaea.org/MTCD/Publications/PDF/te_876_web.pdf#page=179" target="_blank" rel="noopener noreferrer">${t('press.reactorLink')} ↗</a></p>
-      </details>
-      <details class="maek-clipping" hidden>
-        <summary>${t('press.summary')}</summary>
-        <p>${t('press.early')} <a href="https://mangyshlak.kz/gazeta-pravda-%E2%84%9612-1967-god/" target="_blank" rel="noopener noreferrer">${t('press.earlyLink')} ↗</a></p>
-        <p>${t('press.water')} <a href="https://www.lada.kz/aktau_news/society/91530-zhiteli-aktau-do-nochi-stoyali-v-ocheredi-k-vodovozu.html" target="_blank" rel="noopener noreferrer">${t('press.waterLink')} ↗</a></p>
-        <p>${t('press.power')} <a href="https://www.kegoc.kz/ru/press-center/press-releases/161747/" target="_blank" rel="noopener noreferrer">${t('press.powerLink')} ↗</a></p>
-      </details>
       <div class="sight-footer">
         <a class="sight-source" target="_blank" rel="noopener noreferrer">${t('sight.source')} ↗</a>
         <div class="sight-pages">
@@ -179,12 +181,11 @@ export class CitySights {
     const [id, source] = this.stops[this.index];
     const mesh = this.locate(id);
     if (!mesh) return this.close();
-    this.focus(mesh);
     this.card.querySelector('#sight-name')!.textContent = t(`sight.${id}.name`);
     this.card.querySelector('.sight-description')!.textContent = t(`sight.${id}.description`);
     const link = this.card.querySelector<HTMLAnchorElement>('.sight-source')!;
     link.href = source;
-    link.textContent = t(id === 'torysh' ? 'walk.landscapeSource' : isWalkStop(id) ? 'walk.source' : 'sight.source') + ' ↗';
+    link.textContent = t(id === 'torysh' ? 'walk.landscapeSource' : isWalkStop(id) ? 'walk.source' : 'sight.source') + '\u00a0↗';
     if (isWalkStop(id)) this.album.show(id);
     else this.album.hide();
     const clipping = this.card.querySelector<HTMLDetailsElement>('.maek-clipping')!;
@@ -194,7 +195,9 @@ export class CitySights {
     record.open = false;
     record.hidden = id !== 'reactor';
     this.card.scrollTop = 0;
+    this.card.querySelector('.sight-story')!.scrollTop = 0;
     this.card.querySelector('.sight-count')!.textContent = `${this.index + 1} / ${this.stops.length}`;
+    this.focus(mesh, this.card);
   }
 
   public close(): void {

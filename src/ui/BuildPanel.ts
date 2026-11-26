@@ -6,6 +6,10 @@ import { gameState } from '../simulation/GameState';
 import type { BuildingType } from '../types';
 import { t, td } from '../i18n';
 
+export const compactCityScreen = window.matchMedia(
+  '(max-width: 700px), (pointer: coarse) and (orientation: landscape) and (max-height: 540px)'
+);
+
 // Reactor is auto-placed at game start, so not in menu
 const BUILDING_HOTKEYS: Record<string, BuildingType> = {
   '1': 'pump',
@@ -18,6 +22,7 @@ const BUILDING_HOTKEYS: Record<string, BuildingType> = {
 export class BuildPanel {
   private container: HTMLDivElement;
   private buildingManager: BuildingManager;
+  private readonly launcher = document.createElement('button');
   private buttons: Map<BuildingType, HTMLButtonElement> = new Map();
   private demolishButton: HTMLButtonElement | null = null;
 
@@ -43,6 +48,7 @@ export class BuildPanel {
     const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement | null;
 
     this.buildingManager.onDemolishModeChange((enabled) => {
+      this.demolishButton?.setAttribute('aria-pressed', String(enabled));
       this.setPanelTitle(enabled ? t('build.site.demolish') : t('build.title'));
       if (this.demolishButton) {
         if (enabled) {
@@ -58,6 +64,62 @@ export class BuildPanel {
         }
       }
     });
+  }
+
+  public mountMobileControls(): void {
+    const dock = document.querySelector<HTMLElement>('.map-tools')!;
+    const options = document.querySelector<HTMLDetailsElement>('.hud-options')!;
+    const menu = options.querySelector<HTMLElement>('.hud-options-menu')!;
+    this.launcher.type = 'button';
+    this.launcher.className = 'build-launcher';
+    this.launcher.setAttribute('aria-controls', this.container.id);
+    this.launcher.setAttribute('aria-expanded', 'false');
+    this.launcher.innerHTML = `<span class="icon-wrap">${ICONS.microrayon}</span>${t('build.open')}`;
+    this.launcher.onclick = () => {
+      const open = !this.container.classList.contains('palette-open');
+      this.openPalette(open);
+      if (open && this.launcher.matches(':focus-visible')) {
+        this.container.querySelector<HTMLButtonElement>('.build-button:not(:disabled)')?.focus();
+      }
+    };
+    dock.prepend(this.launcher);
+
+    // Move the existing controls so keyboard order follows the visible menu on rotation.
+    const controls = [
+      ['.hud-speeds', menu], ['.network-control', menu],
+      ['#reset-view-btn', menu], ['#shortcuts-btn', menu], ['#chronicle-btn', dock]
+    ] as const;
+    const slots = controls.map(([selector, phoneParent]) => {
+      const control = document.querySelector<HTMLElement>(selector)!;
+      const originalSlot = document.createComment(selector);
+      control.before(originalSlot);
+      return { control, phoneParent, originalSlot };
+    });
+    const resetLayout = () => {
+      this.openPalette(false);
+      options.open = false;
+      for (const { control, phoneParent, originalSlot } of slots) {
+        if (compactCityScreen.matches) phoneParent.append(control);
+        else originalSlot.after(control);
+      }
+      document.body.classList.toggle('compact-city', compactCityScreen.matches);
+    };
+    resetLayout();
+    compactCityScreen.addEventListener('change', resetLayout);
+    menu.addEventListener('click', (event) => {
+      if ((event.target as Element).closest('#reset-view-btn, #shortcuts-btn')) options.open = false;
+    });
+    document.addEventListener('pointerdown', (event) => {
+      if (this.launcher.getAttribute('aria-expanded') !== 'true') return;
+      if (!this.container.contains(event.target as Node) && !this.launcher.contains(event.target as Node)) {
+        this.openPalette(false);
+      }
+    });
+  }
+
+  private openPalette(open: boolean): void {
+    this.container.classList.toggle('palette-open', open);
+    this.launcher.setAttribute('aria-expanded', String(open));
   }
 
   private setupKeyboardShortcuts(): void {
@@ -79,6 +141,8 @@ export class BuildPanel {
       }
 
       if (e.key === 'Escape') {
+        if (this.container.classList.contains('palette-open')) this.launcher.focus();
+        this.openPalette(false);
         this.cancelSelection();
       }
     });
@@ -92,6 +156,15 @@ export class BuildPanel {
     title.className = 'panel-title';
     title.textContent = t('build.title');
     container.appendChild(title);
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.className = 'placement-cancel';
+    cancel.textContent = t('build.cancel');
+    cancel.onclick = () => {
+      this.cancelSelection();
+      this.launcher.focus();
+    };
+    container.append(cancel);
 
     const buttonContainer = document.createElement('div');
     buttonContainer.className = 'build-buttons';
@@ -135,6 +208,7 @@ export class BuildPanel {
     // Add demolish button
     const demolishButton = document.createElement('button');
     demolishButton.className = 'build-button demolish-button';
+    demolishButton.setAttribute('aria-pressed', 'false');
     demolishButton.innerHTML = `
       <span class="build-icon icon-wrap" style="color: #ef4444">${ICONS.demolish}</span>
       <span class="build-name">${t('build.demolish')}</span>
@@ -232,12 +306,14 @@ export class BuildPanel {
       }
     }
 
+    this.openPalette(false);
     this.setPanelTitle(td(`build.site.${type}`));
     this.buildingManager.selectBuildingType(type);
     this.container.classList.add('building-selected');
   }
 
   private toggleDemolishMode(): void {
+    this.openPalette(false);
     const isCurrentlyDemolish = this.buildingManager.isDemolishMode();
 
     if (isCurrentlyDemolish) {

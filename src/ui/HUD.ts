@@ -63,7 +63,7 @@ export class HUD {
     sections.forEach((section) => {
       section.addEventListener('mouseenter', (e) => {
         const key = (section as HTMLElement).dataset.tooltip as HudTooltipKey;
-        if (key) {
+        if (key && window.matchMedia('(hover: hover)').matches) {
           this.showTooltip(key, e as MouseEvent);
         }
       });
@@ -141,7 +141,7 @@ export class HUD {
         <div class="district-name"><span>${ICONS.atom}</span>AKTAU</div>
         <div class="hud-resources">
         <button class="hud-section hud-calendar" popovertarget="season-calendar">
-          <span class="hud-label">${t('hud.day')} · <span id="season-name"></span></span>
+          <span class="hud-label">${t('hud.day')} <span class="hud-season-name">· <span id="season-name"></span></span></span>
           <span id="hud-day" class="hud-value">1</span>
           <span id="hud-season" class="hud-season icon-wrap icon-season">${ICONS.spring}</span>
         </button>
@@ -155,15 +155,18 @@ export class HUD {
           <span id="hud-freshWater" class="hud-value">0</span>
           <span id="hud-trend-freshWater" class="hud-trend"></span>
         </div>
-        <button type="button" id="hud-status-toggle" popovertarget="city-status" aria-controls="city-status">
-          ${t('hud.status')}<span class="status-chevron" aria-hidden="true"></span>
+        <button type="button" id="hud-status-toggle" popovertarget="city-status" aria-controls="city-status" aria-label="${t('hud.status')}">
+          <span class="status-full">${t('hud.status')}</span><span class="status-short">${t('hud.statusShort')}</span><span class="status-chevron" aria-hidden="true"></span>
         </button>
         </div>
         <div class="hud-controls">
           <button id="hud-pause" class="hud-button" title="${t('hud.pause')}"><span class="icon-wrap pause-icon">${ICONS.pause}</span></button>
-          <button id="hud-speed-0" class="hud-button speed-btn active">1×</button>
-          <button id="hud-speed-1" class="hud-button speed-btn">2×</button>
-          <button id="hud-speed-2" class="hud-button speed-btn">4×</button>
+          <div class="hud-speeds" role="group" aria-label="${t('hud.speed')}">
+            <span class="mobile-menu-label">${t('hud.speed')}</span>
+            <button id="hud-speed-0" class="hud-button speed-btn active" aria-pressed="true">1×</button>
+            <button id="hud-speed-1" class="hud-button speed-btn" aria-pressed="false">2×</button>
+            <button id="hud-speed-2" class="hud-button speed-btn" aria-pressed="false">4×</button>
+          </div>
           <details class="hud-options"><summary title="${t('hud.options')}" aria-label="${t('hud.options')}">•••</summary><div class="hud-options-menu">
           <button id="hud-save" class="hud-button" title="${t('hud.save')}"><span class="icon-wrap">${ICONS.save}</span>${t('hud.save')}</button>
           <button id="hud-load" class="hud-button" title="${t('hud.load')}"><span class="icon-wrap">${ICONS.load}</span>${t('hud.load')}</button>
@@ -323,6 +326,7 @@ export class HUD {
     tickSystem.setTickRate(this.speeds[index]);
     this.speedButtons.forEach((btn, i) => {
       btn.classList.toggle('active', i === index);
+      btn.setAttribute('aria-pressed', String(i === index));
     });
   }
 

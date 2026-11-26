@@ -4,12 +4,12 @@ import { tickSystem } from '../simulation/TickSystem';
 import { t, td } from '../i18n';
 
 export class ShortcutsModal {
-  private overlay: HTMLDivElement;
-  private isOpen = false;
+  private overlay: HTMLDialogElement;
 
   constructor() {
-    this.overlay = document.createElement('div');
+    this.overlay = document.createElement('dialog');
     this.overlay.id = 'shortcuts-modal';
+    this.overlay.setAttribute('aria-labelledby', 'controls-title');
     this.overlay.innerHTML = this.createContent();
     document.body.appendChild(this.overlay);
 
@@ -24,31 +24,39 @@ export class ShortcutsModal {
     const closeBtn = this.overlay.querySelector('.shortcuts-close');
     closeBtn?.addEventListener('click', () => this.close());
 
-    // Keyboard shortcuts
+    this.overlay.addEventListener('close', () => {
+      soundManager.play('click');
+      tickSystem.onModalClose();
+    });
+
     window.addEventListener('keydown', (e) => {
       const active = document.activeElement;
       if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) return;
 
       // Open with ? or F1
-      if ((e.key === '?' || e.key === 'F1') && !this.isOpen) {
+      if ((e.key === '?' || e.key === 'F1') && !tickSystem.hasOpenModal()) {
         e.preventDefault();
         this.open();
-      }
-      // Close with Escape
-      else if (e.key === 'Escape' && this.isOpen) {
-        this.close();
       }
     });
   }
 
   private createContent(): string {
+    const touch = matchMedia('(pointer: coarse)').matches;
+    const title = touch ? t('shortcuts.touchTitle') : t('shortcuts.title');
     return `
       <div class="shortcuts-content">
         <div class="shortcuts-header">
-          <h2><span class="shortcuts-icon">${ICONS.keyboard}</span> ${t('shortcuts.title')}</h2>
-          <button class="shortcuts-close">${ICONS.close}</button>
+          <h2 id="controls-title"><span class="shortcuts-icon" aria-hidden="true">${touch ? ICONS.book : ICONS.keyboard}</span> ${title}</h2>
+          <button type="button" class="shortcuts-close" aria-label="${t('menu.close')}" autofocus>${ICONS.close}</button>
         </div>
 
+        ${touch ? `
+        <dl class="touch-controls">
+          <dt>${t('shortcuts.camera')}</dt><dd>${t('guide.touchControls')}</dd>
+          <dt>${t('shortcuts.touchExplore')}</dt><dd>${t('shortcuts.touchInspect')}</dd>
+          <dt>${t('shortcuts.building')}</dt><dd>${t('shortcuts.touchBuild')}</dd>
+        </dl>` : `
         <div class="shortcuts-sections">
           <div class="shortcuts-section">
             <h3>${t('shortcuts.camera')}</h3>
@@ -82,29 +90,24 @@ export class ShortcutsModal {
 
         <div class="shortcuts-footer">
           ${t('shortcuts.close')}
-        </div>
+        </div>`}
       </div>
     `;
   }
 
   public open(): void {
-    if (this.isOpen) return;
-    this.isOpen = true;
-    this.overlay.classList.add('open');
+    if (this.overlay.open) return;
+    this.overlay.showModal();
     soundManager.play('click');
     tickSystem.onModalOpen();
   }
 
   public close(): void {
-    if (!this.isOpen) return;
-    this.isOpen = false;
-    this.overlay.classList.remove('open');
-    soundManager.play('click');
-    tickSystem.onModalClose();
+    this.overlay.close();
   }
 
   public toggle(): void {
-    if (this.isOpen) {
+    if (this.overlay.open) {
       this.close();
     } else {
       this.open();

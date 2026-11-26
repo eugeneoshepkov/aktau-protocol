@@ -127,22 +127,10 @@
     right: 125px;
     bottom: 106px;
   }
-  #city-sights {
-    left: max(10px, env(safe-area-inset-left));
-    bottom: max(10px, env(safe-area-inset-bottom));
-    width: min(350px, calc(100% - 20px));
-  }
 }
 @media (max-width: 383px) {
   .sights-launcher span {
     display: none;
-  }
-}
-@media (max-height: 480px) and (orientation: landscape) {
-  #city-sights {
-    bottom: 8px;
-    left: 8px;
-    width: 260px;
   }
 }
 
@@ -204,9 +192,59 @@
 
 .walk-invitation[hidden], .water-history[hidden] { display: none; }
 
-@media (orientation: portrait) {
-  #city-sights.neighbourhood-walk:has(.walk-album:not([hidden])) {
-    max-height: 56dvh;
+@media (max-width: 700px), (max-height: 540px) and (orientation: landscape) {
+  #city-sights:not([hidden]) {
+    display: flex;
+    flex-direction: column;
+    inset: auto max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+    width: auto;
+    max-height: 52dvh;
+    padding: 0 12px;
+    overflow: hidden;
+    border-radius: 9px;
+  }
+  .sight-header, .sight-footer {
+    flex: none;
+  }
+  .sight-header {
+    padding-block: 3px;
+    border-bottom: 1px solid #ccc2ac;
+  }
+  .sight-story {
     overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 10px 2px 0;
+  }
+  .sight-description {
+    font-size: 16px;
+    line-height: 1.43;
+  }
+  .sight-footer {
+    padding: 0;
+    gap: 4px;
+  }
+  #city-sights button,
+  #city-sights .sight-routes button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  #city-sights .sight-routes button,
+  .sight-source {
+    font-size: 14px;
+  }
+  .sight-source {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  .sight-pages {
+    flex-shrink: 0;
+  }
+}
+@media (max-height: 540px) and (orientation: landscape) {
+  #city-sights:not([hidden]) {
+    right: auto;
+    width: clamp(274px, 45vw, 350px);
+    max-height: calc(100dvh - max(8px, env(safe-area-inset-top)) - max(8px, env(safe-area-inset-bottom)));
   }
 }

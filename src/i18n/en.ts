@@ -96,6 +96,11 @@ export const en = {
   // ============================================
   // Build Panel
   // ============================================
+  'build.open': 'Build',
+  'build.cancel': 'Cancel',
+  'chronicle.short': 'Chronicle',
+  'hud.statusShort': 'City',
+  'hud.speed': 'Game speed',
   'build.title': 'Construction',
   'build.free': 'Free',
   'build.maxed': "At limit",
@@ -177,6 +182,7 @@ export const en = {
   'press.reactorSummary': 'Plant archive · February 1975',
   'press.reactor': 'The BN-350 operating record lists two steam-generator faults in late 1973. A further leak in February 1975 caused a fire that lasted about two hours.',
   'press.reactorLink': 'Read the operating history',
+  'sight.short': 'Sights',
   'sight.open': 'City sights',
   'sight.close': 'Return to the city',
   'sight.prev': 'Previous sight',
@@ -247,6 +253,7 @@ export const en = {
   'guide.winter': "Plan for winter",
   'guide.winter.info': "Winter doubles heat demand. Complete district orders to earn supplies and use the pause control whenever you need time to plan.",
   'guide.controls': "Drag to pan. Scroll or pinch to zoom. Use Q and E to rotate.",
+  'guide.touchControls': 'Drag with one finger to move around the city. Pinch to zoom or twist two fingers to rotate.',
   'hud.options': "City controls",
   'hud.pause': "Pause or resume",
   'build.site.pump': "Sea pump · Place in water within two tiles of shore",
@@ -416,6 +423,10 @@ export const en = {
   // Shortcuts Modal
   // ============================================
   'shortcuts.title': 'Keyboard Shortcuts',
+  'shortcuts.touchTitle': 'Touch controls',
+  'shortcuts.touchExplore': 'Explore the city',
+  'shortcuts.touchInspect': 'Tap a building or landmark to see what’s there.',
+  'shortcuts.touchBuild': 'Tap the marked lot to build there. To choose your own site, select a building and tap the tile where you want it.',
   'shortcuts.camera': 'Camera',
   'shortcuts.building': 'Building',
   'shortcuts.general': 'General',

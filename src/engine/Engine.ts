@@ -54,7 +54,8 @@ export class GameEngine {
     sun.shadowFrustumSize = 60;
     sun.shadowMinZ = 1;
     sun.shadowMaxZ = 95;
-    const shadows = new ShadowGenerator(2048, sun);
+    const shadowSize = window.matchMedia('(pointer: coarse)').matches ? 1024 : 2048;
+    const shadows = new ShadowGenerator(shadowSize, sun);
     shadows.usePercentageCloserFiltering = true;
     shadows.filteringQuality = ShadowGenerator.QUALITY_LOW;
     shadows.bias = 0.0002;

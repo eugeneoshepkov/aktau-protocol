@@ -257,7 +257,7 @@ export class Chronicle {
     this.archiveBtn = document.createElement('button');
     this.archiveBtn.id = 'chronicle-btn';
     this.archiveBtn.setAttribute('aria-label', t('shortcuts.chronicle'));
-    this.archiveBtn.innerHTML = `<span class="icon-wrap">${ICONS.chronicle}</span>`;
+    this.archiveBtn.innerHTML = `<span class="icon-wrap">${ICONS.chronicle}</span><span class="mobile-menu-label">${t('chronicle.short')}</span>`;
     this.archiveBtn.title = t('chronicle.button');
     this.archiveBtn.addEventListener('click', () => {
       soundManager.play('click');

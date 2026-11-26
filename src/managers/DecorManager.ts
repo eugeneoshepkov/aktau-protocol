@@ -187,7 +187,7 @@ class DecorManagerClass {
       return mesh;
     };
     landmark('lighthouse', melovoyLighthouse(), 51.45, 10.35, -0.38);
-    const palace = landmark('abayPalace', abayPalace(), 59.6, 15.45, -Math.PI / 2);
+    landmark('abayPalace', abayPalace(), 59.6, 15.45, -Math.PI / 2);
     landmark('monument', shevchenkoMonument(), 55.2, 10.25, -1.9);
     landmark('factory', fertiliserWorks(), 52.55, 21.35, -0.12);
     const kiosk = landmark('iceCream', iceCreamCounter(), 54, 15.45, -0.64);
@@ -200,7 +200,6 @@ class DecorManagerClass {
     this.beachgoers.metadata = { sight: 'swimmingPier' };
     this.beachgoers.isPickable = true;
     const torysh = landmark('torysh', toryshStones(), 56.7, 45.1, -1.15);
-    for (const stop of [kiosk, club, pier, torysh, palace]) stop.metadata.frameAboveCard = true;
     const outcrops = finish(toryshStones(true), 'outcrops at Torysh');
     outcrops.parent = torysh;
     outcrops.metadata = { sight: 'torysh' };

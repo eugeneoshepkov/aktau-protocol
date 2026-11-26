@@ -1,4 +1,4 @@
-import { ArcRotateCamera, Vector3, Scene, Animation, EasingFunction, CubicEase, type AbstractMesh } from '@babylonjs/core';
+import { ArcRotateCamera, ArcRotateCameraPointersInput, Plane, Vector3, Scene, Animation, EasingFunction, CubicEase, type AbstractMesh, type PointerTouch } from '@babylonjs/core';
 import {
   ISOMETRIC_ALPHA,
   ISOMETRIC_BETA,
@@ -12,6 +12,43 @@ import { normalizeKey } from '../utils/keyboard';
 
 let cameraInstance: IsometricCamera | null = null;
 
+export class MapPointers extends ArcRotateCameraPointersInput {
+  private readonly ground = Plane.FromPositionAndNormal(Vector3.Zero(), Vector3.Up());
+  private previousAngle = 0;
+
+  private groundAt(x: number, y: number): Vector3 | null {
+    const ray = this.camera.getScene().createPickingRay(x, y, null, this.camera);
+    const distance = ray.intersectsPlane(this.ground);
+    return distance !== null && distance >= 0 ? ray.origin.add(ray.direction.scale(distance)) : null;
+  }
+
+  private moveGroundUnder(anchor: Vector3 | null, point: PointerTouch): void {
+    const next = this.groundAt(point.x, point.y);
+    if (anchor && next) this.camera.target.addInPlace(anchor.subtract(next));
+  }
+
+  override onTouch(point: PointerTouch | null, dx: number, dy: number): void {
+    if (point?.type !== 'touch') return super.onTouch(point, dx, dy);
+    this.moveGroundUnder(this.groundAt(point.x - dx, point.y - dy), point);
+  }
+
+  override onMultiTouch(
+    a: PointerTouch | null, b: PointerTouch | null, previousDistanceSq: number, distanceSq: number,
+    previousCenter: PointerTouch | null, center: PointerTouch | null
+  ): void {
+    if (!a || !b || !center || distanceSq < 1) return;
+    const angle = Math.atan2(b.y - a.y, b.x - a.x);
+    if (previousCenter && previousDistanceSq >= 1) {
+      const anchor = this.groundAt(previousCenter.x, previousCenter.y);
+      const radius = this.camera.radius * Math.sqrt(previousDistanceSq / distanceSq);
+      this.camera.radius = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, radius));
+      this.camera.alpha += angle - this.previousAngle;
+      this.moveGroundUnder(anchor, center);
+    }
+    this.previousAngle = angle;
+  }
+}
+
 export class IsometricCamera {
   private camera: ArcRotateCamera;
   private scene: Scene;
@@ -24,7 +61,9 @@ export class IsometricCamera {
   private originalTarget: Vector3 | null = null;
   private home = Vector3.Zero();
   private beforeSight: { target: Vector3; alpha: number; beta: number; radius: number } | null = null;
-  private sightAboveCard: AbstractMesh | null = null;
+  private activeSight: AbstractMesh | null = null;
+  private sightCard: HTMLElement | null = null;
+  private readonly cardResize = new ResizeObserver(() => this.frameSightCard());
 
   constructor(scene: Scene, canvas: HTMLCanvasElement) {
     this.scene = scene;
@@ -43,6 +82,8 @@ export class IsometricCamera {
 
     this.camera.inputs.removeByType('ArcRotateCameraMouseWheelInput');
     this.camera.inputs.removeByType('ArcRotateCameraKeyboardMoveInput');
+    this.camera.inputs.removeByType('ArcRotateCameraPointersInput');
+    this.camera.inputs.add(new MapPointers());
     this.camera.attachControl(true, false, 0);
 
     this.camera.lowerRadiusLimit = MIN_ZOOM;
@@ -51,7 +92,6 @@ export class IsometricCamera {
     this.camera.lowerBetaLimit = ISOMETRIC_BETA;
     this.camera.upperBetaLimit = ISOMETRIC_BETA;
 
-    this.camera.useNaturalPinchZoom = true;
     // Trackpads report small, frequent deltas and already supply their own scroll momentum.
     const onWheel = (event: WheelEvent) => {
       event.preventDefault();
@@ -65,11 +105,14 @@ export class IsometricCamera {
       this.camera.radius = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, radius));
     };
     canvas.addEventListener('wheel', onWheel, { passive: false });
-    this.camera.onDisposeObservable.addOnce(() => canvas.removeEventListener('wheel', onWheel));
+    this.camera.onDisposeObservable.addOnce(() => {
+      canvas.removeEventListener('wheel', onWheel);
+      this.cardResize.disconnect();
+    });
 
     this.camera.panningAxis = new Vector3(1, 0, 1);
     scene.getEngine().onResizeObservable.add(() => {
-      if (this.sightAboveCard) this.fitSight(this.sightAboveCard);
+      if (this.activeSight) this.fitSight(this.activeSight);
     });
 
     const shouldIgnoreKeyboard = () => {
@@ -256,13 +299,15 @@ export class IsometricCamera {
     this.camera.inertialAlphaOffset = this.camera.inertialBetaOffset = this.camera.inertialRadiusOffset = 0;
   }
 
-  public visitSight(mesh: AbstractMesh): void {
+  public visitSight(mesh: AbstractMesh, card: HTMLElement): void {
     const camera = this.camera;
     this.beforeSight ??= {
       target: camera.target.clone(), alpha: camera.alpha, beta: camera.beta, radius: camera.radius
     };
     this.stopMotion();
-    this.sightAboveCard = mesh.metadata?.frameAboveCard ? mesh : null;
+    this.activeSight = mesh;
+    this.sightCard = card;
+    this.cardResize.observe(card);
     const { minimum, maximum } = mesh.getBoundingInfo().boundingBox;
     const height = maximum.y - minimum.y;
     camera.setTarget(new Vector3(mesh.position.x, mesh.position.y + height * 0.46, mesh.position.z));
@@ -278,9 +323,22 @@ export class IsometricCamera {
     const canvas = this.scene.getEngine().getRenderingCanvas()!;
     const portrait = Math.max(1, 0.7 * canvas.clientHeight / Math.max(1, canvas.clientWidth));
     camera.radius = Math.max(MIN_ZOOM + 0.6, span * 2.35) * portrait;
-    // The sight card occupies the lower half of a phone. Frame the building above it.
-    const aboveCard = this.sightAboveCard && canvas.clientHeight > canvas.clientWidth;
-    camera.targetScreenOffset.y = aboveCard ? camera.radius * Math.tan(camera.fov / 2) * 0.56 : 0;
+    this.frameSightCard();
+  }
+
+  private frameSightCard(): void {
+    if (!this.sightCard) return;
+    const canvas = this.scene.getEngine().getRenderingCanvas()!;
+    const { clientWidth: width, clientHeight: height } = canvas;
+    const card = this.sightCard.getBoundingClientRect();
+    const unitsPerPixel = 2 * this.camera.radius * Math.tan(this.camera.fov / 2) / height;
+    // Put the landmark halfway across the part of the canvas left open by the sheet.
+    const beside = height <= 540 && width > height;
+    const above = width <= 700 && !beside;
+    this.camera.targetScreenOffset.set(
+      beside ? card.right * 0.5 * unitsPerPixel : 0,
+      above ? (height - card.top) * 0.5 * unitsPerPixel : 0
+    );
   }
 
   public leaveSight(): void {
@@ -291,8 +349,10 @@ export class IsometricCamera {
     this.camera.alpha = saved.alpha;
     this.camera.beta = saved.beta;
     this.camera.radius = saved.radius;
-    this.camera.targetScreenOffset.y = 0;
-    this.sightAboveCard = null;
+    this.camera.targetScreenOffset.set(0, 0);
+    this.activeSight = null;
+    this.sightCard = null;
+    this.cardResize.disconnect();
     this.beforeSight = null;
   }
 

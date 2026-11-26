@@ -17,7 +17,7 @@ import {
 import { getCameraInstance } from '../engine/Camera';
 import { gameState, RESERVE_SUPPLIES, RESERVE_POWER_COST } from '../simulation/GameState';
 import { GRID_SIZE, RESOURCE_CAPS, type BuildingType } from '../types';
-import type { BuildPanel } from './BuildPanel';
+import { compactCityScreen, type BuildPanel } from './BuildPanel';
 import { feedbackManager } from './FeedbackManager';
 import { FieldSeasonPanel } from './FieldSeasonPanel';
 import type { SightId } from './CitySights';
@@ -76,10 +76,12 @@ export class TutorialManager {
       this.panel.querySelector<HTMLElement>('#plan-details')!.hidden = expanded;
     });
 
+    if (compactCityScreen.matches) this.panelButton.click();
+
     const focusLot = () => {
       const site = this.site;
       if (!site) return;
-      if (window.matchMedia('(max-width: 700px)').matches && this.panelButton.getAttribute('aria-expanded') === 'true') {
+      if (compactCityScreen.matches && this.panelButton.getAttribute('aria-expanded') === 'true') {
         this.panelButton.click();
       }
       getCameraInstance()?.focusOn(getTileCenter(site.x, site.z));
@@ -112,7 +114,7 @@ export class TutorialManager {
         // Make room to see the new landmark and its neighbouring construction lot on a phone.
         if (
           nextSite &&
-          window.matchMedia('(max-width: 700px)').matches &&
+          compactCityScreen.matches &&
           this.panelButton.getAttribute('aria-expanded') === 'true'
         ) {
           this.panelButton.click();

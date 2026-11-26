@@ -45,7 +45,7 @@ export async function initGame(resume: boolean, walk = false): Promise<void> {
   // Create reset view button
   const resetBtn = document.createElement('button');
   resetBtn.id = 'reset-view-btn';
-  resetBtn.innerHTML = `<span class="icon-wrap">${ICONS.center}</span>`;
+  resetBtn.innerHTML = `<span class="icon-wrap">${ICONS.center}</span><span class="mobile-menu-label">${t('shortcuts.center')}</span>`;
   resetBtn.title = t('shortcuts.center') + ' (C)';
   resetBtn.addEventListener('click', () => {
     camera.resetView();
@@ -59,8 +59,10 @@ export async function initGame(resume: boolean, walk = false): Promise<void> {
   // Create shortcuts button
   const shortcutsBtn = document.createElement('button');
   shortcutsBtn.id = 'shortcuts-btn';
-  shortcutsBtn.innerHTML = `<span class="icon-wrap">${ICONS.keyboard}</span>`;
-  shortcutsBtn.title = t('shortcuts.title') + ' (?)';
+  const touch = matchMedia('(pointer: coarse)').matches;
+  const controlsLabel = t(touch ? 'shortcuts.touchTitle' : 'shortcuts.title');
+  shortcutsBtn.innerHTML = `<span class="icon-wrap">${touch ? ICONS.book : ICONS.keyboard}</span><span class="mobile-menu-label">${controlsLabel}</span>`;
+  shortcutsBtn.title = touch ? controlsLabel : controlsLabel + ' (?)';
   shortcutsBtn.addEventListener('click', () => {
     shortcutsModal.toggle();
   });
@@ -179,11 +181,11 @@ export async function initGame(resume: boolean, walk = false): Promise<void> {
       mesh = scene.getMeshByName(id);
     }
     return mesh?.isEnabled() && mesh.isVisible ? mesh : null;
-  }, (mesh) => {
+  }, (mesh, card) => {
     gridManager.hideHighlight();
     buildingManager.hideGhostPreview();
     pipeManager.hideConnectionPreview();
-    camera.visitSight(mesh);
+    camera.visitSight(mesh, card);
   }, () => camera.leaveSight());
 
   const inputManager = new InputManager(
@@ -272,6 +274,7 @@ export async function initGame(resume: boolean, walk = false): Promise<void> {
   const hud = new HUD();
   const buildPanel = new BuildPanel(buildingManager);
   new Chronicle(notices);
+  buildPanel.mountMobileControls();
   new TutorialManager(buildPanel, scene, pipeManager, buildingManager, (id, readPress) => sights.open(id, readPress));
   sights.mountInvitation(document.querySelector('#plan-details')!);
 

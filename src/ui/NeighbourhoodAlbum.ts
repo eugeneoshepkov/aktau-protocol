@@ -90,6 +90,7 @@ export class NeighbourhoodAlbum {
         this.result.hidden = false;
         this.result.textContent = t('album.iceCream.queue');
         this.activity.textContent = t('album.iceCream.serve');
+        this.result.scrollIntoView({ block: 'nearest' });
         return;
       }
       if (!this.notes.has(id)) this.saveNote(id, '');
@@ -98,10 +99,11 @@ export class NeighbourhoodAlbum {
       this.result.textContent = t(id === 'chaika' ? 'album.chaika.scene' : `album.${id}.result`);
       void this.art.offsetWidth;
       this.art.classList.add(id === 'chaika' ? 'rewinding' : 'revisiting');
+      this.item.scrollIntoView({ block: 'nearest' });
     });
     this.flip.addEventListener('click', () => {
       this.setBack(this.back.hidden);
-      if (!this.back.hidden) this.note.focus({ preventScroll: true });
+      if (!this.back.hidden) this.note.focus();
     });
     this.note.addEventListener('input', () => {
       if (this.current) this.saveNote(this.current, this.note.value);
