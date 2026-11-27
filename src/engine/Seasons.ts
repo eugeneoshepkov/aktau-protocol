@@ -2,7 +2,7 @@ import { Color3, Mesh, VertexBuffer } from '@babylonjs/core';
 import type { Season } from '../simulation/GameState';
 
 export const seasonalLight = {
-  spring: { sky: '#aacbc1', sun: '#ffeac7', elevation: 1.0, intensity: 0.52 },
+  spring: { sky: '#c8d3c6', sun: '#ffdaa6', elevation: 0.78, intensity: 0.61 },
   summer: { sky: '#bed3cb', sun: '#ffe1a6', elevation: 1.32, intensity: 0.61 },
   autumn: { sky: '#d0c5ac', sun: '#ffd096', elevation: 0.79, intensity: 0.51 },
   winter: { sky: '#b7c7d2', sun: '#e2edff', elevation: 0.73, intensity: 0.43 }

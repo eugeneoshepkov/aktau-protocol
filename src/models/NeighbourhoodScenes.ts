@@ -124,6 +124,56 @@ export function iceCreamCounter() {
   return p;
 }
 
+export function apartmentCourtyard() {
+  const p = new ModelParts();
+  // The rug folds over a painted steel pipe set into concrete feet.
+  for (const x of [-0.17, 0.83]) {
+    p.cylinder(x, -0.13, 0, 0.11, 0.09, 0.055, '#b7aa91', 8);
+    p.cylinder(x, -0.13, 0.055, 0.045, 0.045, 0.51, blue, 8);
+  }
+  p.tube([-0.19, 0.565, -0.13], [0.85, 0.565, -0.13], 0.055, blue, 8);
+  p.tube([0, 0.565, -0.13], [0.72, 0.565, -0.13], 0.068, '#813e38', 12);
+  p.box(0.36, -0.16, 0.265, 0.72, 0.012, 0.3, '#813e38');
+  // The longer face fans out below the rail; a shorter plain fold hangs behind it.
+  const weave = (
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    tint: string,
+    layer = 0,
+    angle = 0
+  ) => {
+    const z = -0.102 + (0.565 - y) * 0.31 + layer;
+    const cloth = VertexData.CreateBox({ width, height, depth: 0.009 });
+    p.add(cloth, x, y, z, tint, Quaternion.RotationYawPitchRoll(0, -0.3, angle));
+  };
+  weave(0.36, 0.354, 0.72, 0.452, '#863f39');
+  weave(0.36, 0.354, 0.676, 0.401, '#e4b577', 0.003);
+  weave(0.36, 0.354, 0.636, 0.356, '#994a3f', 0.006);
+  for (const x of [0.17, 0.36, 0.55]) {
+    weave(x, 0.354, 0.122, 0.122, '#edc891', 0.009, Math.PI / 4);
+    weave(x, 0.354, 0.059, 0.059, '#495f61', 0.012, Math.PI / 4);
+  }
+  for (let i = 0; i < 12; i++)
+    weave(0.026 + 0.061 * i, 0.119, 0.024, 0.04 + (i % 3) * 0.007, cream);
+
+  // A wicker carpet beater rests in the neighbour's hand beside the uncovered end of the rail.
+  neighbour(p, 0.98, 0.09, 0, 0.48, '#527978', '#68544b', '#af8c6a');
+  p.tube([0.87, 0.22, 0.05], [0.74, 0.417, 0.008], 0.02, wood, 6);
+  const beater = VertexData.CreateTorus({ diameter: 0.105, thickness: 0.018, tessellation: 8 });
+  p.add(beater, 0.716, 0.456, 0, wood, Quaternion.RotationAxis(Vector3.Right(), Math.PI / 2));
+
+  // Sun-bleached boards make a sandpit, with a tin bucket and a child at its edge.
+  p.box(-0.56, 0.16, 0.01, 0.63, 0.49, 0.036, '#d8bc87');
+  for (const z of [-0.104, 0.424]) p.box(-0.56, z, 0, 0.74, 0.068, 0.079, '#b7724c');
+  for (const x of [-0.895, -0.225]) p.box(x, 0.16, 0, 0.07, 0.46, 0.079, '#6d9890');
+  p.box(-0.8, 0.34, 0.079, 0.23, 0.16, 0.035, '#c89c5e');
+  p.cylinder(-0.45, 0.25, 0.046, 0.072, 0.098, 0.08, '#568c9e', 8);
+  neighbour(p, -0.65, 0.04, 0.046, 0.3, '#e5b659', '#547989', '#825c41');
+  return p;
+}
+
 export function courtyardClub() {
   const p = new ModelParts();
   p.box(0, 0, 0, 2.74, 1.57, 0.06, '#beb19b');
@@ -181,6 +231,60 @@ export function firstMicrorayonPier() {
   }
   for (const y of [-0.12, 0.022, 0.16])
     p.tube([-0.96, y, -1.34], [-0.96, y, -1.59], 0.022, blue, 6);
+
+  // A wooden skiff pulled up on the sand beside the landward end of the pier.
+  const hullOutline = [
+    [-0.8, -0.21],
+    [-0.42, -0.28],
+    [0.08, -0.29],
+    [0.52, -0.19],
+    [0.89, 0],
+    [0.52, 0.19],
+    [0.08, 0.29],
+    [-0.42, 0.28],
+    [-0.8, 0.21]
+  ];
+  const hullRing = (length: number, beam: number, height: number) =>
+    hullOutline.map(
+      ([x, z]) => new Vector3(-0.65 + x * length, height + 0.09 * x * x, 2.3 + z * beam)
+    );
+  const keel = hullRing(0.82, 0.38, 0.015);
+  const bottom = keel.map(({ x, y }) => new Vector3(x, y, 2.3));
+  const chine = hullRing(0.94, 0.79, 0.09);
+  const rail = hullRing(1, 1, 0.2);
+  const lip = hullRing(1, 1.01, 0.234);
+  for (const [lower, upper, tint] of [
+    [bottom, keel, '#7e664f'],
+    [keel, chine, '#456d70'],
+    [chine, rail, '#429fa0'],
+    [rail, lip, cream]
+  ] as const) {
+    p.add(
+      VertexData.CreateRibbon({
+        pathArray: [lower, upper],
+        closePath: true,
+        sideOrientation: Mesh.DOUBLESIDE
+      }),
+      0,
+      0,
+      0,
+      tint
+    );
+  }
+  for (const z of [-0.062, 0, 0.062]) p.box(-0.7, 2.3 + z, 0.055, 1.21, 0.057, 0.022, wood);
+  for (const [x, width] of [
+    [-0.46, 0.49],
+    [0.02, 0.56],
+    [0.43, 0.4]
+  ]) {
+    p.box(-0.65 + x, 2.3, 0.169, 0.13, width, 0.039, '#c79763');
+  }
+  // Two varnished oars rest across the seats, their painted blades at opposite ends.
+  for (const side of [-1, 1]) {
+    const z = 2.3 + side * 0.094;
+    p.tube([-0.65 - side * 0.56, 0.229, z], [-0.65 + side * 0.4, 0.229, z], 0.033, wood, 6);
+    oval(p, -0.65 + side * 0.5, 0.229, z, 0.3, 0.036, 0.096, red);
+  }
   return p;
 }
 

@@ -15,11 +15,12 @@ import { melovoyeTower, melovoyeTrace } from '../models/MelovoyeField';
 import { createLimestoneShore } from '../models/LimestoneShore';
 import { createNeighbourhoodPaths } from '../models/NeighbourhoodPaths';
 import {
-  courtyardClub, enamelSign, firstMicrorayonPier, iceCreamCounter, summerAtThePier, toryshStones
+  apartmentCourtyard, courtyardClub, enamelSign, firstMicrorayonPier, iceCreamCounter, summerAtThePier, toryshStones
 } from '../models/NeighbourhoodScenes';
 import type { SightId } from '../ui/CitySights';
 import {
   foliage,
+  glidingGull,
   harborLight,
   harborTug,
   limestoneOutcrop,
@@ -107,7 +108,9 @@ class DecorManagerClass {
         for (let z = Math.max(0, Math.floor(min.z)); z <= lastZ; z++) register(mesh, x, z);
       }
     };
-    for (const mesh of [dock, tug, light, customs, canteen, market, dockShed]) {
+    const courtyard = finish(apartmentCourtyard(), 'carpet rail and sandpit');
+    place(courtyard, 37.5, 0.15, 16.65, -0.28, 0.72);
+    for (const mesh of [dock, tug, light, customs, canteen, market, dockShed, courtyard]) {
       registerFootprint(mesh);
     }
     this.shoreMaterial = this.material.clone('limestone and dune grass');
@@ -124,6 +127,25 @@ class DecorManagerClass {
     }
     this.paths = createNeighbourhoodPaths(scene);
     this.meshes.add(this.paths);
+
+    // Two separate circuits, one over the tug's mooring and one off the swimming pier.
+    const gull = finish(glidingGull(), 'gull over the quay', false);
+    const pierGull = gull.createInstance('gull off the pier');
+    pierGull.isPickable = false;
+    this.meshes.add(pierGull);
+    let flightTime = 0;
+    const fly = (bird: AbstractMesh, x: number, span: number, phase: number) => {
+      const c = Math.cos(phase), s = Math.sin(phase);
+      bird.position.set(x + span * c, 1.55 + 0.42 * Math.sin(phase * 2), 4.7 + 2.05 * s);
+      bird.rotation.y = Math.atan2(-span * s, 2.05 * c);
+      bird.rotation.z = 0.12 + 0.38 * c * c;
+    };
+    const glide = scene.onBeforeRenderObservable.add(() => {
+      flightTime += Math.min(100, scene.getEngine().getDeltaTime()) * 0.001;
+      fly(gull, 37.8, 6.7, 0.3 + flightTime * 0.18);
+      fly(pierGull, 50.8, 4.3, 1.02 + flightTime * 0.23);
+    });
+    gull.onDisposeObservable.addOnce(() => scene.onBeforeRenderObservable.remove(glide));
 
     // The harbor tug leaves its mooring, circles the breakwater, then returns.
     // Its two fading wake lines follow the stern without extra water simulation.

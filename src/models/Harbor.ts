@@ -1,4 +1,4 @@
-import { Matrix, Quaternion, Vector3, VertexData } from '@babylonjs/core';
+import { Matrix, Mesh, Quaternion, Vector3, VertexData } from '@babylonjs/core';
 import { ModelParts } from './CityModels';
 
 const limestone = '#d4cbb4';
@@ -7,6 +7,46 @@ const cream = '#e9dbb8';
 const oxide = '#b95b3c';
 const ochre = '#d98e42';
 const glass = '#4c757c';
+
+export function glidingGull(): ModelParts {
+  const bird = new ModelParts();
+  const body = VertexData.CreateSphere({
+    diameterX: 0.084,
+    diameterY: 0.082,
+    diameterZ: 0.25,
+    segments: 4
+  });
+  bird.add(body, 0, 0, 0, '#f7efdd');
+  bird.cylinder(0, 0.108, 0.004, 0.068, 0.05, 0.054, '#fbf5e7', 7);
+  bird.box(0, 0.151, 0.016, 0.026, 0.061, 0.022, '#d7a254');
+
+  // A gull's long wings bend at the wrist, with dark primaries sweeping back.
+  for (const side of [-1, 1]) {
+    const featherRow = (x: number, y: number, leading: number, trailing: number) => [
+      new Vector3(side * x, y, leading),
+      new Vector3(side * x, y, trailing)
+    ];
+    const root = featherRow(0.016, 0.014, 0.05, -0.065);
+    const wrist = featherRow(0.2, 0.085, 0.078, -0.008);
+    const primaries = featherRow(0.32, 0.07, 0.006, -0.045);
+    const tip = featherRow(0.429, 0.041, -0.082, -0.088);
+    for (const [inner, outer, tint] of [
+      [root, wrist, '#dddeda'],
+      [wrist, primaries, '#a3b1b3'],
+      [primaries, tip, '#425156'],
+      [featherRow(0, 0.006, -0.06, -0.16), featherRow(0.064, 0.002, -0.15, -0.164), '#f2eddd']
+    ] as const) {
+      bird.add(
+        VertexData.CreateRibbon({ pathArray: [inner, outer], sideOrientation: Mesh.DOUBLESIDE }),
+        0,
+        0,
+        0,
+        tint
+      );
+    }
+  }
+  return bird;
+}
 
 export function quay(): ModelParts {
   const p = new ModelParts();

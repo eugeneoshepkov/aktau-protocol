@@ -1,5 +1,6 @@
 import {
   Color3,
+  DirectionalLight,
   DynamicTexture,
   Mesh,
   MeshBuilder,
@@ -45,23 +46,42 @@ const waterFragment = `
   uniform vec3 deep;
   uniform vec3 shallow;
   uniform vec3 horizon;
-  float hash(vec2 p) { return fract(sin(dot(p, vec2(27.61, 61.73))) * 4375.54); }
+  uniform vec3 cameraPosition;
+  uniform vec3 sunTint;
+  uniform vec3 sunReflection;
+  float hash(vec2 cell) {
+    vec3 h = fract(vec3(cell.xyx) * vec3(0.1031, 0.1030, 0.0973));
+    h += dot(h, h.yzx + 33.33);
+    return fract((h.x + h.y) * h.z);
+  }
+  float windPatch(vec2 pos) {
+    vec2 cell = floor(pos);
+    vec2 f = smoothstep(0.0, 1.0, fract(pos));
+    return mix(mix(hash(cell), hash(cell + vec2(1, 0)), f.x),
+               mix(hash(cell + vec2(0, 1)), hash(cell + vec2(1, 1)), f.x), f.y);
+  }
   void main() {
     float swell = time * wind;
     float sandbar = depth + 0.42 * sin(p.x * 1.4 + p.y * 1.6);
     vec3 color = mix(shallow, deep, smoothstep(-0.25, 6.2, sandbar));
-    color += (0.011 + wind * 0.011) * sin(p.x * 0.8 + p.y * 2.4 + swell * 0.48) + 0.013 * sin(p.y * 0.6 - swell * 0.28);
-    float wash = depth + (0.06 + wind * 0.04) * sin(2.1 * p.x + swell) + 0.05 * sin(4.0 * p.x);
-    float foam = (1.0 - smoothstep(0.035, 0.11, abs(wash - 0.15)))
-               + (1.0 - smoothstep(0.03, 0.085, abs(wash - 0.52))) * 0.42;
-    color = mix(color, vec3(0.82, 0.87, 0.76), clamp(foam, 0.0, 0.85));
-    // Small broken crests stretch parallel to the prevailing wind.
-    vec2 cell = vec2(p.x * 1.25 + p.y * 0.7, p.y * 3.4);
-    cell.x += 0.32 * sin(floor(cell.y) * 7.5 + swell * 0.5);
-    float seed = hash(floor(cell));
-    vec2 f = abs(fract(cell) - 0.5);
-    float glint = (1.0 - smoothstep(0.04, 0.26, f.x)) * (1.0 - smoothstep(0.02, 0.085, f.y));
-    color += glint * step(0.83 - wind * 0.12, seed) * (0.10 + 0.065 * wind + 0.07 * sin(seed * 17.0 + swell));
+    float longWave = sin(p.x * 0.63 - p.y * 0.45 + swell * 0.23);
+    color += (0.01 + wind * 0.008) * sin(p.x * 0.8 + p.y * 2.4 + longWave + swell * 0.48);
+    // Successive waves run up the sand, break in patches and dissolve.
+    float wave = depth * 6.4 + swell * 1.25 + 0.5 * sin(1.65 * p.x) + 0.34 * sin(3.1 * p.x);
+    float breaker = smoothstep(0.73, 0.98, cos(wave)) * (1.0 - smoothstep(0.08, 1.65, depth));
+    float patches = sin(2.7 * p.x + 0.35 * swell) + 0.55 * sin(p.y * 8.0 - p.x);
+    color = mix(color, vec3(0.90, 0.93, 0.83), breaker * (0.12 + 0.56 * smoothstep(-0.5, 0.9, patches)));
+
+    // Only the ripple faces turned towards the sun catch its reflection.
+    vec3 eye = normalize(cameraPosition - vec3(p.x, 0.0, p.y));
+    float sheen = pow(max(dot(eye, sunReflection), 0.0), 42.0);
+    float gust = windPatch(p * vec2(0.8, 1.2) + vec2(swell * 0.08, 0.0));
+    float rippleZ = p.y + 0.43 * gust + 0.09 * sin(p.x * 2.3 + gust * 3.6);
+    float crests = 0.48 * sin(rippleZ * 22.0 + p.x * 4.2 + 2.1 * longWave + swell * 1.45)
+                 + 0.31 * sin(rippleZ * 14.3 - p.x * 3.6 + swell * 1.13)
+                 + 0.21 * sin(p.y * 6.6 + p.x * 7.5 - longWave - swell * 0.54);
+    float glint = smoothstep(0.50, 0.95, crests) * smoothstep(0.16, 0.63, gust);
+    color = mix(color, sunTint, sheen * (0.065 + 0.55 * glint) + 0.044 * glint);
     float haze = smoothstep(35.0, 100.0, distanceToCamera);
     gl_FragColor = vec4(mix(color, horizon, haze), 1.0);
   }`;
@@ -246,7 +266,17 @@ export class GridManager {
       },
       {
         attributes: ['position', 'uv'],
-        uniforms: ['worldViewProjection', 'time', 'wind', 'deep', 'shallow', 'horizon']
+        uniforms: [
+          'worldViewProjection',
+          'time',
+          'wind',
+          'deep',
+          'shallow',
+          'horizon',
+          'cameraPosition',
+          'sunTint',
+          'sunReflection'
+        ]
       }
     );
     mat.backFaceCulling = false;
@@ -263,6 +293,13 @@ export class GridManager {
     water?.setColor3('shallow', Color3.FromHexString(climate.shallows));
     water?.setColor3('horizon', this.scene.fogColor);
     water?.setFloat('wind', climate.wind);
+    const sun = this.scene.getLightByName('sunLight') as DirectionalLight | null;
+    if (sun) {
+      const reflection = sun.direction.normalizeToNew();
+      reflection.y *= -1;
+      water?.setColor3('sunTint', sun.diffuse);
+      water?.setVector3('sunReflection', reflection);
+    }
 
     const positions = this.land?.getVerticesData(VertexBuffer.PositionKind);
     if (!this.dryGround || !positions || !this.land) return;

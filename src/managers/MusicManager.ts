@@ -13,6 +13,54 @@ class MusicManagerClass {
   private volume = 0.3;
   private muted = false;
   private isPlaying = false;
+  private shore: { context: AudioContext; gain: GainNode } | null = null;
+  private shoreLevel = 0;
+  private shorePlaying = false;
+
+  // The launch tap can unlock Web Audio on iOS. The mix stays silent until the city is ready.
+  public async prepareShore(): Promise<void> {
+    if (this.shore || !window.AudioContext) return;
+    try {
+      const context = new AudioContext();
+      const gain = context.createGain();
+      gain.gain.value = 0;
+      gain.connect(context.destination);
+      this.shore = { context, gain };
+      document.addEventListener('visibilitychange', this.mixShore);
+      void context.resume().catch(() => {});
+      const response = await fetch('/audio/caspian-shore.mp3');
+      if (!response.ok) throw new Error(`Shore audio: ${response.status}`);
+      const buffer = await context.decodeAudioData(await response.arrayBuffer());
+      if (this.shore?.context !== context) return;
+      const source = context.createBufferSource();
+      source.buffer = buffer;
+      source.loop = true;
+      source.connect(gain);
+      source.start();
+    } catch {
+      this.disposeShore();
+    }
+  }
+
+  public setShoreLevel(level: number): void {
+    if (level === this.shoreLevel) return;
+    this.shoreLevel = level;
+    this.mixShore();
+  }
+
+  private mixShore = (): void => {
+    if (!this.shore) return;
+    const { context, gain } = this.shore;
+    const volume =
+      this.shorePlaying && !this.muted && !document.hidden ? this.volume * this.shoreLevel : 0;
+    gain.gain.setTargetAtTime(volume, context.currentTime, volume ? 0.35 : 0.025);
+  };
+
+  public disposeShore(): void {
+    document.removeEventListener('visibilitychange', this.mixShore);
+    if (this.shore) void this.shore.context.close().catch(() => {});
+    this.shore = null;
+  }
 
   public initialize(): void {
     this.shufflePlaylist();
@@ -52,6 +100,8 @@ class MusicManagerClass {
     if (!this.audio || this.isPlaying) return;
 
     this.isPlaying = true;
+    this.shorePlaying = true;
+    this.mixShore();
     this.playTrack(this.playlist[this.currentIndex]);
   }
 
@@ -84,22 +134,27 @@ class MusicManagerClass {
   public stop(): void {
     if (!this.audio) return;
     this.isPlaying = false;
-    this.audio.pause();
+    this.pause();
     this.audio.currentTime = 0;
   }
 
   public pause(): void {
     if (!this.audio) return;
+    this.shorePlaying = false;
+    this.mixShore();
     this.audio.pause();
   }
 
   public resume(): void {
     if (!this.audio || !this.isPlaying) return;
+    this.shorePlaying = true;
+    this.mixShore();
     this.audio.play().catch(() => {});
   }
 
   public setVolume(value: number): void {
     this.volume = Math.max(0, Math.min(1, value));
+    this.mixShore();
     if (this.audio && !this.muted) {
       this.audio.volume = this.volume;
     }
@@ -111,6 +166,7 @@ class MusicManagerClass {
 
   public setMuted(muted: boolean): void {
     this.muted = muted;
+    this.mixShore();
     if (this.audio) {
       this.audio.volume = muted ? 0 : this.volume;
     }

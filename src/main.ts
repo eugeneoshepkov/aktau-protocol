@@ -31,6 +31,8 @@ import { ambientManager } from './simulation/ambient';
 import { STARTER_DISTRICT } from './simulation/DistrictPlan';
 import { t } from './i18n';
 import { getTileCenter } from './grid/GridCoords';
+import { shoreAt } from './grid/TileTypes';
+import { TILE_SIZE } from './types';
 
 export async function initGame(resume: boolean, walk = false): Promise<void> {
   musicManager.initialize();
@@ -42,6 +44,14 @@ export async function initGame(resume: boolean, walk = false): Promise<void> {
 
   const camera = new IsometricCamera(scene, canvas);
   const frostEffect = new FrostVignetteEffect(scene, camera.getCamera());
+  const view = camera.getCamera();
+  const mixShoreAtTarget = () => {
+    const distance = Math.abs(view.target.z / TILE_SIZE - shoreAt(view.target.x / TILE_SIZE));
+    musicManager.setShoreLevel(Math.max(0, 1 - distance / 15));
+  };
+  view.onViewMatrixChangedObservable.add(mixShoreAtTarget);
+  mixShoreAtTarget();
+  scene.onDisposeObservable.addOnce(() => musicManager.disposeShore());
 
   // Create reset view button
   const resetBtn = document.createElement('button');
@@ -273,6 +283,7 @@ export async function initGame(resume: boolean, walk = false): Promise<void> {
 
   gameState.on('gameOver', () => {
     musicManager.stop();
+    musicManager.disposeShore();
     soundManager.play('meltdown');
     setTimeout(() => soundManager.play('gameover'), 300);
   });
