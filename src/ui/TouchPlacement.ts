@@ -5,7 +5,6 @@ import type { GridManager } from '../grid/GridManager';
 import { t } from '../i18n';
 import type { BuildingManager } from '../managers/BuildingManager';
 import type { PipeManager } from '../managers/PipeManager';
-import { soundManager } from '../managers/SoundManager';
 import { gameState } from '../simulation/GameState';
 import { tickSystem } from '../simulation/TickSystem';
 import type { BuildPanel, TouchPlacementPreview } from './BuildPanel';
@@ -46,7 +45,6 @@ export function mountTouchPlacement(
     if (!panel.hasTouchPreview() || !lot || tickSystem.hasOpenModal() || gameState.isGameOver()) return;
     if (buildings.tryPlaceBuilding(lot.x, lot.z)) {
       panel.cancelSelection();
-      soundManager.play('build');
     } else {
       draw();
     }

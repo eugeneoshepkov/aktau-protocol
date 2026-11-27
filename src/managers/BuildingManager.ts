@@ -17,6 +17,8 @@ import { feedbackManager } from '../ui/FeedbackManager';
 import { soundManager } from './SoundManager';
 import { BUILDING_COSTS, type Building, type BuildingType, type Resources } from '../types';
 import type { ParticleManager } from '../effects/ParticleManager';
+import { PlacementFlow } from '../effects/PlacementFlow';
+import type { PipeManager } from './PipeManager';
 import { t, td } from '../i18n';
 
 type PreviewState = 'valid' | 'invalid' | 'inefficient';
@@ -25,6 +27,8 @@ export class BuildingManager {
   private scene: Scene;
   private gridManager: GridManager;
   private particleManager: ParticleManager | null = null;
+  private readonly pipes: PipeManager;
+  private readonly placementFlow: PlacementFlow;
   private models: CityModels;
   private meshes = new Map<string, Mesh>();
   private civicMesh: Mesh | null = null;
@@ -39,9 +43,11 @@ export class BuildingManager {
   private ghostStyle = '';
   private previewMaterials: Record<PreviewState, StandardMaterial>;
 
-  constructor(scene: Scene, gridManager: GridManager) {
+  constructor(scene: Scene, gridManager: GridManager, pipes: PipeManager) {
     this.scene = scene;
     this.gridManager = gridManager;
+    this.pipes = pipes;
+    this.placementFlow = new PlacementFlow(scene);
     this.models = CityModels.forScene(scene);
     this.previewMaterials = {
       valid: this.previewMaterial('valid', '#70deaa'),
@@ -155,7 +161,19 @@ export class BuildingManager {
       return false;
     }
 
-    console.log(`Placed ${this.selectedBuildingType} at (${gridX}, ${gridZ})`);
+    // All placement listeners, including pipe allocation, have finished at this point.
+    this.hideGhostPreview();
+    this.gridManager.hideHighlight();
+    this.pipes.hideConnectionPreview();
+    const mesh = this.meshes.get(building.id);
+    if (mesh && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      this.particleManager?.createDust(mesh.position.clone());
+      this.playSquashStretchAnimation(mesh);
+    }
+    const supply = this.pipes.getPlacementFlow(building);
+    this.placementFlow.play(building, supply);
+    const sound = building.type === 'thermal_plant' ? 'reactor' : building.type;
+    soundManager.play(supply.missing.length ? 'build' : sound);
     return true;
   }
 
@@ -236,6 +254,7 @@ export class BuildingManager {
   }
 
   private handlePlacement = (data: unknown): void => {
+    this.placementFlow.clear();
     const building = data as Building;
     const { type, gridX, gridZ } = building;
     const mesh = this.models.create(type, 'building_' + building.id, gridX * 5 + gridZ);
@@ -244,9 +263,6 @@ export class BuildingManager {
     const shadowMap = this.scene.getLightByName('sunLight')?.getShadowGenerator()?.getShadowMap();
     shadowMap?.renderList?.push(mesh);
     this.meshes.set(building.id, mesh);
-    this.particleManager?.createDust(mesh.position.clone());
-    soundManager.play(type === 'thermal_plant' ? 'reactor' : type);
-    this.playSquashStretchAnimation(mesh);
   };
 
   private syncCivicProject = (): void => {
@@ -267,6 +283,7 @@ export class BuildingManager {
   };
 
   private handleRemoval = (data: unknown): void => {
+    this.placementFlow.clear();
     const { id } = data as Building;
     const mesh = this.meshes.get(id);
     if (!mesh) return;
@@ -295,6 +312,7 @@ export class BuildingManager {
   }
 
   public dispose(): void {
+    this.placementFlow.clear();
     gameState.off('buildingPlaced', this.handlePlacement);
     gameState.off('buildingRemoved', this.handleRemoval);
     gameState.off('civicProjectChange', this.syncCivicProject);

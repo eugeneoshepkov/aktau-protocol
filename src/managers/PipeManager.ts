@@ -17,6 +17,7 @@ import {
 } from '../config/ConnectionRules';
 import {
   RESOURCE_FLOWS,
+  type PipeType,
   type ResourceFlowConfig,
   type ResourceType,
   getCapacity,
@@ -50,6 +51,17 @@ export interface BuildingConnection {
   direction: 'outgoing' | 'incoming';
 }
 
+export interface PlacementFlowSummary {
+  routes: { resource: ResourceType; points: Vector3[] }[];
+  missing: PipeType[];
+}
+
+function pipeEndpoint(building: Building, type: PipeType): Vector3 {
+  const point = getTileCenter(building.gridX, building.gridZ);
+  point.y = type === 'heat' ? 0.42 : 0.3;
+  return point;
+}
+
 // Track which consumer is supplied by which producer for a resource
 interface SupplyAllocation {
   consumer: Building;
@@ -75,9 +87,8 @@ export class PipeManager {
   private suppliedBuildings: Map<string, Set<string>> = new Map();
   // Detailed allocation info for pipe visualization
   private supplyAllocations: SupplyAllocation[] = [];
-  // Track relay upstream connections: relayId -> { upstream building, pipe type }
-  private relayUpstreamConnections: Map<string, { upstream: Building; pipeType: 'water' | 'heat' }> =
-    new Map();
+  // A tank can be primed by separate seawater and drinking-water networks.
+  private relayFeeds = new Map<ResourceType, Map<string, { upstream: Building; relay: Building }>>();
 
   constructor(scene: Scene) {
     this.scene = scene;
@@ -292,7 +303,7 @@ export class PipeManager {
     // Reset supply tracking
     this.suppliedBuildings.clear();
     this.supplyAllocations = [];
-    this.relayUpstreamConnections.clear();
+    this.relayFeeds.clear();
 
     const buildings = gameState.getBuildings();
 
@@ -331,7 +342,8 @@ export class PipeManager {
       // BFS from producers to find and draw relay chain connections
       // Each relay gets exactly ONE upstream pipe (chain topology, not mesh)
       const visited = new Set<string>();
-      const connectedRelays = new Set<string>(); // Relays that already have an upstream pipe
+      const feeds = new Map<string, { upstream: Building; relay: Building }>();
+      this.relayFeeds.set(flow.resource, feeds);
       const queue: Building[] = [...producers];
 
       while (queue.length > 0) {
@@ -341,7 +353,7 @@ export class PipeManager {
 
         // Find unconnected relays within range, sorted by distance (closest first)
         const unconnectedRelays = relays
-          .filter((relay) => !connectedRelays.has(relay.id))
+          .filter((relay) => !feeds.has(relay.id))
           .map((relay) => ({ relay, dist: this.getDistance(current, relay) }))
           .filter(({ dist }) => dist > 0 && dist <= MAX_PIPE_DISTANCE)
           .sort((a, b) => a.dist - b.dist);
@@ -350,11 +362,7 @@ export class PipeManager {
           // Draw pipe from current to relay
           this.createPipe(current, relay, pipeType);
 
-          // Track relay's upstream connection for getConnectionsForBuilding
-          this.relayUpstreamConnections.set(relay.id, { upstream: current, pipeType });
-
-          // Mark relay as connected (one upstream pipe only)
-          connectedRelays.add(relay.id);
+          feeds.set(relay.id, { upstream: current, relay });
 
           // Add relay to queue to continue chain
           queue.push(relay);
@@ -597,10 +605,8 @@ export class PipeManager {
       return;
     }
 
-    const startPos = getTileCenter(from.gridX, from.gridZ);
-    const endPos = getTileCenter(to.gridX, to.gridZ);
-
-    startPos.y = endPos.y = type === 'heat' ? 0.42 : 0.3;
+    const startPos = pipeEndpoint(from, type);
+    const endPos = pipeEndpoint(to, type);
 
     const direction = endPos.subtract(startPos);
     const length = direction.length();
@@ -629,6 +635,48 @@ export class PipeManager {
     this.pipes.set(pipeId, { mesh: pipe, type });
   }
 
+  public getPlacementFlow(building: Building): PlacementFlowSummary {
+    const routes: PlacementFlowSummary['routes'] = [];
+    const covered = new Set<string>();
+    const addRoute = (resource: ResourceType, path: Building[]) => {
+      const hops = path.slice(1).map((to, i) => `${resource}:${path[i].id}:${to.id}`);
+      if (hops.every(key => covered.has(key))) return;
+      for (const key of hops) covered.add(key);
+      routes.push({ resource, points: path.map(b => pipeEndpoint(b, getPipeType(resource))) });
+    };
+    for (const { resource } of RESOURCE_FLOWS) {
+      const feeds = this.relayFeeds.get(resource);
+      const inlet = [building];
+      let feed = feeds?.get(building.id);
+      while (feed) {
+        inlet.push(feed.upstream);
+        feed = feeds?.get(feed.upstream.id);
+      }
+      inlet.reverse();
+      for (const allocation of this.supplyAllocations) {
+        if (allocation.resource !== resource || !allocation.path.some(b => b.id === building.id)) continue;
+        const path = [...allocation.path].reverse();
+        // Water in a newly primed tank must arrive before its own capacity flows out.
+        addRoute(resource, allocation.producer.id === building.id ? inlet.concat(path.slice(1)) : path);
+      }
+      if (!feeds) continue;
+      if (inlet.length > 1) addRoute(resource, inlet);
+      for (const { upstream, relay } of feeds.values()) {
+        if (upstream.id === building.id) addRoute(resource, [...inlet, relay]);
+      }
+    }
+    const missing = getResourcesReceivedViaPipes(building.type)
+      .filter(resource => !this.isSuppliedWith(building, resource))
+      .map(getPipeType);
+    if (building.type === 'water_tank' && !this.hasTankFeed(building)) missing.push('water');
+    return { routes, missing };
+  }
+
+  private hasTankFeed(tank: Building): boolean {
+    for (const feeds of this.relayFeeds.values()) if (feeds.has(tank.id)) return true;
+    return false;
+  }
+
   public getConnectionsForBuilding(building: Building): BuildingConnection[] {
     const connections: BuildingConnection[] = [];
     const buildings = gameState.getBuildings();
@@ -655,26 +703,15 @@ export class PipeManager {
       });
     }
 
-    // Check relay infrastructure connections (for water tanks and other relays)
-    const relayConnection = this.relayUpstreamConnections.get(building.id);
-    if (relayConnection) {
-      connections.push({
-        building: relayConnection.upstream,
-        type: relayConnection.pipeType,
-        direction: 'incoming'
-      });
-    }
-
-    // Check if this building is upstream of any relay (outgoing relay connection)
-    for (const [relayId, conn] of this.relayUpstreamConnections.entries()) {
-      if (conn.upstream.id === building.id) {
-        const relay = buildings.find((b) => b.id === relayId);
-        if (relay) {
-          connections.push({
-            building: relay,
-            type: conn.pipeType,
-            direction: 'outgoing'
-          });
+    for (const [resource, feeds] of this.relayFeeds) {
+      for (const { upstream, relay } of feeds.values()) {
+        if (upstream.id !== building.id && relay.id !== building.id) continue;
+        const incoming = relay.id === building.id;
+        const other = incoming ? upstream : relay;
+        const direction = incoming ? 'incoming' : 'outgoing';
+        const type = getPipeType(resource);
+        if (!connections.some(c => c.building.id === other.id && c.direction === direction && c.type === type)) {
+          connections.push({ building: other, type, direction });
         }
       }
     }
@@ -758,6 +795,9 @@ export class PipeManager {
   }
 
   public isFullyOperational(building: Building): boolean {
+    if (building.type === 'water_tank' && building.id !== 'virtual_preview') {
+      return this.hasTankFeed(building);
+    }
     // First check capacity-based supply for buildings that consume resources
     const consumptionConfigs = BUILDING_CONSUMPTION[building.type];
     if (consumptionConfigs && consumptionConfigs.length > 0) {
@@ -824,6 +864,9 @@ export class PipeManager {
   public getMissingConnections(
     building: Building
   ): { type: BuildingType; resourceType: 'water' | 'heat' }[] {
+    if (building.type === 'water_tank' && building.id !== 'virtual_preview') {
+      return this.hasTankFeed(building) ? [] : [{ type: 'pump', resourceType: 'water' }];
+    }
     const requirements = BUILDING_REQUIREMENTS[building.type];
     if (!requirements || requirements.requiredInputs.length === 0) {
       return [];

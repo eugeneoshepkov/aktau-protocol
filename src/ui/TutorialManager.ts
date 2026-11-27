@@ -152,7 +152,6 @@ export class TutorialManager {
       if (this.buildPanel.hasTouchPreview()) return;
       if (buildings.tryPlaceBuilding(x, z)) {
         this.buildPanel.cancelSelection();
-        soundManager.play('build');
       }
     });
 

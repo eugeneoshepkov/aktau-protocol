@@ -122,13 +122,13 @@ export async function initGame(resume: boolean, walk = false): Promise<void> {
 
   await decorManager.initialize(scene, (x, z) => gridManager.getTileAt(x, z));
 
-  const buildingManager = new BuildingManager(scene, gridManager);
+  const pipeManager = new PipeManager(scene);
+  const buildingManager = new BuildingManager(scene, gridManager, pipeManager);
   const isPlacing = () =>
     buildingManager.getSelectedBuildingType() !== null &&
     !tickSystem.hasOpenModal() &&
     !gameState.isGameOver();
 
-  const pipeManager = new PipeManager(scene);
   const particleManager = new ParticleManager(scene);
 
   mountNetworkInspector(pipeManager);
@@ -240,10 +240,7 @@ export async function initGame(resume: boolean, walk = false): Promise<void> {
         return;
       }
       if (!gridManager.isInBounds(x, z)) return;
-      const placed = buildingManager.tryPlaceBuilding(x, z);
-      if (placed) {
-        soundManager.play('build');
-      }
+      buildingManager.tryPlaceBuilding(x, z);
     } else {
       tooltip.show(x, z, pointer);
     }
