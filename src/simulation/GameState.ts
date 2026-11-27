@@ -229,6 +229,7 @@ export class GameState {
   private gameOverReason?: GameOverReason;
   private buildingIdCounter: number = 0;
   private connectionChecker: ConnectionChecker | null = null;
+  private fixedSiteChecker?: (type: BuildingType | CivicProjectKind, x: number, z: number) => boolean;
   private eventModifiersGetter: (() => EventModifiers) | null = null;
 
   private listeners: Map<GameEventType, Set<GameEventCallback>> = new Map();
@@ -327,6 +328,10 @@ export class GameState {
     this.weatherPersistence = persistence;
   }
 
+  public setFixedSiteChecker(checker: typeof this.fixedSiteChecker): void {
+    this.fixedSiteChecker = checker;
+  }
+
   public getNextDispatchDay(): number {
     return this.nextDispatchDay;
   }
@@ -409,6 +414,7 @@ export class GameState {
       for (let gridX = 0; gridX < GRID_SIZE; gridX++) {
         const distance = (gridX - preferredX) ** 2 + (gridZ - preferredZ) ** 2;
         if (distance >= nearest || getTileTypeAt(gridX, gridZ) === 'sea') continue;
+        if (this.fixedSiteChecker?.(kind, gridX, gridZ)) continue;
         if (this.buildings.some((b) => overlapsSite(b, gridX, gridZ))) continue;
         nearest = distance;
         site = { kind, gridX, gridZ };
@@ -590,6 +596,10 @@ export class GameState {
       return { canPlace: false, reason: 'Game is over' };
     }
 
+    if (this.fixedSiteChecker?.(type, gridX, gridZ)) {
+      return { canPlace: false, reason: 'Tile is already occupied' };
+    }
+
     // Check tile type compatibility
     const allowedTiles = BUILDING_PLACEMENT[type];
     if (!allowedTiles.includes(tileType)) {
@@ -663,6 +673,7 @@ export class GameState {
   }
 
   public placeBuilding(type: BuildingType, gridX: number, gridZ: number): Building | null {
+    if (this.fixedSiteChecker?.(type, gridX, gridZ)) return null;
     // Deduct costs
     const cost = this.getEffectiveCost(type);
     if (cost === null) {

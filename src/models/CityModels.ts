@@ -1,4 +1,5 @@
 import {
+  type BoundingBox,
   Color3,
   Matrix,
   Mesh,
@@ -319,6 +320,10 @@ const designs: Record<BuildingType | CivicProjectKind, (parts: ModelParts, varia
   district_heating: districtHeating
 };
 
+export function buildingQuarterTurns(type: BuildingType | CivicProjectKind, x: number, z: number): number {
+  return type === 'microrayon' ? (x + z) % 4 : 0;
+}
+
 export class CityModels {
   private static scenes = new WeakMap<Scene, CityModels>();
   private snowy = false;
@@ -382,7 +387,7 @@ export class CityModels {
     for (const template of this.templates.values()) snowOnRoofs(template, snowy);
   }
 
-  create(type: BuildingType | CivicProjectKind, name: string, variant = 0): Mesh {
+  private getTemplate(type: BuildingType | CivicProjectKind, variant: number): Mesh {
     const style = type === 'microrayon' ? Math.abs(Math.floor(variant)) % 3 : 0;
     const key = type + style;
     let template = this.templates.get(key);
@@ -395,7 +400,23 @@ export class CityModels {
       template.setEnabled(false);
       this.templates.set(key, template);
     }
-    const mesh = template.clone(name, null, true);
+    return template;
+  }
+
+  overlapsLot(bounds: BoundingBox, type: BuildingType | CivicProjectKind, x: number, z: number): boolean {
+    // All foundations are centred on their lot, including while a new building animates into place.
+    const half = this.getTemplate(type, x * 5 + z).getBoundingInfo().boundingBox.extendSize;
+    const sideways = buildingQuarterTurns(type, x, z) % 2 === 1;
+    const halfWidth = sideways ? half.z : half.x;
+    const halfDepth = sideways ? half.x : half.z;
+    return (
+      Math.abs(x + 0.5 - bounds.centerWorld.x) < halfWidth + bounds.extendSizeWorld.x &&
+      Math.abs(z + 0.5 - bounds.centerWorld.z) < halfDepth + bounds.extendSizeWorld.z
+    );
+  }
+
+  create(type: BuildingType | CivicProjectKind, name: string, variant = 0): Mesh {
+    const mesh = this.getTemplate(type, variant).clone(name, null, true);
     mesh.setEnabled(true);
     mesh.receiveShadows = true;
     return mesh;

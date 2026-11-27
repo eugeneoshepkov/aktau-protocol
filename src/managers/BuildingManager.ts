@@ -12,7 +12,7 @@ import {
 import { gameState } from '../simulation/GameState';
 import { GridManager } from '../grid/GridManager';
 import { getTileCenter, type GridPosition } from '../grid/GridCoords';
-import { CityModels } from '../models/CityModels';
+import { buildingQuarterTurns, CityModels } from '../models/CityModels';
 import { decorManager } from './DecorManager';
 import { feedbackManager } from '../ui/FeedbackManager';
 import { soundManager } from './SoundManager';
@@ -77,7 +77,7 @@ export class BuildingManager {
   private positionModel(mesh: Mesh, type: BuildingType, x: number, z: number) {
     const center = getTileCenter(x, z);
     mesh.position.set(center.x, 0.15, center.z);
-    mesh.rotation.y = type === 'microrayon' ? (((x + z) % 4) * Math.PI) / 2 : 0;
+    mesh.rotation.y = buildingQuarterTurns(type, x, z) * Math.PI / 2;
   }
 
   public showGhostPreview(

@@ -93,7 +93,7 @@ class DecorManagerClass {
     const light = finish(harborLight(), 'breakwater light');
     place(light, 44.5, 0, 2.84);
     const customs = finish(portOffice(), 'port customs office');
-    place(customs, 43.5, 0.15, 12.47);
+    place(customs, 43.5, 0.15, 12.17);
     const canteen = finish(portOffice(), 'workers canteen');
     place(canteen, 46.1, 0.15, 12.28, Math.PI, 0.88);
     const market = finish(marketHall(), 'covered market');
@@ -101,7 +101,6 @@ class DecorManagerClass {
     const dockShed = finish(marketHall(), 'quayside stores');
     place(dockShed, 33.95, 0.15, 11.65, Math.PI / 2, 0.72);
     this.waterfrontRoofs = [dock, customs, canteen, market, dockShed];
-    // Clearing any intersecting construction lot clears the entire landmark.
     const registerFootprint = (mesh: Mesh) => {
       const { minimumWorld: min, maximumWorld: max } = mesh.getBoundingInfo().boundingBox;
       const lastX = Math.min(GRID_SIZE - 1, Math.floor(max.x));
@@ -111,10 +110,8 @@ class DecorManagerClass {
       }
     };
     const courtyard = finish(apartmentCourtyard(), 'carpet rail and sandpit');
-    place(courtyard, 37.5, 0.15, 16.65, -0.28, 0.72);
-    for (const mesh of [dock, tug, light, customs, canteen, market, dockShed, courtyard]) {
-      registerFootprint(mesh);
-    }
+    place(courtyard, 37.1, 0.15, 16.65, -0.28, 0.72);
+    const fixedStructures = [dock, light, customs, canteen, market, dockShed, courtyard];
     this.shoreMaterial = this.material.clone('limestone and dune grass');
     this.shoreMaterial.backFaceCulling = false;
     for (const shelf of createLimestoneShore(scene)) {
@@ -207,6 +204,7 @@ class DecorManagerClass {
       place(mesh, x, 0.15, z, angle);
       mesh.metadata = { sight: id };
       mesh.isPickable = true;
+      fixedStructures.push(mesh);
       this.waterfrontRoofs.push(mesh);
       return mesh;
     };
@@ -443,8 +441,34 @@ class DecorManagerClass {
       for (const z of [14.3, 17.7]) plant(lamp, x, 0.15, z, 0, 1);
     }
 
-    // Beyond the build boundary, the road continues past the existing Soviet town.
     const library = CityModels.forScene(scene);
+    gameState.setFixedSiteChecker((type, x, z) =>
+      fixedStructures.some(mesh => library.overlapsLot(mesh.getBoundingInfo().boundingBox, type, x, z))
+    );
+    // Older saves may already have built here. Restore the scenery when the last obstruction goes.
+    const syncSavedStructures = () => {
+      const buildings = gameState.getBuildings();
+      const civic = gameState.getCivicProject();
+      for (const mesh of fixedStructures) {
+        const bounds = mesh.getBoundingInfo().boundingBox;
+        const visible =
+          !(civic && library.overlapsLot(bounds, civic.kind, civic.gridX, civic.gridZ)) &&
+          !buildings.some(b => library.overlapsLot(bounds, b.type, b.gridX, b.gridZ));
+        if (mesh.isVisible === visible) continue;
+        mesh.isVisible = visible;
+        for (const child of mesh.getChildMeshes()) child.isVisible = visible;
+      }
+    };
+    gameState.on('buildingRemoved', syncSavedStructures);
+    // Load emits civicProjectChange after restoring all buildings, including in cities without a project.
+    gameState.on('civicProjectChange', syncSavedStructures);
+    dock.onDisposeObservable.addOnce(() => {
+      gameState.setFixedSiteChecker(undefined);
+      gameState.off('buildingRemoved', syncSavedStructures);
+      gameState.off('civicProjectChange', syncSavedStructures);
+    });
+
+    // Beyond the build boundary, the road continues past the existing Soviet town.
     for (const [x, z, angle] of [
       [51.5, 13.3, 0],
       [53.6, 13.3, 0],

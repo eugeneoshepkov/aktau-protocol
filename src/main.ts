@@ -15,6 +15,7 @@ import { CitySights } from './ui/CitySights';
 import { mountNetworkInspector } from './ui/NetworkInspector';
 import { BuildPanel } from './ui/BuildPanel';
 import { mountTouchPlacement } from './ui/TouchPlacement';
+import { isBuildableLot } from './grid/BuildingLots';
 import { Tooltip } from './ui/Tooltip';
 import { ShortcutsModal } from './ui/ShortcutsModal';
 import { Chronicle } from './ui/Chronicle';
@@ -148,7 +149,6 @@ export async function initGame(resume: boolean, walk = false): Promise<void> {
   const restored = resume && gameState.load();
   if (!restored) {
     for (const { type, x, z } of STARTER_DISTRICT) {
-      decorManager.removeDecorationAt(x, z);
       gameState.placeBuilding(type, x, z);
     }
   }
@@ -280,7 +280,8 @@ export async function initGame(resume: boolean, walk = false): Promise<void> {
     if (selectedType) {
       const canPlace = buildingManager.checkPlacement(x, z).canPlace;
       gridManager.showHighlight(x, z, canPlace);
-      pipeManager.showConnectionPreview(selectedType, x, z);
+      if (canPlace || isBuildableLot(selectedType, x, z)) pipeManager.showConnectionPreview(selectedType, x, z);
+      else pipeManager.hideConnectionPreview();
 
       // Show ghost building preview: green=valid, red=invalid, gray=inefficient
       const wouldWork = pipeManager.wouldBeOperational(selectedType, x, z);
