@@ -1,6 +1,13 @@
 import { Color3, Mesh, VertexBuffer } from '@babylonjs/core';
 import type { Season } from '../simulation/GameState';
 
+// A simulation day lasts a second. Give a walk through town its own unhurried evening.
+export function duskAtTime(elapsedSeconds: number): number {
+  const phase = elapsedSeconds % 160;
+  const fade = Math.max(0, Math.min(1, (phase - 12) / 32, (108 - phase) / 32));
+  return fade * fade * (3 - 2 * fade);
+}
+
 export const seasonalLight = {
   spring: { sky: '#c8d3c6', sun: '#ffdaa6', elevation: 0.78, intensity: 0.61 },
   summer: { sky: '#bed3cb', sun: '#ffe1a6', elevation: 1.32, intensity: 0.61 },

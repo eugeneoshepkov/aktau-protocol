@@ -1,10 +1,11 @@
-import { Matrix, Mesh, Quaternion, Vector3, VertexData } from '@babylonjs/core';
-import { ModelParts } from './CityModels';
+import { Color3, Constants, Matrix, Mesh, MeshBuilder, Quaternion, StandardMaterial, Vector3, VertexData } from '@babylonjs/core';
+import { markKitchenWindow, ModelParts } from './CityModels';
 
 const shell = '#e4d6b7';
 const chalk = '#efe4ca';
 const recessed = '#515b59';
 const oxide = '#af5140';
+const towerX = -0.13, towerZ = 0.19;
 
 // No. 9, fourth microrayon. The pierced central stairwell forms the daymark
 // below the eight-sided lantern. The long street elevation faces positive Z.
@@ -17,11 +18,16 @@ export function melovoyLighthouse(): ModelParts {
   const slots = new VertexData();
   const positions: number[] = [];
   const indices: number[] = [];
-  const towerX = -0.13;
   for (let floor = 0; floor < 10; floor++) {
     const y = 0.22 + floor * 0.205;
     for (const [x, width] of [[-0.81, 0.73], [0.65, 1.02]]) {
       p.box(x, -0.05, y + 0.025, width, 0.902, 0.112, '#657b7c');
+      // A single flat behind each band of glazing leaves the lantern the brightest point.
+      const side = x < 0 ? 0 : 1;
+      const bay = (floor * 3 + side) % 5;
+      const paneX = x + width * ((bay + 0.5) / 5 - 0.5);
+      const kitchen = p.box(paneX, -0.05, y + 0.025, width / 5 - 0.024, 0.906, 0.112, '#657b7c');
+      markKitchenWindow(kitchen, floor * 2 + side);
       for (let pane = 1; pane < 5; pane++) {
         p.box(x + width * (pane / 5 - 0.5), -0.05, y + 0.024, 0.024, 0.909, 0.115, chalk);
       }
@@ -60,7 +66,6 @@ export function melovoyLighthouse(): ModelParts {
   p.box(0, 0.23, 2.436, 2.33, 0.048, 0.048, chalk);
   p.box(towerX, 0.235, 2.31, 0.51, 0.49, 0.15, chalk);
 
-  const towerZ = 0.19;
   p.cylinder(towerX, towerZ, 2.46, 0.381, 0.353, 0.125, '#58615f', 8);
   p.cylinder(towerX, towerZ, 2.585, 0.356, 0.407, 0.18, chalk, 8);
   p.cylinder(towerX, towerZ, 2.765, 0.46, 0.46, 0.061, oxide, 8);
@@ -76,6 +81,77 @@ export function melovoyLighthouse(): ModelParts {
   p.cylinder(towerX, towerZ, 3.066, 0.52, 0.085, 0.075, '#8a473b', 8);
   p.cylinder(towerX, towerZ, 3.14, 0.022, 0.012, 0.113, '#69706b', 6);
   return p;
+}
+
+// The lamp, shaft and glints are local to the roof. The landmark keeps its own bounds for the tour.
+export function mountLighthouseBeacon(lighthouse: Mesh): (brightness: number) => void {
+  const scene = lighthouse.getScene();
+  const glass = MeshBuilder.CreateCylinder('Melovoy lantern', {
+    height: 0.135, diameterBottom: 0.34, diameterTop: 0.354, tessellation: 8
+  }, scene);
+  glass.parent = lighthouse;
+  glass.position.set(towerX, 2.908, towerZ);
+  glass.isPickable = false;
+
+  const light = new StandardMaterial('Melovoy beacon light', scene);
+  light.disableLighting = true;
+  light.emissiveColor = Color3.FromHexString('#ffe9af');
+  light.backFaceCulling = false;
+  light.alphaMode = Constants.ALPHA_ADD;
+  glass.material = light;
+
+  const beam = new Mesh('Melovoy seaward beam', scene);
+  beam.parent = glass;
+  beam.isPickable = false;
+  beam.hasVertexAlpha = true;
+  beam.material = light;
+  const positions: number[] = [], colors: number[] = [], indices: number[] = [];
+  const point = (x: number, y: number, z: number, alpha: number) => {
+    positions.push(x, y, z);
+    colors.push(1, 1, 1, alpha);
+  };
+  const seaLevel = -0.01 - lighthouse.position.y - glass.position.y;
+  // A soft ribbon of sea mist. Its transparent margins widen as the light reaches the water.
+  for (const [distance, width, strength] of [
+    [0.16, 0.07, 0.59], [2.4, 0.20, 0.35], [8.8, 0.48, 0.16],
+    [16.8, 0.90, 0.08], [21.2, 1.22, 0]
+  ]) {
+    const i = positions.length / 3;
+    const y = Math.max(seaLevel, distance * seaLevel / 18.8);
+    point(-width, y, -distance, 0);
+    point(0, y, -distance, strength);
+    point(width, y, -distance, 0);
+    if (i) indices.push(i - 3, i - 2, i, i, i - 2, i + 1, i - 2, i - 1, i + 1, i + 1, i - 1, i + 2);
+  }
+  // Broken highlights at the foot of the beam suggest crests catching the sweep.
+  for (let n = 0; n < 14; n++) {
+    const i = positions.length / 3;
+    const z = -15.5 - n * 0.42, x = 0.19 * Math.sin(2.4 * n);
+    const width = (0.22 + 0.09 * Math.sin(4.6 * n)) * Math.sin((n + 1) * Math.PI / 15);
+    point(x - width, seaLevel, z, 0);
+    point(x, seaLevel, z - 0.045, 0.26);
+    point(x + width, seaLevel, z, 0);
+    point(x, seaLevel, z + 0.045, 0.2);
+    indices.push(i, i + 1, i + 3, i + 3, i + 1, i + 2);
+  }
+  const data = new VertexData();
+  Object.assign(data, { positions, indices, colors });
+  data.applyToMesh(beam);
+  glass.setEnabled(false);
+  let phase = 0.45;
+  const sweep = scene.onBeforeRenderObservable.add(() => {
+    if (!glass.isEnabled()) return;
+    phase += Math.min(100, scene.getEngine().getDeltaTime()) * 0.00032;
+    beam.rotation.y = Math.sin(phase) * 0.98 - lighthouse.rotation.y;
+  });
+  glass.onDisposeObservable.addOnce(() => {
+    scene.onBeforeRenderObservable.remove(sweep);
+    light.dispose();
+  });
+  return (brightness) => {
+    glass.setEnabled(brightness > 0);
+    light.alpha = brightness;
+  };
 }
 
 // The poet leans over one raised knee with both hands resting on it.

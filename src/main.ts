@@ -1,4 +1,5 @@
 import { GameEngine } from './engine/Engine';
+import { duskAtTime } from './engine/Seasons';
 import { CityModels } from './models/CityModels';
 import { IsometricCamera } from './engine/Camera';
 import { GridManager } from './grid/GridManager';
@@ -129,12 +130,6 @@ export async function initGame(resume: boolean, walk = false): Promise<void> {
     !tickSystem.hasOpenModal() &&
     !gameState.isGameOver();
 
-  scene.registerBeforeRender(() => {
-    gridManager.setSurveyVisible(isPlacing());
-    const deltaTime = scene.getEngine().getDeltaTime() / 1000;
-    ambientManager.update(deltaTime);
-  });
-
   const pipeManager = new PipeManager(scene);
   const particleManager = new ParticleManager(scene);
 
@@ -157,15 +152,36 @@ export async function initGame(resume: boolean, walk = false): Promise<void> {
       gameState.placeBuilding(type, x, z);
     }
   }
+  const models = CityModels.forScene(scene);
+  let elapsedSeconds = 0;
+  let dusk = 0;
+  const applyDaylight = () => {
+    gameEngine.setDaylight(gameState.getSeason(), dusk);
+    gridManager.setDusk(dusk);
+    decorManager.setDusk(dusk);
+    models.setDusk(dusk);
+  };
   const applySeason = () => {
     const season = gameState.getSeason();
-    gameEngine.setSeason(season);
     gridManager.setSeason(season);
     decorManager.setSeason(season);
-    CityModels.forScene(scene).setSnowy(season === 'winter');
+    models.setSnowy(season === 'winter');
+    applyDaylight();
   };
   applySeason();
   gameState.on('seasonChange', applySeason);
+  scene.registerBeforeRender(() => {
+    gridManager.setSurveyVisible(isPlacing());
+    const delta = scene.getEngine().getDeltaTime() / 1000;
+    ambientManager.update(delta);
+    if (document.hidden) return;
+    elapsedSeconds += Math.min(delta, 0.25);
+    const nextDusk = duskAtTime(elapsedSeconds);
+    if (dusk !== nextDusk) {
+      dusk = nextDusk;
+      applyDaylight();
+    }
+  });
 
   const reactor = gameState.getBuildings().find((building) => building.type === 'reactor');
   if (reactor) {

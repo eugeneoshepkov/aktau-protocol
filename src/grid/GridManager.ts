@@ -8,6 +8,7 @@ import {
   ShaderMaterial,
   StandardMaterial,
   Texture,
+  Vector3,
   VertexBuffer,
   VertexData
 } from '@babylonjs/core';
@@ -43,6 +44,7 @@ const waterFragment = `
   varying float distanceToCamera;
   uniform float time;
   uniform float wind;
+  uniform float dusk;
   uniform vec3 deep;
   uniform vec3 shallow;
   uniform vec3 horizon;
@@ -82,6 +84,9 @@ const waterFragment = `
                  + 0.21 * sin(p.y * 6.6 + p.x * 7.5 - longWave - swell * 0.54);
     float glint = smoothstep(0.50, 0.95, crests) * smoothstep(0.16, 0.63, gust);
     color = mix(color, sunTint, sheen * (0.065 + 0.55 * glint) + 0.044 * glint);
+    color *= mix(vec3(1.0), vec3(0.42, 0.49, 0.70), dusk);
+    // The offshore water picks up the peach horizon as the sun goes down.
+    color = mix(color, horizon, 1.6 * dusk * (1.0 - dusk) * (1.0 - max(eye.y, 0.0)));
     float haze = smoothstep(35.0, 100.0, distanceToCamera);
     gl_FragColor = vec4(mix(color, horizon, haze), 1.0);
   }`;
@@ -91,6 +96,7 @@ export class GridManager {
   private tileMap: TileType[][] = [];
   private land: Mesh | null = null;
   private water: Mesh | null = null;
+  private readonly sunReflection = Vector3.Zero();
   private survey: Mesh | null = null;
   private dryGround: Float32Array | null = null;
   private highlight: Mesh | null = null;
@@ -270,6 +276,7 @@ export class GridManager {
           'worldViewProjection',
           'time',
           'wind',
+          'dusk',
           'deep',
           'shallow',
           'horizon',
@@ -286,20 +293,25 @@ export class GridManager {
     return mesh;
   }
 
+  public setDusk(amount: number): void {
+    const water = this.water?.material as ShaderMaterial | undefined;
+    water?.setFloat('dusk', amount);
+    water?.setColor3('horizon', this.scene.fogColor);
+    const sun = this.scene.getLightByName('sunLight') as DirectionalLight | null;
+    if (sun) {
+      sun.direction.normalizeToRef(this.sunReflection);
+      this.sunReflection.y *= -1;
+      water?.setColor3('sunTint', sun.diffuse);
+      water?.setVector3('sunReflection', this.sunReflection);
+    }
+  }
+
   public setSeason(season: Season): void {
     const climate = seasonalCoast[season];
     const water = this.water?.material as ShaderMaterial | undefined;
     water?.setColor3('deep', Color3.FromHexString(climate.deep));
     water?.setColor3('shallow', Color3.FromHexString(climate.shallows));
-    water?.setColor3('horizon', this.scene.fogColor);
     water?.setFloat('wind', climate.wind);
-    const sun = this.scene.getLightByName('sunLight') as DirectionalLight | null;
-    if (sun) {
-      const reflection = sun.direction.normalizeToNew();
-      reflection.y *= -1;
-      water?.setColor3('sunTint', sun.diffuse);
-      water?.setVector3('sunReflection', reflection);
-    }
 
     const positions = this.land?.getVerticesData(VertexBuffer.PositionKind);
     if (!this.dryGround || !positions || !this.land) return;

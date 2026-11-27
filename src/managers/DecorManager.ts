@@ -8,14 +8,15 @@ import {
   VertexData
 } from '@babylonjs/core';
 import { CityModels, ModelParts } from '../models/CityModels';
-import { melovoyLighthouse, shevchenkoMonument } from '../models/ShevchenkoLandmarks';
+import { melovoyLighthouse, mountLighthouseBeacon, shevchenkoMonument } from '../models/ShevchenkoLandmarks';
 import { abayPalace } from '../models/AbayPalace';
 import { fertiliserWorks } from '../models/ShevchenkoFactory';
 import { melovoyeTower, melovoyeTrace } from '../models/MelovoyeField';
 import { createLimestoneShore } from '../models/LimestoneShore';
 import { createNeighbourhoodPaths } from '../models/NeighbourhoodPaths';
 import {
-  apartmentCourtyard, courtyardClub, enamelSign, firstMicrorayonPier, iceCreamCounter, summerAtThePier, toryshStones
+  apartmentCourtyard, courtyardClub, enamelSign, firstMicrorayonPier, iceCreamCounter,
+  kioskAttendant, kioskQueue, kioskShutter, summerAtThePier, toryshStones
 } from '../models/NeighbourhoodScenes';
 import type { SightId } from '../ui/CitySights';
 import {
@@ -43,6 +44,7 @@ class DecorManagerClass {
   private waterfrontRoofs: Mesh[] = [];
   private beachgoers?: Mesh;
   private paths?: Mesh;
+  private updateDusk?: (amount: number) => void;
   private vegetation: { mesh: Mesh; positions: Float32Array; colors: Float32Array }[] = [];
   private buildingPlaced = (data: unknown) => {
     const { gridX, gridZ } = data as Building;
@@ -208,12 +210,38 @@ class DecorManagerClass {
       this.waterfrontRoofs.push(mesh);
       return mesh;
     };
-    landmark('lighthouse', melovoyLighthouse(), 51.45, 10.35, -0.38);
+    const lighthouse = landmark('lighthouse', melovoyLighthouse(), 51.45, 10.35, -0.38);
+    lighthouse.material = CityModels.forScene(scene).apartmentMaterial;
+    const setBeacon = mountLighthouseBeacon(lighthouse);
     landmark('abayPalace', abayPalace(), 59.6, 15.45, -Math.PI / 2);
     landmark('monument', shevchenkoMonument(), 55.2, 10.25, -1.9);
     landmark('factory', fertiliserWorks(), 52.55, 21.35, -0.12);
     const kiosk = landmark('iceCream', iceCreamCounter(), 54, 15.45, -0.64);
     enamelSign(kiosk, 'МОРОЖЕНОЕ', 0, 1.05, 0.118, 1.66, 0.205);
+    const attendant = finish(kioskAttendant(), 'kiosk attendant');
+    attendant.parent = kiosk;
+    const queue = finish(kioskQueue(), 'ice cream queue');
+    queue.parent = kiosk;
+    queue.metadata = kiosk.metadata;
+    queue.isPickable = true;
+    const shutter = finish(kioskShutter(), 'kiosk shutter', false);
+    shutter.parent = kiosk;
+    shutter.position.set(0, 0.864, 0.144);
+    this.updateDusk = (amount) => {
+      const closed = Math.max(0, Math.min(1, (amount - 0.32) / 0.3));
+      shutter.setEnabled(closed > 0);
+      shutter.scaling.y = closed;
+      // The last customers head back towards the flats as the seller steps inside.
+      const departure = Math.max(0, Math.min(1, (amount - 0.25) / 0.30));
+      queue.position.z = 0.94 * departure;
+      queue.rotation.y = 0.32 * departure;
+      queue.visibility = Math.min(1, (1 - departure) * 1.8);
+      queue.setEnabled(departure < 1);
+      attendant.position.z = -0.22 * Math.min(1, closed * 1.8);
+      attendant.setEnabled(closed < 1);
+      setBeacon(Math.max(0, Math.min(1, (amount - 0.45) / 0.4)));
+    };
+    this.setDusk(0);
     const club = landmark('chaika', courtyardClub(), 55.9, 19.72, 1.0);
     enamelSign(club, 'ЧАЙКА', -0.78, 1.013, 0.504, 0.85, 0.183);
     const pier = landmark('swimmingPier', firstMicrorayonPier(), 52.4, 6.65, -0.34);
@@ -439,6 +467,10 @@ class DecorManagerClass {
     gameState.on('buildingPlaced', this.buildingPlaced);
   }
 
+  public setDusk(amount: number): void {
+    this.updateDusk?.(amount);
+  }
+
   public setSeason(season: Season): void {
     this.beachgoers?.setEnabled(season === 'summer');
     if (this.paths) this.paths.visibility = season === 'winter' ? 0.34 : 1;
@@ -512,6 +544,7 @@ class DecorManagerClass {
   }
 
   public dispose(): void {
+    this.updateDusk = undefined;
     gameState.off('buildingPlaced', this.buildingPlaced);
     for (const mesh of this.meshes) mesh.dispose();
     this.tileItems.clear();

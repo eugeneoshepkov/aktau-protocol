@@ -8,6 +8,7 @@ import {
   Vector3,
   VertexData
 } from '@babylonjs/core';
+import { CustomMaterial } from '@babylonjs/materials/custom/customMaterial';
 import type { BuildingType } from '../types';
 import type { CivicProjectKind } from '../simulation/DistrictPlan';
 import { publicGarden, districtHeating } from './CivicModels';
@@ -45,6 +46,7 @@ export class ModelParts {
     }
     data.colors = colors;
     this.pieces.push(data);
+    return data;
   }
 
   box(
@@ -56,7 +58,7 @@ export class ModelParts {
     height: number,
     color: string
   ) {
-    this.add(VertexData.CreateBox({ width, depth, height }), x, bottom + height / 2, z, color);
+    return this.add(VertexData.CreateBox({ width, depth, height }), x, bottom + height / 2, z, color);
   }
 
   cylinder(
@@ -259,6 +261,12 @@ function thermalPlant(p: ModelParts) {
   p.tube([-0.43, 0.26, -0.43], [0.5, 0.26, -0.43], 0.13, steel);
 }
 
+// These meshes are opaque. The unused vertex alpha carries a household ID through batching.
+export function markKitchenWindow(pane: VertexData, id: number): void {
+  const colors = pane.colors!;
+  for (let i = 3; i < colors.length; i += 4) colors[i] = (1 + id) / 64;
+}
+
 function housing(p: ModelParts, variant: number) {
   const floors = [5, 7, 4][variant];
   const wall = [limestone, '#e2c5a2', '#cbd0b9'][variant];
@@ -273,7 +281,7 @@ function housing(p: ModelParts, variant: number) {
       const x = -0.55 + bay * 0.22;
       const pane =
         (bay * 7 + f * 3 + variant) % 8 === 0 ? '#c5aa78' : (bay + f) % 3 === 0 ? glass : navy;
-      p.box(x, -0.1, y + 0.059, 0.138, 0.548, 0.086, pane);
+      markKitchenWindow(p.box(x, -0.1, y + 0.059, 0.138, 0.548, 0.086, pane), f * 6 + bay);
     }
     for (const x of [-0.44, 0.44]) {
       p.box(x, 0.202, y + 0.011, 0.36, 0.115, 0.029, white);
@@ -317,6 +325,8 @@ export class CityModels {
   private templates = new Map<string, Mesh>();
   private scene: Scene;
   private material: StandardMaterial;
+  readonly apartmentMaterial: CustomMaterial;
+  private dusk = 0;
 
   static forScene(scene: Scene) {
     let library = this.scenes.get(scene);
@@ -331,6 +341,39 @@ export class CityModels {
     this.scene = scene;
     this.material = new StandardMaterial('city-painted-concrete', scene);
     this.material.specularColor.set(0.035, 0.035, 0.03);
+    const apartments = new CustomMaterial('apartments and kitchen windows', scene);
+    this.apartmentMaterial = apartments;
+    apartments.specularColor.copyFrom(this.material.specularColor);
+    apartments.AddUniform('dusk', 'float', null)
+      .AddAttribute('uv')
+      .Vertex_Definitions(`
+        #ifndef UV1
+        attribute vec2 uv;
+        #endif
+        varying vec3 kitchen;
+      `)
+      .Fragment_Definitions('varying vec3 kitchen;')
+      .Vertex_After_WorldPosComputed(`
+        kitchen = vec3(0.0);
+        #if defined(VERTEXCOLOR) && defined(NORMAL)
+        if (color.a < 0.99 && abs(normal.z) > 0.9) {
+          float household = color.a * 64.0 + dot(finalWorld[3].xz, vec2(2.71, 1.39)) + normal.z * 13.9;
+          // Thresholds past full dusk leave some households dark.
+          float switchOn = 0.14 + 1.44 * fract(sin(household * 1.77) * 4027.3);
+          kitchen = vec3(smoothstep(switchOn, switchOn + 0.024, dusk), fract(household * 0.381), uv.x);
+        }
+        #endif
+      `)
+      .Fragment_Before_Fog(`
+        vec3 lamplight = mix(vec3(1.0, 0.64, 0.28), vec3(1.0, 0.87, 0.59), kitchen.y);
+        lamplight *= mix(0.43, 1.0, smoothstep(0.014, 0.06, abs(kitchen.z - 0.35)));
+        color.rgb = mix(color.rgb, lamplight, kitchen.x);
+      `);
+    apartments.onBindObservable.add(() => apartments.getEffect()?.setFloat('dusk', this.dusk));
+  }
+
+  setDusk(amount: number) {
+    this.dusk = amount;
   }
 
   setSnowy(snowy: boolean) {
@@ -347,7 +390,7 @@ export class CityModels {
       const parts = new ModelParts();
       designs[type](parts, style);
       template = parts.finish('prototype-' + key, this.scene);
-      template.material = this.material;
+      template.material = type === 'microrayon' ? this.apartmentMaterial : this.material;
       snowOnRoofs(template, this.snowy);
       template.setEnabled(false);
       this.templates.set(key, template);

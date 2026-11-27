@@ -92,10 +92,6 @@ export function iceCreamCounter() {
   p.box(0, 0.088, 0.385, 1.38, 0.03, 0.45, '#3e5d60');
   p.box(0.17, 0.11, 0.4, 0.6, 0.04, 0.3, '#7da5a3');
   p.box(0, 0.145, 0.37, 1.53, 0.23, 0.053, cream);
-  p.cylinder(-0.3, 0.15, 0.425, 0.14, 0.2, 0.14, '#e3debb', 6);
-  oval(p, -0.3, 0.627, 0.16, 0.143, 0.162, 0.132, skin);
-  p.box(-0.3, 0.15, 0.678, 0.16, 0.13, 0.066, '#f8efcf');
-  for (const x of [0.53, 0.61]) p.cylinder(x, 0.182, 0.423, 0.042, 0.068, 0.08, '#e0ae71', 8);
   p.box(0, -0.33, 0.87, 1.76, 0.93, 0.065, cream);
   p.box(0, -0.25, 0.935, 1.68, 0.65, 0.23, blue);
   p.box(0, 0.084, 0.939, 1.72, 0.06, 0.228, '#336e82');
@@ -115,12 +111,37 @@ export function iceCreamCounter() {
   }
   p.box(-0.56, 0.41, 0.052, 0.53, 0.32, 0.26, '#d9dec9');
   p.box(-0.56, 0.41, 0.31, 0.55, 0.33, 0.032, '#59968f');
+  return p;
+}
+
+export function kioskAttendant() {
+  const p = new ModelParts();
+  p.cylinder(-0.3, 0.15, 0.425, 0.14, 0.2, 0.14, '#e3debb', 6);
+  oval(p, -0.3, 0.627, 0.16, 0.143, 0.162, 0.132, skin);
+  p.box(-0.3, 0.15, 0.678, 0.16, 0.13, 0.066, '#f8efcf');
+  for (const x of [0.53, 0.61]) p.cylinder(x, 0.182, 0.423, 0.042, 0.068, 0.08, '#e0ae71', 8);
+  return p;
+}
+
+export function kioskQueue() {
+  const p = new ModelParts();
   neighbour(p, 0.49, 0.41, 0.045, 0.54, red, '#5e7481', '#694d3c');
   neighbour(p, 0.26, 0.59, 0.045, 0.34, '#f1c261', '#556e91', '#ad7544');
   neighbour(p, -0.17, 0.75, 0.045, 0.41, '#5999aa', '#665c81', '#4c403a');
   // A pale scoop in a waffle cup, held by the child at the hatch.
   p.cylinder(0.18, 0.538, 0.207, 0.042, 0.064, 0.066, '#d49f62', 8);
   oval(p, 0.18, 0.278, 0.538, 0.073, 0.064, 0.073, '#fff1d1');
+  return p;
+}
+
+export function kioskShutter() {
+  const p = new ModelParts();
+  // Local zero is under the awning. The bottom rail comes to rest on the serving ledge.
+  p.box(0, 0, -0.439, 1.409, 0.022, 0.439, '#92a9a3');
+  for (let slat = 1; slat <= 7; slat++)
+    p.box(0, 0.015, -slat * 0.055, 1.409, 0.013, 0.012, '#688383');
+  p.box(0, 0.015, -0.441, 1.43, 0.035, 0.021, '#456868');
+  p.box(0, 0.037, -0.419, 0.19, 0.029, 0.018, iron);
   return p;
 }
 
