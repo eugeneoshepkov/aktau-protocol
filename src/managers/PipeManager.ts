@@ -54,7 +54,10 @@ export interface BuildingConnection {
 export interface PlacementFlowSummary {
   routes: { resource: ResourceType; points: Vector3[] }[];
   missing: PipeType[];
+  restored: { building: Building; resources: ResourceType[]; missing: PipeType[] }[];
 }
+
+type SupplySnapshot = ReadonlyMap<string, readonly ResourceType[]>;
 
 function pipeEndpoint(building: Building, type: PipeType): Vector3 {
   const point = getTileCenter(building.gridX, building.gridZ);
@@ -635,41 +638,80 @@ export class PipeManager {
     this.pipes.set(pipeId, { mesh: pipe, type });
   }
 
-  public getPlacementFlow(building: Building): PlacementFlowSummary {
+  private receivedResources(building: Building): ResourceType[] {
+    return RESOURCE_FLOWS.filter(
+      ({ resource }) =>
+        this.isSuppliedWith(building, resource) || this.relayFeeds.get(resource)?.has(building.id)
+    ).map(({ resource }) => resource);
+  }
+
+  public captureSupply(): SupplySnapshot {
+    return new Map(gameState.getBuildings().map((b) => [b.id, this.receivedResources(b)]));
+  }
+
+  private missingInputs(building: Building): PipeType[] {
+    const missing = getResourcesReceivedViaPipes(building.type)
+      .filter((resource) => !this.isSuppliedWith(building, resource))
+      .map(getPipeType);
+    if (building.type === 'water_tank' && !this.hasTankFeed(building)) missing.push('water');
+    return missing;
+  }
+
+  public getPlacementFlow(building: Building, before?: SupplySnapshot): PlacementFlowSummary {
     const routes: PlacementFlowSummary['routes'] = [];
+    const restored = new Map<string, PlacementFlowSummary['restored'][number]>();
+    if (before) {
+      for (const lot of gameState.getBuildings()) {
+        const previouslyReceived = before.get(lot.id);
+        if (!previouslyReceived || lot.id === building.id) continue;
+        const resources = this.receivedResources(lot).filter(
+          (r) => !previouslyReceived.includes(r)
+        );
+        if (resources.length) {
+          restored.set(lot.id, { building: lot, resources, missing: this.missingInputs(lot) });
+        }
+      }
+    }
     const covered = new Set<string>();
     const addRoute = (resource: ResourceType, path: Building[]) => {
       const hops = path.slice(1).map((to, i) => `${resource}:${path[i].id}:${to.id}`);
-      if (hops.every(key => covered.has(key))) return;
+      if (hops.every((key) => covered.has(key))) return;
       for (const key of hops) covered.add(key);
-      routes.push({ resource, points: path.map(b => pipeEndpoint(b, getPipeType(resource))) });
+      routes.push({ resource, points: path.map((b) => pipeEndpoint(b, getPipeType(resource))) });
     };
     for (const { resource } of RESOURCE_FLOWS) {
       const feeds = this.relayFeeds.get(resource);
-      const inlet = [building];
-      let feed = feeds?.get(building.id);
-      while (feed) {
-        inlet.push(feed.upstream);
-        feed = feeds?.get(feed.upstream.id);
-      }
-      inlet.reverse();
+      const inletTo = (target: Building) => {
+        const inlet = [target];
+        let feed = feeds?.get(target.id);
+        while (feed) {
+          inlet.push(feed.upstream);
+          feed = feeds?.get(feed.upstream.id);
+        }
+        return inlet.reverse();
+      };
+      const inlet = inletTo(building);
       for (const allocation of this.supplyAllocations) {
-        if (allocation.resource !== resource || !allocation.path.some(b => b.id === building.id)) continue;
+        if (allocation.resource !== resource) continue;
+        const gained = restored.get(allocation.consumer.id)?.resources.includes(resource);
+        if (!gained && !allocation.path.some((b) => b.id === building.id)) continue;
         const path = [...allocation.path].reverse();
-        // Water in a newly primed tank must arrive before its own capacity flows out.
-        addRoute(resource, allocation.producer.id === building.id ? inlet.concat(path.slice(1)) : path);
+        // A tank allocates its own capacity, but the pulse originates at its water source.
+        const includeInlet = gained || allocation.producer.id === building.id;
+        addRoute(
+          resource,
+          includeInlet ? inletTo(allocation.producer).concat(path.slice(1)) : path
+        );
       }
       if (!feeds) continue;
       if (inlet.length > 1) addRoute(resource, inlet);
       for (const { upstream, relay } of feeds.values()) {
-        if (upstream.id === building.id) addRoute(resource, [...inlet, relay]);
+        if (restored.get(relay.id)?.resources.includes(resource))
+          addRoute(resource, inletTo(relay));
+        else if (upstream.id === building.id) addRoute(resource, [...inlet, relay]);
       }
     }
-    const missing = getResourcesReceivedViaPipes(building.type)
-      .filter(resource => !this.isSuppliedWith(building, resource))
-      .map(getPipeType);
-    if (building.type === 'water_tank' && !this.hasTankFeed(building)) missing.push('water');
-    return { routes, missing };
+    return { routes, missing: this.missingInputs(building), restored: [...restored.values()] };
   }
 
   private hasTankFeed(tank: Building): boolean {

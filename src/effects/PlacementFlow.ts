@@ -6,6 +6,7 @@ import {
   type Observer,
   type Vector3
 } from '@babylonjs/core';
+import { RESOURCE_FLOWS, type ResourceType } from '../config/ResourceFlow';
 import { getTileCenter } from '../grid/GridCoords';
 import { LAND_Y, SEA_Y } from '../grid/TileTypes';
 import type { PlacementFlowSummary } from '../managers/PipeManager';
@@ -19,23 +20,24 @@ const vertexSource = `
   attribute vec2 uv2;
   uniform mat4 worldViewProjection;
   varying vec2 ink;
-  varying float style;
+  varying vec2 paint;
   void main() {
     ink = uv;
-    style = uv2.x;
+    paint = uv2;
     gl_Position = worldViewProjection * vec4(position, 1.0);
   }`;
 
 const fragmentSource = `
   precision highp float;
   varying vec2 ink;
-  varying float style;
+  varying vec2 paint;
   uniform float age;
-  uniform float longest;
-  uniform float arrivalTime;
+  uniform float speed;
+  uniform float settleEnd;
   uniform float stationary;
   void main() {
-    float t = stationary > 0.5 ? 1.5 : age;
+    float t = stationary > 0.5 ? 3.0 : age;
+    float style = floor(abs(paint.x) + 0.5);
     vec3 color;
     float alpha;
     if (style < 2.5) {
@@ -45,7 +47,7 @@ const fragmentSource = `
       vec3 light = style < 0.5 ? vec3(0.79, 0.97, 1.0)
                  : style < 1.5 ? vec3(1.0, 0.86, 0.54) : vec3(0.61, 1.0, 0.85);
       float side = abs(ink.y);
-      float head = (t - 0.1) * longest;
+      float head = (t - 0.1) * speed;
       float fill = 1.0 - smoothstep(head - 0.16, head + 0.04, ink.x);
       float leading = 1.0 - smoothstep(0.04, 0.45, abs(ink.x - head));
       float chevrons = abs(fract(ink.x / 0.83 - t * 1.65 + 0.28 * side) - 0.5);
@@ -54,12 +56,11 @@ const fragmentSource = `
       float mark = max(rail, max(arrow, leading) * (1.0 - smoothstep(0.72, 0.98, side)));
       color = mix(dye * 0.56, dye, rail);
       color = mix(color, light, max(leading, arrow));
-      alpha = mark * fill * (1.0 - smoothstep(1.86, 2.5, age));
+      alpha = mark * fill * (1.0 - smoothstep(settleEnd - 0.74, settleEnd - 0.1, age));
     } else {
-      // A complete collar seals the connection. Open amber arcs mark an unfinished hook-up.
-      bool incomplete = style > 3.5 && style < 4.5;
-      bool idle = style > 4.5;
-      float start = (incomplete || idle) ? 0.1 : arrivalTime;
+      // The new lot has its own status rim. Restored lots echo the resource that arrived.
+      bool incomplete = style == 4.0 || paint.x < 0.0;
+      float start = paint.y;
       float arrived = smoothstep(start, start + 0.32, t);
       float r = length(ink);
       float radius = mix(0.66, 0.88, smoothstep(start, start + 0.68, t));
@@ -69,10 +70,13 @@ const fragmentSource = `
       float angle = atan(ink.y, ink.x) / 6.2831853;
       float gap = abs(fract(angle * 3.0 + 0.5) - 0.5);
       float cut = incomplete ? smoothstep(0.075, 0.095, gap) : 1.0;
-      vec3 rim = incomplete ? vec3(1.0, 0.73, 0.32)
-               : idle ? vec3(0.86, 0.81, 0.65) : vec3(0.80, 0.98, 0.83);
-      color = mix(incomplete ? vec3(0.53, 0.30, 0.13) : vec3(0.18, 0.48, 0.43), rim, core);
-      float fadeAt = incomplete ? 3.6 : 2.6;
+      vec3 rim = style == 4.0 ? vec3(1.0, 0.73, 0.32)
+               : style == 5.0 ? vec3(0.86, 0.81, 0.65)
+               : style == 6.0 ? vec3(0.61, 0.93, 1.0)
+               : style == 7.0 ? vec3(1.0, 0.72, 0.42)
+               : style == 8.0 ? vec3(0.45, 0.97, 0.81) : vec3(0.80, 0.98, 0.83);
+      color = mix(rim * vec3(0.35, 0.50, 0.48), rim, core);
+      float fadeAt = style == 4.0 ? 3.6 : settleEnd;
       alpha = cut * edge * arrived * (1.0 - smoothstep(fadeAt - 0.65, fadeAt, age));
     }
     if (alpha < 0.015) discard;
@@ -92,75 +96,103 @@ export class PlacementFlow {
 
   play(building: Building, summary: PlacementFlowSummary): void {
     this.clear();
-    const { routes, missing } = summary;
-    const center = getTileCenter(building.gridX, building.gridZ);
-    const atBuilding = (point: Vector3) => point.x === center.x && point.z === center.z;
-    let arrival = 0;
-    // A newly supplied distiller or tank sends its first pulse after the arriving supplies.
-    for (const { points } of routes) {
-      let prefix = 0;
-      for (let i = 1; i < points.length; i++) {
-        prefix += Math.hypot(points[i].x - points[i - 1].x, points[i].z - points[i - 1].z);
-        if (atBuilding(points[i])) arrival = Math.max(arrival, prefix);
-      }
-    }
+    const { routes, missing, restored } = summary;
     const positions: number[] = [],
       uvs: number[] = [],
       uv2s: number[] = [],
       indices: number[] = [];
-    const quad = (style: number) => {
+    const quad = (style: number, start = 0) => {
       const i = uv2s.length / 2;
       indices.push(i, i + 1, i + 2, i, i + 2, i + 3);
-      for (let n = 0; n < 4; n++) uv2s.push(style, 0);
+      for (let n = 0; n < 4; n++) uv2s.push(style, start);
     };
-    let longest = 0;
-    const drawn = new Set<string>();
-    for (const { resource, points } of routes) {
-      let distance = 0;
-      const style = resource === 'freshWater' ? 0 : resource === 'heat' ? 1 : 2;
-      for (let i = 1; i < points.length; i++) {
-        const a = points[i - 1],
-          b = points[i];
-        if (atBuilding(a)) distance = Math.max(distance, arrival);
-        const dx = b.x - a.x,
-          dz = b.z - a.z;
-        const length = Math.hypot(dx, dz);
-        if (length === 0) continue;
-        const end = distance + length;
-        const key = [resource, a.x, a.z, b.x, b.z].join(':');
-        if (!drawn.has(key)) {
-          drawn.add(key);
-          // Lift the ribbon just above the optional pipe overlay. Buildings still occlude it.
-          const nx = (-0.14 * dz) / length,
-            nz = (0.14 * dx) / length;
-          const vertex = (p: Vector3, side: number) =>
-            positions.push(p.x + side * nx, p.y + 0.052, p.z + side * nz);
-          vertex(a, -1);
-          vertex(a, 1);
-          vertex(b, 1);
-          vertex(b, -1);
-          uvs.push(distance, -1, distance, 1, end, 1, end, -1);
-          quad(style);
-        }
-        distance = end;
-      }
-      longest = Math.max(longest, distance);
+
+    const tileKey = (p: Vector3) => `${p.x},${p.z}`;
+    const arrivals = new Map<
+      string,
+      { type: Building['type']; feeds: Partial<Record<ResourceType, number>> }
+    >();
+    for (const lot of [building, ...restored.map((r) => r.building)]) {
+      arrivals.set(tileKey(getTileCenter(lot.gridX, lot.gridZ)), { type: lot.type, feeds: {} });
     }
 
-    const model = this.scene.getMeshByName('building_' + building.id);
-    const half = model?.getBoundingInfo().boundingBox.extendSize;
-    const extent = ((half ? Math.hypot(half.x, half.z) : 0.8) + 0.17) / 0.88;
-    const y = (building.type === 'pump' ? SEA_Y : LAND_Y) + 0.058;
-    for (const [u, v] of [
-      [-1, -1],
-      [-1, 1],
-      [1, 1],
-      [1, -1]
-    ]) {
-      positions.push(center.x + u * extent, y, center.z + v * extent);
-      uvs.push(u, v);
+    const segments = new Map<
+      string,
+      { a: Vector3; b: Vector3; style: number; distance: number; length: number }
+    >();
+    const pipeStyle = { freshWater: 0, heat: 1, seawater: 2 };
+    let longest = 0;
+    // Schedule in supply order: a newly operational distiller can only send fresh water
+    // once its last incoming feed reaches it. Distances on a relay path are cumulative.
+    for (const { resource } of RESOURCE_FLOWS) {
+      for (const route of routes) {
+        if (route.resource !== resource || route.points.length < 2) continue;
+        const { points } = route;
+        const source = arrivals.get(tileKey(points[0]));
+        let distance =
+          resource === 'freshWater' && source?.type === 'distiller'
+            ? Math.max(source.feeds.heat ?? 0, source.feeds.seawater ?? 0)
+            : 0;
+        for (let i = 1; i < points.length; i++) {
+          const a = points[i - 1],
+            b = points[i];
+          const length = Math.hypot(b.x - a.x, b.z - a.z);
+          if (!length) continue;
+          const edge = `${resource}:${tileKey(a)}:${tileKey(b)}`;
+          const earlier = segments.get(edge);
+          if (!earlier || distance < earlier.distance) {
+            segments.set(edge, { a, b, style: pipeStyle[resource], distance, length });
+          }
+          distance += length;
+          const target = arrivals.get(tileKey(b))?.feeds;
+          if (target) target[resource] = Math.min(target[resource] ?? Infinity, distance);
+        }
+        longest = Math.max(longest, distance);
+      }
     }
-    quad(missing.length ? 4 : routes.length ? 3 : 5);
+
+    const speed = Math.max(longest, 1) / (restored.length ? 1.65 : 1);
+    for (const { a, b, style, distance, length } of segments.values()) {
+      // Lift the ribbon just above the optional pipe overlay. Buildings still occlude it.
+      const nx = (-0.14 * (b.z - a.z)) / length,
+        nz = (0.14 * (b.x - a.x)) / length;
+      const vertex = (p: Vector3, side: number) =>
+        positions.push(p.x + side * nx, p.y + 0.052, p.z + side * nz);
+      vertex(a, -1);
+      vertex(a, 1);
+      vertex(b, 1);
+      vertex(b, -1);
+      const end = distance + length;
+      uvs.push(distance, -1, distance, 1, end, 1, end, -1);
+      quad(style);
+    }
+
+    const ring = (lot: Building, style: number, resources?: ResourceType[]) => {
+      const center = getTileCenter(lot.gridX, lot.gridZ);
+      const { feeds } = arrivals.get(tileKey(center))!;
+      const distances = resources ? resources.map((r) => feeds[r] ?? 0) : Object.values(feeds);
+      const arrival = Math.max(0, ...distances);
+      const model = this.scene.getMeshByName('building_' + lot.id);
+      const half = model?.getBoundingInfo().boundingBox.extendSize;
+      const extent = ((half ? Math.hypot(half.x, half.z) : 0.8) + 0.17) / 0.88;
+      const y = (lot.type === 'pump' ? SEA_Y : LAND_Y) + 0.058;
+      for (const [u, v] of [
+        [-1, -1],
+        [-1, 1],
+        [1, 1],
+        [1, -1]
+      ]) {
+        positions.push(center.x + u * extent, y, center.z + v * extent);
+        uvs.push(u, v);
+      }
+      const start = style === 4 || style === 5 ? 0.1 : arrival ? 0.1 + arrival / speed : 0.4;
+      quad(style, start);
+    };
+    ring(building, missing.length ? 4 : routes.length ? 3 : 5);
+    for (const lot of restored) {
+      const style = lot.resources.length === 1 ? 6 + pipeStyle[lot.resources[0]] : 9;
+      ring(lot.building, lot.missing.length ? -style : style, lot.resources);
+    }
 
     const mesh = new Mesh('placement flow', this.scene);
     const data = new VertexData();
@@ -175,13 +207,14 @@ export class PlacementFlow {
       { vertexSource, fragmentSource },
       {
         attributes: ['position', 'uv', 'uv2'],
-        uniforms: ['worldViewProjection', 'age', 'longest', 'arrivalTime', 'stationary'],
+        uniforms: ['worldViewProjection', 'age', 'speed', 'settleEnd', 'stationary'],
         needAlphaBlending: true
       }
     );
     ink.backFaceCulling = false;
-    ink.setFloat('longest', Math.max(longest, 1));
-    ink.setFloat('arrivalTime', arrival > 0 ? 0.1 + arrival / longest : 0.4);
+    const settleEnd = restored.length ? 3.25 : 2.6;
+    ink.setFloat('speed', speed);
+    ink.setFloat('settleEnd', settleEnd);
     ink.setFloat(
       'stationary',
       globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 1 : 0
@@ -191,7 +224,7 @@ export class PlacementFlow {
     if (missing.length) this.caption = new PlacementCaption(this.scene, building, missing);
     this.caption?.update();
     const start = performance.now();
-    const duration = missing.length ? 3.6 : 2.6;
+    const duration = missing.length ? 3.6 : settleEnd;
     this.observer = this.scene.onBeforeRenderObservable.add(() => {
       const age = (performance.now() - start) / 1000;
       if (age >= duration) this.clear();

@@ -155,6 +155,7 @@ export class BuildingManager {
       return false;
     }
 
+    const supplyBefore = this.pipes.captureSupply();
     const building = gameState.placeBuilding(this.selectedBuildingType, gridX, gridZ);
     if (!building) {
       console.log('Failed to place building');
@@ -170,7 +171,7 @@ export class BuildingManager {
       this.particleManager?.createDust(mesh.position.clone());
       this.playSquashStretchAnimation(mesh);
     }
-    const supply = this.pipes.getPlacementFlow(building);
+    const supply = this.pipes.getPlacementFlow(building, supplyBefore);
     this.placementFlow.play(building, supply);
     const sound = building.type === 'thermal_plant' ? 'reactor' : building.type;
     soundManager.play(supply.missing.length ? 'build' : sound);
