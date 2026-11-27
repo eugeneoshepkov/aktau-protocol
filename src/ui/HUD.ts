@@ -2,8 +2,10 @@ import { gameState, SEASONS, SEASON_LENGTH, type ResourceTrend, type Season } fr
 import { tickSystem } from '../simulation/TickSystem';
 import { musicManager } from '../managers/MusicManager';
 import { soundManager } from '../managers/SoundManager';
+import type { PipeManager } from '../managers/PipeManager';
+import { getCityIssues, type CityIssue } from './cityIssues';
 import { ICONS, icon } from './Icons';
-import type { GameOverReason, Resources } from '../types';
+import type { Building, GameOverReason, Resources } from '../types';
 import { t, td } from '../i18n';
 
 // Tooltip content for each HUD resource
@@ -11,6 +13,8 @@ type HudTooltipKey = 'population' | 'freshWater';
 
 export class HUD {
   private container: HTMLDivElement;
+  private readonly pipes: PipeManager;
+  private issues: CityIssue[] = [];
   private resourceElements: Map<string, HTMLSpanElement> = new Map();
   private trendElements: Map<string, HTMLSpanElement> = new Map();
   private dayElement: HTMLSpanElement | null = null;
@@ -29,7 +33,8 @@ export class HUD {
     winter: ICONS.winter
   };
 
-  constructor() {
+  constructor(pipes: PipeManager, showOnMap: (buildings: Building[]) => void) {
+    this.pipes = pipes;
     this.container = this.createHUD();
     document.body.appendChild(this.container);
 
@@ -42,7 +47,16 @@ export class HUD {
     gameState.on('dayAdvance', () => this.updateDay());
     gameState.on('seasonChange', () => this.updateSeason());
     gameState.on('gameOver', (data) => this.showGameOver(data as { reason: GameOverReason; day: number }));
-    gameState.on('reactorWarning', () => this.flashWarning());
+
+    this.container.querySelector('#city-issues')!.addEventListener('click', event => {
+      const button = (event.target as Element).closest<HTMLButtonElement>('.issue-locate');
+      if (!button) return;
+      const issue = this.issues.find(issue => issue.id === button.dataset.issue);
+      if (!issue?.buildings.length) return;
+      this.container.querySelector<HTMLElement>('#city-status')!.hidePopover();
+      this.container.querySelector<HTMLElement>('#hud-status-toggle')!.focus({ preventScroll: true });
+      showOnMap(issue.buildings);
+    });
 
     this.updateResources();
     this.updateDay();
@@ -157,6 +171,7 @@ export class HUD {
         </div>
         <button type="button" id="hud-status-toggle" popovertarget="city-status" aria-controls="city-status" aria-label="${t('hud.status')}">
           <span class="status-full">${t('hud.status')}</span><span class="status-short">${t('hud.statusShort')}</span><span class="status-chevron" aria-hidden="true"></span>
+          <span class="status-indicator" aria-hidden="true">!</span>
         </button>
         </div>
         <div class="hud-controls">
@@ -181,6 +196,7 @@ export class HUD {
         <header><h2 id="city-status-heading">${t('hud.status')}</h2>
           <button type="button" class="hud-button" aria-label="${t('menu.close')}" popovertarget="city-status" popovertargetaction="hide" autofocus>${icon('close')}</button>
         </header>
+        <div id="city-issues" hidden><h3>${t('hud.issues')}</h3><ul></ul></div>
         ${readings.map(([key, symbol, label]) => `
           <div class="hud-reading">
             <span class="reading-label"><span class="icon-wrap icon-${symbol}">${ICONS[symbol]}</span> ${t(label)}</span>
@@ -358,6 +374,54 @@ export class HUD {
         this.tempElement.classList.remove('warning', 'critical');
       }
     }
+    this.updateIssues();
+  }
+
+  private updateIssues(): void {
+    const previous = this.issues;
+    this.issues = getCityIssues(this.pipes);
+    if (this.issues.length === previous.length && this.issues.every((issue, i) => {
+      const old = previous[i];
+      return old.id === issue.id && old.message === issue.message && old.critical === issue.critical &&
+        Boolean(old.buildings.length) === Boolean(issue.buildings.length);
+    })) return;
+
+    const group = this.container.querySelector<HTMLElement>('#city-issues')!;
+    const toggle = this.container.querySelector<HTMLButtonElement>('#hud-status-toggle')!;
+    const list = group.querySelector('ul')!;
+    const focusedIssue = list.contains(document.activeElement)
+      ? (document.activeElement as HTMLButtonElement).dataset.issue : undefined;
+    const active = this.issues.length > 0;
+    const critical = this.issues.some(issue => issue.critical);
+    const heading = t(critical ? 'hud.urgent' : 'hud.issues');
+    group.hidden = !active;
+    group.querySelector('h3')!.textContent = heading;
+    if (active) toggle.dataset.issues = critical ? 'critical' : 'attention';
+    else delete toggle.dataset.issues;
+    toggle.setAttribute('aria-label', active ? `${t('hud.status')} · ${heading}` : t('hud.status'));
+
+    list.replaceChildren(...this.issues.map(issue => {
+      const row = document.createElement('li');
+      const message = document.createElement('p');
+      message.id = 'city-issue-' + issue.id;
+      message.textContent = issue.message;
+      row.append(message);
+      if (issue.buildings.length) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'issue-locate';
+        button.dataset.issue = issue.id;
+        button.textContent = t('hud.showOnMap');
+        button.setAttribute('aria-describedby', message.id);
+        row.append(button);
+      }
+      return row;
+    }));
+    if (focusedIssue) {
+      const target = list.querySelector<HTMLButtonElement>(`[data-issue="${focusedIssue}"]`) ??
+        this.container.querySelector<HTMLButtonElement>('#city-status header button')!;
+      target.focus({ preventScroll: true });
+    }
   }
 
   private updateTrends(trends: ResourceTrend): void {
@@ -397,13 +461,6 @@ export class HUD {
       this.container.querySelector('#calendar-demand')!.textContent = t(`season.${season}`, { mult });
       this.seasonElement.className = `hud-season icon-wrap ${season}`;
     }
-  }
-
-  private flashWarning(): void {
-    this.container.classList.add('warning-flash');
-    setTimeout(() => {
-      this.container.classList.remove('warning-flash');
-    }, 500);
   }
 
   private showGameOver({ reason, day }: { reason: GameOverReason; day: number }): void {

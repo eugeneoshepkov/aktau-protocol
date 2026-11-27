@@ -142,7 +142,6 @@ body {
 
 .hud-value.low {
   color: #ff6b6b;
-  animation: pulse 0.5s infinite;
 }
 
 .hud-value.warning {
@@ -151,7 +150,6 @@ body {
 
 .hud-value.critical {
   color: #ff3333;
-  animation: pulse 0.3s infinite;
 }
 
 .hud-unit {
@@ -539,30 +537,6 @@ body {
 .tutorial-skip:hover {
   border-color: #888;
   color: #aaa;
-}
-
-.warning-flash {
-  animation: warning-flash 0.5s;
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-}
-
-@keyframes warning-flash {
-  0%,
-  100% {
-    background-color: transparent;
-  }
-  50% {
-    background-color: rgba(255, 100, 0, 0.3);
-  }
 }
 
 .error-flash {
@@ -1017,86 +991,6 @@ body.demolish-cursor #gameCanvas {
     color: #f87171;
     text-shadow: 0 0 10px rgba(248, 113, 113, 0.8);
   }
-}
-
-/* Hint Bar - Warning Banner */
-#hint-bar {
-  position: fixed;
-  top: 60px;
-  left: 50%;
-  transform: translateX(-50%) translateY(-10px);
-  background: linear-gradient(135deg, rgba(180, 83, 9, 0.95), rgba(146, 64, 14, 0.95));
-  border: 2px solid rgba(251, 191, 36, 0.6);
-  border-radius: 8px;
-  padding: 12px 16px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  max-width: 400px;
-  z-index: 1500;
-  opacity: 0;
-  pointer-events: none;
-  transition:
-    opacity 0.3s ease,
-    transform 0.3s ease;
-  box-shadow:
-    0 4px 20px rgba(0, 0, 0, 0.4),
-    0 0 30px rgba(251, 191, 36, 0.2);
-}
-
-#hint-bar.show {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-  pointer-events: auto;
-  cursor: pointer;
-}
-
-.hint-icon {
-  flex-shrink: 0;
-  width: 24px;
-  height: 24px;
-  color: #fbbf24;
-}
-
-.hint-icon svg {
-  width: 100%;
-  height: 100%;
-  filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.5));
-}
-
-.hint-text {
-  color: #fef3c7;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 1.4;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-}
-
-.hint-dismiss {
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
-  color: #fef3c7;
-  cursor: pointer;
-  padding: 4px;
-  margin-left: auto;
-  flex-shrink: 0;
-  transition: background 0.2s, color 0.2s;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.hint-dismiss svg {
-  width: 14px;
-  height: 14px;
-}
-
-.hint-dismiss:hover {
-  background: rgba(0, 0, 0, 0.4);
-  color: #fff;
 }
 
 /* Reset View Button */

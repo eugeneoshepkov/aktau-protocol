@@ -59,12 +59,30 @@ body {
   outline-offset: 2px;
 }
 .status-chevron {
+  display: grid;
+  place-items: center;
+  width: 14px;
+}
+.status-chevron::after {
+  content: '';
   width: 6px;
   height: 6px;
   border: solid #b7cbc8;
   border-width: 0 1.5px 1.5px 0;
   transform: translateY(-1px) rotate(45deg);
 }
+.status-indicator, #hud-status-toggle[data-issues] .status-chevron { display: none; }
+#hud-status-toggle[data-issues] .status-indicator {
+  display: grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #e6b87c;
+  color: #15272b;
+  font: 800 11px/1 var(--sans);
+}
+#hud-status-toggle[data-issues="critical"] .status-indicator { background: #ff997d; }
 #city-status {
   position: fixed;
   inset: auto;
@@ -88,6 +106,36 @@ body {
   align-items: center;
 }
 #city-status h2 { font: 650 18px var(--sans); }
+#city-issues {
+  padding: 12px 0;
+  border-top: 1px solid #405456;
+}
+#city-issues h3 {
+  color: #edc399;
+  font: 650 13px/1.35 var(--sans);
+}
+#city-issues ul { list-style: none; }
+#city-issues li {
+  margin-top: 8px;
+  padding-left: 10px;
+  border-left: 2px solid #7f715e;
+  font: 14px/1.4 var(--sans);
+}
+.issue-locate {
+  min-height: 28px;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: #a8dbdc;
+  font: 600 13px/1.4 var(--sans);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+@media (pointer: coarse) {
+  .issue-locate { min-height: 44px; }
+  #city-status header button { min-width: 44px; min-height: 44px; }
+}
 .hud-reading {
   padding: 8px 0;
   border-top: 1px solid #405456;
@@ -363,12 +411,12 @@ body {
   gap: 7px;
   pointer-events: none;
 }
-.city-notices #hint-bar, .city-notices #chronicle-notification {
+.city-notices #chronicle-notification {
   position: static;
   transform: none;
   pointer-events: auto;
 }
-#hint-bar:not(.show), #chronicle-notification:not(.visible) {
+#chronicle-notification:not(.visible) {
   display: none;
 }
 #chronicle-notification {
@@ -377,10 +425,6 @@ body {
 }
 #toast-container {
   top: 72px;
-}
-#hint-bar {
-  max-width: min(295px, calc(100vw - 20px));
-  padding: 8px 10px;
 }
 .shortcuts-content {
   max-height: 88dvh;

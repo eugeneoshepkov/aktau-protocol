@@ -20,7 +20,6 @@ export const en = {
   'hud.lowPower': 'Power is low. Save electricity for the pumps before building again.',
   'hud.lowMorale': 'Morale is low. Connect homes to drinking water and heat.',
   'hud.highStrain': 'Reactor strain is high. Connect another desalination plant to cool it.',
-  'hud.dismissWarning': 'Dismiss warning',
   'hud.save': 'Save Game',
   'hud.load': 'Load Game',
   'hud.volume': 'Music volume',
@@ -129,6 +128,9 @@ export const en = {
   'build.preview.tankIsolated': 'No water line reaches this tank.',
   'chronicle.short': 'Chronicle',
   'hud.statusShort': 'City',
+  'hud.issues': 'Needs attention',
+  'hud.urgent': 'Needs attention now',
+  'hud.showOnMap': 'Show on map',
   'hud.speed': 'Game speed',
   'build.title': 'Construction',
   'build.free': 'Free',
@@ -437,18 +439,15 @@ export const en = {
   'hint.buildHousing': '🏠 Build Housing on sand to grow population.',
 
   // Diagnostics
-  'diagnostic.waterStuck.text': 'Fresh water not increasing. Check distiller connections.',
-  'diagnostic.heatStuck.text': 'Heat not increasing. Check reactor connections.',
-  'diagnostic.freshWaterDeclining.text': 'Fresh water declining. Check distiller connections.',
-  'diagnostic.heatDeclining.text': 'Heat declining. Check reactor connections.',
-  // Distiller connection messages
-  'diagnostic.distillerNeedsWater': '{count} distiller(s) need water supply.',
-  'diagnostic.distillerNeedsHeat': '{count} distiller(s) need heat supply.',
-  'diagnostic.distillerNeedsBoth': '{count} distiller(s) need connections.',
-  // Housing connection messages
-  'diagnostic.housingNeedsWater': '{count} housing block(s) need water.',
-  'diagnostic.housingNeedsHeat': '{count} housing block(s) need heat.',
-  'diagnostic.housingNeedsBoth': '{count} housing block(s) need connections.',
+  'diagnostic.runningLow.heat': 'At this rate the heat reserve will last at most two days. A thermal plant can replenish it.',
+  'diagnostic.runningLow.freshWater': 'At this rate drinking water will last at most two days. Check the seawater and heat supply to the desalination plants.',
+  'diagnostic.reactorCooling': 'Reactor strain is high but falling. Keep the desalination plants connected.',
+  'diagnostic.distiller.water': 'A desalination plant needs seawater from a sea pump.',
+  'diagnostic.distiller.heat': 'A desalination plant needs heat from the reactor or a thermal plant.',
+  'diagnostic.distiller.both': 'A desalination plant needs both seawater and heat.',
+  'diagnostic.microrayon.water': 'Housing needs drinking water from a desalination plant.',
+  'diagnostic.microrayon.heat': 'Housing needs heat from the reactor or a thermal plant.',
+  'diagnostic.microrayon.both': 'Housing needs both drinking water and heat.',
 
   // ============================================
   // Shortcuts Modal

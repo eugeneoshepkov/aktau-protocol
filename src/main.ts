@@ -21,7 +21,6 @@ import { ShortcutsModal } from './ui/ShortcutsModal';
 import { Chronicle } from './ui/Chronicle';
 import { feedbackManager } from './ui/FeedbackManager';
 import { TutorialManager } from './ui/TutorialManager';
-import { DiagnosticManager } from './ui/DiagnosticManager';
 import { tickSystem } from './simulation/TickSystem';
 import { gameState } from './simulation/GameState';
 import { eventSystem } from './simulation/EventSystem';
@@ -256,9 +255,6 @@ export async function initGame(resume: boolean, walk = false): Promise<void> {
   const notices = document.createElement('div');
   notices.className = 'city-notices';
   document.body.append(notices);
-  const diagnosticManager = new DiagnosticManager(notices);
-  diagnosticManager.setPipeManager(pipeManager);
-  diagnosticManager.setBuildingManager(buildingManager);
 
   inputManager.setTileHoverCallback((x, z, pointer) => {
     if (buildPanel.hasTouchPreview()) return;
@@ -301,10 +297,6 @@ export async function initGame(resume: boolean, walk = false): Promise<void> {
     buildingManager.hideGhostPreview();
   });
 
-  gameState.on('reactorWarning', () => {
-    soundManager.play('warning');
-  });
-
   gameState.on('gameOver', () => {
     musicManager.stop();
     musicManager.disposeShore();
@@ -312,7 +304,12 @@ export async function initGame(resume: boolean, walk = false): Promise<void> {
     setTimeout(() => soundManager.play('gameover'), 300);
   });
 
-  const hud = new HUD();
+  const hud = new HUD(pipeManager, buildings => {
+    if (sights.isOpen()) sights.close();
+    const first = buildings[0];
+    camera.focusOn(getTileCenter(first.gridX, first.gridZ));
+    buildingManager.highlightBuildings(buildings);
+  });
   const buildPanel = new BuildPanel(buildingManager);
   new Chronicle(notices);
   buildPanel.mountMobileControls();

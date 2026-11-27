@@ -4,7 +4,6 @@ import {
   StandardMaterial,
   Color3,
   Vector3,
-  Observer,
   Animation,
   EasingFunction,
   BackEase
@@ -30,8 +29,7 @@ export class BuildingManager {
   private meshes = new Map<string, Mesh>();
   private civicMesh: Mesh | null = null;
   private highlightedBuildings = new Set<Mesh>();
-  private renderObserver: Observer<Scene>;
-  private animationTime = 0;
+  private highlightTimeout?: number;
   private selectedBuildingType: BuildingType | null = null;
   private onSelectionChangeCallback?: (type: BuildingType | null, lot?: GridPosition) => void;
   private demolishMode: boolean = false;
@@ -54,12 +52,6 @@ export class BuildingManager {
     gameState.on('buildingRemoved', this.handleRemoval);
     gameState.on('civicProjectChange', this.syncCivicProject);
     this.syncCivicProject();
-    this.renderObserver = scene.onBeforeRenderObservable.add(() => {
-      if (!this.highlightedBuildings.size) return;
-      this.animationTime += scene.getEngine().getDeltaTime() / 1000;
-      const alpha = 0.36 + Math.sin(this.animationTime * 4) * 0.18;
-      for (const mesh of this.highlightedBuildings) mesh.overlayAlpha = alpha;
-    });
   }
 
   public setParticleManager(pm: ParticleManager): void {
@@ -283,18 +275,21 @@ export class BuildingManager {
     this.meshes.delete(id);
   };
 
-  public highlightProblematic(buildings: Building[]): void {
+  public highlightBuildings(buildings: Building[]): void {
     this.clearHighlights();
     for (const building of buildings) {
       const mesh = this.meshes.get(building.id);
       if (!mesh) continue;
-      mesh.overlayColor.set(0.95, 0.19, 0.1);
+      mesh.overlayColor.set(1, 0.73, 0.31);
+      mesh.overlayAlpha = 0.52;
       mesh.renderOverlay = true;
       this.highlightedBuildings.add(mesh);
     }
+    this.highlightTimeout = window.setTimeout(() => this.clearHighlights(), 3000);
   }
 
-  public clearHighlights(): void {
+  private clearHighlights(): void {
+    window.clearTimeout(this.highlightTimeout);
     for (const mesh of this.highlightedBuildings) mesh.renderOverlay = false;
     this.highlightedBuildings.clear();
   }
@@ -305,7 +300,6 @@ export class BuildingManager {
     gameState.off('civicProjectChange', this.syncCivicProject);
     this.civicMesh?.dispose();
     decorManager.setCivicFootprint(null);
-    this.scene.onBeforeRenderObservable.remove(this.renderObserver);
     this.hideGhostPreview();
     this.clearHighlights();
     for (const mesh of this.meshes.values()) mesh.dispose();

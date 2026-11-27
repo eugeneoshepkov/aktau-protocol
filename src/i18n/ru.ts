@@ -20,7 +20,6 @@ export const ru = {
   'hud.lowPower': 'Мало электроэнергии. Перед следующей стройкой оставьте запас для насосов.',
   'hud.lowMorale': 'У жителей низкое настроение. Подключите дома к воде и теплу.',
   'hud.highStrain': 'Нагрузка на реактор высока. Для охлаждения подключите ещё один опреснитель.',
-  'hud.dismissWarning': 'Скрыть предупреждение',
   'hud.save': 'Сохранить игру',
   'hud.load': 'Загрузить игру',
   'hud.volume': 'Громкость музыки',
@@ -129,6 +128,9 @@ export const ru = {
   'build.preview.tankIsolated': 'До резервуара не доходит водопровод.',
   'chronicle.short': 'Хроника',
   'hud.statusShort': 'Город',
+  'hud.issues': 'Требует внимания',
+  'hud.urgent': 'Требует срочного внимания',
+  'hud.showOnMap': 'Показать на карте',
   'hud.speed': 'Скорость игры',
   'build.title': 'Строительство',
   'build.free': 'Бесплатно',
@@ -437,18 +439,15 @@ export const ru = {
   'hint.buildHousing': '🏠 Постройте жильё на песке для роста населения.',
 
   // Диагностика
-  'diagnostic.waterStuck.text': 'Пресная вода не увеличивается. Проверьте подключение опреснителей.',
-  'diagnostic.heatStuck.text': 'Тепло не увеличивается. Проверьте подключение реакторов.',
-  'diagnostic.freshWaterDeclining.text': 'Пресная вода уменьшается. Проверьте подключение опреснителей.',
-  'diagnostic.heatDeclining.text': 'Тепло уменьшается. Проверьте подключение реакторов.',
-  // Сообщения о подключении опреснителей
-  'diagnostic.distillerNeedsWater': '{count} опреснитель(ей) нужна вода.',
-  'diagnostic.distillerNeedsHeat': '{count} опреснитель(ей) нужно тепло.',
-  'diagnostic.distillerNeedsBoth': '{count} опреснитель(ей) нужны подключения.',
-  // Сообщения о подключении жилья
-  'diagnostic.housingNeedsWater': '{count} жилой(ых) блок(ов) нужна вода.',
-  'diagnostic.housingNeedsHeat': '{count} жилой(ых) блок(ов) нужно тепло.',
-  'diagnostic.housingNeedsBoth': '{count} жилой(ых) блок(ов) нужны подключения.',
+  'diagnostic.runningLow.heat': 'При таком расходе тепла хватит максимум на два дня. ТЭЦ поможет пополнить запас.',
+  'diagnostic.runningLow.freshWater': 'При таком расходе питьевой воды хватит максимум на два дня. Проверьте подачу морской воды и тепла к опреснителям.',
+  'diagnostic.reactorCooling': 'Нагрузка на реактор ещё высока, но снижается. Сохраните подачу воды и тепла к опреснителям.',
+  'diagnostic.distiller.water': 'Опреснителю нужна морская вода из водозабора.',
+  'diagnostic.distiller.heat': 'Опреснителю нужно тепло от реактора или ТЭЦ.',
+  'diagnostic.distiller.both': 'Опреснителю нужны морская вода и тепло.',
+  'diagnostic.microrayon.water': 'Дому нужна питьевая вода из опреснителя.',
+  'diagnostic.microrayon.heat': 'Дому нужно тепло от реактора или ТЭЦ.',
+  'diagnostic.microrayon.both': 'Дому нужны питьевая вода и тепло.',
 
   // ============================================
   // Окно горячих клавиш
