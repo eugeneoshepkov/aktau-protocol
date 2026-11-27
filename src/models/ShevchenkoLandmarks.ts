@@ -84,7 +84,7 @@ export function melovoyLighthouse(): ModelParts {
 }
 
 // The lamp, shaft and glints are local to the roof. The landmark keeps its own bounds for the tour.
-export function mountLighthouseBeacon(lighthouse: Mesh): (brightness: number) => void {
+export function mountLighthouseBeacon(lighthouse: Mesh): (brightness: number, dust: number) => void {
   const scene = lighthouse.getScene();
   const glass = MeshBuilder.CreateCylinder('Melovoy lantern', {
     height: 0.135, diameterBottom: 0.34, diameterTop: 0.354, tessellation: 8
@@ -148,9 +148,10 @@ export function mountLighthouseBeacon(lighthouse: Mesh): (brightness: number) =>
     scene.onBeforeRenderObservable.remove(sweep);
     light.dispose();
   });
-  return (brightness) => {
+  return (brightness, dust) => {
     glass.setEnabled(brightness > 0);
     light.alpha = brightness;
+    beam.scaling.x = 1 + 0.65 * dust;
   };
 }
 

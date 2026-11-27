@@ -42,6 +42,10 @@ const waterFragment = `
   varying vec2 p;
   varying float depth;
   varying float distanceToCamera;
+  #ifdef FOG
+  uniform vec4 vFogInfos;
+  uniform float dust;
+  #endif
   uniform float time;
   uniform float wind;
   uniform float dusk;
@@ -75,7 +79,8 @@ const waterFragment = `
     color = mix(color, vec3(0.90, 0.93, 0.83), breaker * (0.12 + 0.56 * smoothstep(-0.5, 0.9, patches)));
 
     // Only the ripple faces turned towards the sun catch its reflection.
-    vec3 eye = normalize(cameraPosition - vec3(p.x, 0.0, p.y));
+    vec3 toEye = cameraPosition - vec3(p.x, 0.0, p.y);
+    vec3 eye = normalize(toEye);
     float sheen = pow(max(dot(eye, sunReflection), 0.0), 42.0);
     float gust = windPatch(p * vec2(0.8, 1.2) + vec2(swell * 0.08, 0.0));
     float rippleZ = p.y + 0.43 * gust + 0.09 * sin(p.x * 2.3 + gust * 3.6);
@@ -88,6 +93,14 @@ const waterFragment = `
     // The offshore water picks up the peach horizon as the sun goes down.
     color = mix(color, horizon, 1.6 * dusk * (1.0 - dusk) * (1.0 - max(eye.y, 0.0)));
     float haze = smoothstep(35.0, 100.0, distanceToCamera);
+    #ifdef FOG
+    if (dust > 0.0) {
+      // Blowing sand follows the same radial falloff as the buildings on the shoreline.
+      float distanceToWater = length(toEye - vec3(0.0, ${SEA_Y}, 0.0));
+      float stormHaze = clamp((distanceToWater - vFogInfos.y) / (vFogInfos.z - vFogInfos.y), 0.0, 1.0);
+      haze = mix(haze, stormHaze, dust);
+    }
+    #endif
     gl_FragColor = vec4(mix(color, horizon, haze), 1.0);
   }`;
 
@@ -277,6 +290,7 @@ export class GridManager {
           'time',
           'wind',
           'dusk',
+          'dust',
           'deep',
           'shallow',
           'horizon',
@@ -293,9 +307,10 @@ export class GridManager {
     return mesh;
   }
 
-  public setDusk(amount: number): void {
+  public setDusk(amount: number, dust = 0): void {
     const water = this.water?.material as ShaderMaterial | undefined;
     water?.setFloat('dusk', amount);
+    water?.setFloat('dust', dust);
     water?.setColor3('horizon', this.scene.fogColor);
     const sun = this.scene.getLightByName('sunLight') as DirectionalLight | null;
     if (sun) {

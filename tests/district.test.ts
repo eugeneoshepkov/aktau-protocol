@@ -223,6 +223,31 @@ test('the suggested district can earn its charter and host the Melovoye field se
   place('microrayon', 31, 12);
   expect(gameState.commissionCivicProject('public_garden')).toBe(true);
   expect(gameState.getCivicProject()).not.toMatchObject({ gridX: 31, gridZ: 12 });
+
+  // Loading a storm must not sound a fresh arrival. A new storm still lasts five days.
+  const beforeStorm = { ...city, day: 16, weather: { daysSinceLastEvent: 7, activeEvents: [] } };
+  storage.set('aktau-save', JSON.stringify(beforeStorm));
+  expect(gameState.load()).toBe(true);
+  const weatherChanges = mock((_reason: string, _days: number) => {});
+  const stopWeather = eventSystem.onEventsChange((events, reason) =>
+    weatherChanges(reason, events.find(({ event }) => event.id === 'sandstorm')?.remainingDays ?? 0)
+  );
+  expect(weatherChanges).toHaveBeenLastCalledWith('sync', 0);
+  random.mockReturnValue(0);
+  gameState.tick();
+  random.mockReturnValue(0.9999);
+  expect(weatherChanges).toHaveBeenLastCalledWith('change', 5);
+  expect(gameState.save()).toBe(true);
+  expect(gameState.load()).toBe(true);
+  expect(weatherChanges).toHaveBeenLastCalledWith('sync', 5);
+  for (let day = 0; day < 5; day++) {
+    expect(eventSystem.getModifiers().pumpEfficiency).toBe(0.5);
+    gameState.tick();
+  }
+  expect(weatherChanges).toHaveBeenLastCalledWith('change', 0);
+  expect(eventSystem.getModifiers().pumpEfficiency).toBe(1);
+  stopWeather();
+
   city.day = 98;
   city.weather = { daysSinceLastEvent: 2, activeEvents: [{ id: 'blizzard', remainingDays: 3 }] };
   storage.set('aktau-save', JSON.stringify(city));

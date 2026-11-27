@@ -155,18 +155,21 @@ export async function initGame(resume: boolean, walk = false): Promise<void> {
   const models = CityModels.forScene(scene);
   let elapsedSeconds = 0;
   let dusk = 0;
-  const applyDaylight = () => {
-    gameEngine.setDaylight(gameState.getSeason(), dusk);
-    gridManager.setDusk(dusk);
-    decorManager.setDusk(dusk);
+  let sandstormActive = false;
+  let dust = 0;
+  const applyAtmosphere = () => {
+    gameEngine.setDaylight(gameState.getSeason(), dusk, dust);
+    gridManager.setDusk(dusk, dust);
+    decorManager.setDusk(dusk, dust);
     models.setDusk(dusk);
+    particleManager.setSandstorm(dust);
   };
   const applySeason = () => {
     const season = gameState.getSeason();
     gridManager.setSeason(season);
     decorManager.setSeason(season);
     models.setSnowy(season === 'winter');
-    applyDaylight();
+    applyAtmosphere();
   };
   applySeason();
   gameState.on('seasonChange', applySeason);
@@ -175,11 +178,15 @@ export async function initGame(resume: boolean, walk = false): Promise<void> {
     const delta = scene.getEngine().getDeltaTime() / 1000;
     ambientManager.update(delta);
     if (document.hidden) return;
-    elapsedSeconds += Math.min(delta, 0.25);
+    const step = Math.min(delta, 0.25);
+    elapsedSeconds += step;
     const nextDusk = duskAtTime(elapsedSeconds);
-    if (dusk !== nextDusk) {
+    // Even at 4× a front has time to arrive. The dust settles after the pumps recover.
+    const nextDust = sandstormActive ? Math.min(1, dust + step) : Math.max(0, dust - step / 5);
+    if (dusk !== nextDusk || dust !== nextDust) {
       dusk = nextDusk;
-      applyDaylight();
+      dust = nextDust;
+      applyAtmosphere();
     }
   });
 
@@ -315,8 +322,21 @@ export async function initGame(resume: boolean, walk = false): Promise<void> {
   feedbackManager.initialize();
   if (resume && !restored) feedbackManager.showToast(t('menu.saveUnavailable'), 'warning');
 
-  eventSystem.onEventsChange((events) => {
+  const stopWeather = eventSystem.onEventsChange((events, reason) => {
     hud.updateActiveEvents(events);
+
+    const hasSandstorm = events.some(({ event }) => event.visualEffect === 'sandstorm');
+    if (reason === 'sync') {
+      dust = hasSandstorm ? 1 : 0;
+      applyAtmosphere();
+    } else if (hasSandstorm && !sandstormActive) {
+      const kiosk = scene.getMeshByName('iceCream');
+      const distance = kiosk
+        ? Math.hypot(view.target.x - kiosk.position.x, view.target.z - kiosk.position.z)
+        : Infinity;
+      musicManager.playSandstorm(distance);
+    }
+    sandstormActive = hasSandstorm;
 
     // Check for visual effects based on active events
     const hasSnow = events.some((e) => e.event.visualEffect === 'snow');
@@ -339,6 +359,7 @@ export async function initGame(resume: boolean, walk = false): Promise<void> {
       soundManager.stopLoop('blizzard');
     }
   });
+  scene.onDisposeObservable.addOnce(stopWeather);
 
   gameEngine.startRenderLoop();
   await scene.whenReadyAsync();

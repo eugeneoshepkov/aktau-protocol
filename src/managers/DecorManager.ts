@@ -44,7 +44,7 @@ class DecorManagerClass {
   private waterfrontRoofs: Mesh[] = [];
   private beachgoers?: Mesh;
   private paths?: Mesh;
-  private updateDusk?: (amount: number) => void;
+  private updateDusk?: (amount: number, dust: number) => void;
   private vegetation: { mesh: Mesh; positions: Float32Array; colors: Float32Array }[] = [];
   private buildingPlaced = (data: unknown) => {
     const { gridX, gridZ } = data as Building;
@@ -227,7 +227,7 @@ class DecorManagerClass {
     const shutter = finish(kioskShutter(), 'kiosk shutter', false);
     shutter.parent = kiosk;
     shutter.position.set(0, 0.864, 0.144);
-    this.updateDusk = (amount) => {
+    this.updateDusk = (amount, dust) => {
       const closed = Math.max(0, Math.min(1, (amount - 0.32) / 0.3));
       shutter.setEnabled(closed > 0);
       shutter.scaling.y = closed;
@@ -239,7 +239,7 @@ class DecorManagerClass {
       queue.setEnabled(departure < 1);
       attendant.position.z = -0.22 * Math.min(1, closed * 1.8);
       attendant.setEnabled(closed < 1);
-      setBeacon(Math.max(0, Math.min(1, (amount - 0.45) / 0.4)));
+      setBeacon(Math.max(0, Math.min(1, (amount - 0.45) / 0.4)), dust);
     };
     this.setDusk(0);
     const club = landmark('chaika', courtyardClub(), 55.9, 19.72, 1.0);
@@ -467,8 +467,8 @@ class DecorManagerClass {
     gameState.on('buildingPlaced', this.buildingPlaced);
   }
 
-  public setDusk(amount: number): void {
-    this.updateDusk?.(amount);
+  public setDusk(amount: number, dust = 0): void {
+    this.updateDusk?.(amount, dust);
   }
 
   public setSeason(season: Season): void {

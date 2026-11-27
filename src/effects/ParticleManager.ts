@@ -1,7 +1,8 @@
-import { Scene, ParticleSystem, Texture, Vector3, Color4, AbstractMesh } from '@babylonjs/core';
+import { Scene, ParticleSystem, Texture, Vector3, Color4, AbstractMesh, Mesh, ShaderMaterial } from '@babylonjs/core';
 import { gameState } from '../simulation/GameState';
 import { TILE_SIZE, GRID_SIZE } from '../types';
 import type { Building, BuildingType } from '../types';
+import { createBlowingSand } from './BlowingSand';
 
 interface BuildingParticles {
   buildingId: string;
@@ -15,6 +16,7 @@ export class ParticleManager {
   private dustSystems: ParticleSystem[] = [];
   private vaporTexture: Texture;
   private snowSystem: ParticleSystem | null = null;
+  private blowingSand: Mesh | null = null;
 
   constructor(scene: Scene) {
     this.scene = scene;
@@ -217,6 +219,13 @@ export class ParticleManager {
     }
   }
 
+  public setSandstorm(amount: number): void {
+    if (!this.blowingSand && amount > 0) this.blowingSand = createBlowingSand(this.scene);
+    if (!this.blowingSand) return;
+    this.blowingSand.setEnabled(amount > 0);
+    (this.blowingSand.material as ShaderMaterial).setFloat('strength', amount);
+  }
+
   /**
    * Start snow particle effect for blizzard/arctic front events.
    * Creates a wide emitter covering the whole map with falling snow.
@@ -296,6 +305,7 @@ export class ParticleManager {
     this.dustSystems = [];
 
     this.stopSnow();
+    this.blowingSand?.dispose();
 
     this.vaporTexture.dispose();
   }

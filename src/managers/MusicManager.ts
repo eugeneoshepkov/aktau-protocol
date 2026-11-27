@@ -13,7 +13,9 @@ class MusicManagerClass {
   private volume = 0.3;
   private muted = false;
   private isPlaying = false;
-  private shore: { context: AudioContext; gain: GainNode } | null = null;
+  private shore: { context: AudioContext; gain: GainNode; surf: GainNode } | null = null;
+  private stormBuffer: AudioBuffer | null = null;
+  private stormSource: AudioBufferSourceNode | null = null;
   private shoreLevel = 0;
   private shorePlaying = false;
 
@@ -25,17 +27,28 @@ class MusicManagerClass {
       const gain = context.createGain();
       gain.gain.value = 0;
       gain.connect(context.destination);
-      this.shore = { context, gain };
+      const surf = context.createGain();
+      surf.gain.value = this.shoreLevel;
+      surf.connect(gain);
+      this.shore = { context, gain, surf };
       document.addEventListener('visibilitychange', this.mixShore);
       void context.resume().catch(() => {});
-      const response = await fetch('/audio/caspian-shore.mp3');
-      if (!response.ok) throw new Error(`Shore audio: ${response.status}`);
-      const buffer = await context.decodeAudioData(await response.arrayBuffer());
-      if (this.shore?.context !== context) return;
+      const load = async (file: string) => {
+        const response = await fetch('/audio/' + file);
+        if (!response.ok) throw new Error(`${file}: ${response.status}`);
+        return context.decodeAudioData(await response.arrayBuffer());
+      };
+      void load('sandstorm.mp3')
+        .then((buffer) => {
+          if (this.shore?.context === context) this.stormBuffer = buffer;
+        })
+        .catch(() => {});
+      const buffer = await load('caspian-shore.mp3').catch(() => null);
+      if (!buffer || this.shore?.context !== context) return;
       const source = context.createBufferSource();
       source.buffer = buffer;
       source.loop = true;
-      source.connect(gain);
+      source.connect(surf);
       source.start();
     } catch {
       this.disposeShore();
@@ -45,19 +58,60 @@ class MusicManagerClass {
   public setShoreLevel(level: number): void {
     if (level === this.shoreLevel) return;
     this.shoreLevel = level;
-    this.mixShore();
+    if (this.shore) {
+      this.shore.surf.gain.setTargetAtTime(
+        level,
+        this.shore.context.currentTime,
+        level ? 0.35 : 0.025
+      );
+    }
+  }
+
+  public playSandstorm(distanceToKiosk: number): void {
+    if (
+      !this.shore ||
+      !this.stormBuffer ||
+      !this.shorePlaying ||
+      this.muted ||
+      !this.volume ||
+      document.hidden
+    )
+      return;
+    const { context, gain } = this.shore;
+    if (context.state !== 'running') return;
+    this.stormSource?.stop();
+    // The low gust carries across town; distance muffles the high shutter rattle.
+    const nearby = Math.max(0, 1 - distanceToKiosk / 14);
+    const filter = context.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.Q.value = 0.5;
+    filter.frequency.value = 540 + 5900 * nearby * nearby;
+    filter.connect(gain);
+    const source = context.createBufferSource();
+    source.buffer = this.stormBuffer;
+    source.connect(filter);
+    source.onended = () => {
+      source.disconnect();
+      filter.disconnect();
+      if (this.stormSource === source) this.stormSource = null;
+    };
+    source.start();
+    this.stormSource = source;
   }
 
   private mixShore = (): void => {
     if (!this.shore) return;
     const { context, gain } = this.shore;
-    const volume =
-      this.shorePlaying && !this.muted && !document.hidden ? this.volume * this.shoreLevel : 0;
+    const volume = this.shorePlaying && !this.muted && !document.hidden ? this.volume : 0;
+    if (!volume) this.stormSource?.stop();
     gain.gain.setTargetAtTime(volume, context.currentTime, volume ? 0.35 : 0.025);
   };
 
   public disposeShore(): void {
     document.removeEventListener('visibilitychange', this.mixShore);
+    this.stormSource?.stop();
+    this.stormSource = null;
+    this.stormBuffer = null;
     if (this.shore) void this.shore.context.close().catch(() => {});
     this.shore = null;
   }

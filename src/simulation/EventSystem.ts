@@ -17,6 +17,9 @@ interface ActiveEvent {
   remainingDays: number;
 }
 
+// A subscription or save restore synchronizes the scene without replaying a weather cue.
+type EventsListener = (events: ActiveEvent[], reason: 'sync' | 'change') => void;
+
 const EVENTS: GameEvent[] = [
   // Year-round events
   {
@@ -151,7 +154,7 @@ const EVENTS: GameEvent[] = [
 
 class EventSystemClass {
   private activeEvents: ActiveEvent[] = [];
-  private listeners: Set<(events: ActiveEvent[]) => void> = new Set();
+  private listeners = new Set<EventsListener>();
   private modifiers = {
     pumpEfficiency: 1,
     heatMultiplier: 1,
@@ -210,7 +213,7 @@ class EventSystemClass {
     this.daysSinceLastEvent = daysSinceLastEvent;
     this.activeEvents = restored;
     this.applyModifiers();
-    this.notifyListeners();
+    this.notifyListeners('sync');
     return true;
   }
 
@@ -369,18 +372,19 @@ class EventSystemClass {
     return this.daysSinceLastEvent;
   }
 
-  public onEventsChange(callback: (events: ActiveEvent[]) => void): void {
+  public onEventsChange(callback: EventsListener): () => void {
     this.listeners.add(callback);
-    callback([...this.activeEvents]);
+    callback([...this.activeEvents], 'sync');
+    return () => this.offEventsChange(callback);
   }
 
-  public offEventsChange(callback: (events: ActiveEvent[]) => void): void {
+  public offEventsChange(callback: EventsListener): void {
     this.listeners.delete(callback);
   }
 
-  private notifyListeners(): void {
+  private notifyListeners(reason: 'sync' | 'change' = 'change'): void {
     for (const cb of this.listeners) {
-      cb([...this.activeEvents]);
+      cb([...this.activeEvents], reason);
     }
   }
 
@@ -394,7 +398,7 @@ class EventSystemClass {
       happinessBonus: 0,
       waterMultiplier: 1
     };
-    this.notifyListeners();
+    this.notifyListeners('sync');
   }
 }
 
