@@ -14,13 +14,10 @@ import {
 } from '@babylonjs/core';
 import { GRID_SIZE, TILE_SIZE } from '../types';
 import type { TileType } from '../types';
-import { generateTileMap, shoreAt } from './TileTypes';
+import { generateTileMap, LAND_Y, SEA_Y, shoreAt } from './TileTypes';
 import { coastalGround, groundColor, STRAND_LENGTH, STRAND_WIDTH } from './CoastalGround';
 import type { Season } from '../simulation/GameState';
 import { seasonalCoast } from '../engine/Seasons';
-
-const LAND_Y = 0.15;
-const SEA_Y = -0.04;
 
 const waterVertex = `
   precision highp float;

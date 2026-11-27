@@ -384,7 +384,7 @@ src/
 │   ├── EventSystem.ts      # Random events (sandstorms, etc.)
 │   ├── ambient/            # Ambient creatures
 │   │   ├── AmbientManager.ts
-│   │   ├── Camel.ts        # Roaming camels
+│   │   ├── SteppeGrazer.ts  # Walking and grazing for camels and horses
 │   │   └── Tumbleweed.ts   # Rolling tumbleweeds
 │   └── buildings/
 │       └── Building.ts     # Building metadata

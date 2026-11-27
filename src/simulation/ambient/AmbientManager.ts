@@ -1,115 +1,145 @@
-import { Scene, AbstractMesh } from '@babylonjs/core';
+import type { AbstractMesh, Scene } from '@babylonjs/core';
 import { assetManager } from '../../managers/AssetManager';
+import { getTileTypeAt, shoreAt } from '../../grid/TileTypes';
 import { gameState } from '../GameState';
-import type { GridManager } from '../../grid/GridManager';
-import { Camel } from './Camel';
+import { SteppeGrazer } from './SteppeGrazer';
+import { SteppeSnake } from './SteppeSnake';
+import { CaspianSeal } from './CaspianSeal';
 import { Tumbleweed } from './Tumbleweed';
 import { GRID_SIZE, TILE_SIZE, SEA_ROWS } from '../../types';
 
-const CAMEL_COUNT_MIN = 3;
-const CAMEL_COUNT_MAX = 5;
 const TUMBLEWEED_SPAWN_MIN = 2;
 const TUMBLEWEED_SPAWN_MAX = 5;
 const SPAWN_X = -5;
 
-class AmbientManagerClass {
-  private gridManager: GridManager | null = null;
-  private masterCamel: AbstractMesh | null = null;
+interface Range {
+  species: 'camel' | 'horse' | 'snake' | 'seal';
+  x: number;
+  z: number;
+  animal?: SteppeGrazer | SteppeSnake | CaspianSeal;
+}
+
+function findClearing(range: Range, clear: (x: number, z: number) => boolean) {
+  // Start at the familiar grazing spot, then try the surrounding steppe if the city has grown.
+  for (let radius = 0; radius <= 6; radius++) {
+    for (let dx = -radius; dx <= radius; dx++) {
+      for (let dz = -radius; dz <= radius; dz++) {
+        if (Math.max(Math.abs(dx), Math.abs(dz)) !== radius) continue;
+        const x = range.x + dx,
+          z = range.z + dz;
+        if (clear(x, z)) return { x, z };
+      }
+    }
+  }
+}
+
+export class AmbientManager {
+  private readonly ranges: Range[] = [
+    { species: 'camel', x: 38.5, z: 20.5 },
+    { species: 'camel', x: 40.5, z: 21.5 },
+    { species: 'horse', x: 32.5, z: 22.5 },
+    { species: 'horse', x: 30.5, z: 23.5 },
+    { species: 'snake', x: 43.5, z: 20.5 },
+    { species: 'seal', x: 48.5, z: 2.5 }
+  ];
+  private occupied = new Uint8Array(GRID_SIZE * GRID_SIZE);
+  private habitatChanged = true;
+  private markHabitatChanged = () => {
+    this.habitatChanged = true;
+  };
   private masterTumbleweed: AbstractMesh | null = null;
-  private camels: Camel[] = [];
   private tumbleweeds: Tumbleweed[] = [];
   private tumbleweedSpawnTimer = 0;
-  private nextSpawnInterval = 0;
-  private initialized = false;
+  private nextSpawnInterval = this.getRandomSpawnInterval();
+  private readonly scene: Scene;
 
-  public async initialize(_scene: Scene, gridManager: GridManager): Promise<void> {
-    if (this.initialized) return;
-
-    this.gridManager = gridManager;
-
-    await this.loadMasterAssets();
-
-    if (this.masterCamel) {
-      this.spawnCamels();
-    }
-
-    this.nextSpawnInterval = this.getRandomSpawnInterval();
-    this.initialized = true;
-    console.log('[AmbientManager] Initialized');
+  constructor(scene: Scene) {
+    this.scene = scene;
+    gameState.on('buildingPlaced', this.markHabitatChanged);
+    gameState.on('buildingRemoved', this.markHabitatChanged);
+    gameState.on('civicProjectChange', this.markHabitatChanged);
+    gameState.on('seasonChange', this.markHabitatChanged);
+    this.scene.onDisposeObservable.addOnce(() => this.dispose());
   }
 
-  private async loadMasterAssets(): Promise<void> {
-    const miscBasePath = assetManager.getBasePath('misc');
-
-    const camelFile = assetManager.getMiscAsset('camel');
-    if (camelFile) {
-      const meshes = await assetManager.loadModel(camelFile, miscBasePath);
-      if (meshes && meshes.length > 0) {
-        this.masterCamel = meshes[0];
-        this.masterCamel.setEnabled(false);
-        console.log('[AmbientManager] Loaded camel master mesh');
-      }
+  public async initialize(): Promise<void> {
+    const file = assetManager.getMiscAsset('tumbleweed');
+    if (file) {
+      const meshes = await assetManager.loadModel(file, assetManager.getBasePath('misc'));
+      this.masterTumbleweed = meshes?.[0] ?? null;
+      this.masterTumbleweed?.setEnabled(false);
     }
-
-    const tumbleweedFile = assetManager.getMiscAsset('tumbleweed');
-    if (tumbleweedFile) {
-      const meshes = await assetManager.loadModel(tumbleweedFile, miscBasePath);
-      if (meshes && meshes.length > 0) {
-        this.masterTumbleweed = meshes[0];
-        this.masterTumbleweed.setEnabled(false);
-        console.log('[AmbientManager] Loaded tumbleweed master mesh');
-      }
-    }
+    this.refreshHabitat();
   }
 
-  private spawnCamels(): void {
-    const count =
-      CAMEL_COUNT_MIN + Math.floor(Math.random() * (CAMEL_COUNT_MAX - CAMEL_COUNT_MIN + 1));
-
-    for (let i = 0; i < count; i++) {
-      const camel = this.createCamel();
-      if (camel) {
-        this.camels.push(camel);
-      }
+  private canRoam(range: Range, x: number, z: number): boolean {
+    const cellX = Math.floor(x),
+      cellZ = Math.floor(z);
+    if (
+      cellX >= 0 &&
+      cellX < GRID_SIZE &&
+      cellZ >= 0 &&
+      cellZ < GRID_SIZE &&
+      this.occupied[cellZ * GRID_SIZE + cellX]
+    )
+      return false;
+    if (range.species === 'seal') {
+      // The small bay east of the breakwater is clear of the tug's circuit and the swimming pier.
+      return x > 46.8 && x < 54 && z > -1.5 && z < 4.4 && z < shoreAt(x) - 2.5;
     }
-
-    console.log(`[AmbientManager] Spawned ${this.camels.length} camels`);
+    // Open steppe starts behind the last boulevard and its windbreak.
+    if (
+      x < 1 ||
+      x > GRID_SIZE - 1 ||
+      z < 19.6 ||
+      z > GRID_SIZE - 1 ||
+      getTileTypeAt(cellX, cellZ) !== 'sand'
+    )
+      return false;
+    if (range.species === 'snake') return true;
+    return !this.ranges.some((other) => {
+      if (
+        other === range ||
+        !other.animal ||
+        (other.species !== 'horse' && other.species !== 'camel')
+      )
+        return false;
+      const pos = other.animal.root.position;
+      return (x - pos.x) ** 2 + (z - pos.z) ** 2 < 0.85 ** 2;
+    });
   }
 
-  private createCamel(): Camel | null {
-    if (!this.masterCamel || !this.gridManager) return null;
-
-    const clone = this.masterCamel.clone(`camel_${Date.now()}_${Math.random()}`, null);
-    if (!clone) return null;
-
-    clone.setEnabled(true);
-
-    const position = this.getRandomSandPosition();
-    if (!position) {
-      clone.dispose();
-      return null;
-    }
-
-    const camel = new Camel(clone, this.gridManager, gameState);
-    camel.setPosition(position.x, 0, position.z);
-
-    return camel;
-  }
-
-  private getRandomSandPosition(): { x: number; z: number } | null {
-    for (let attempt = 0; attempt < 50; attempt++) {
-      const gridX = Math.floor(Math.random() * GRID_SIZE);
-      const gridZ = SEA_ROWS + Math.floor(Math.random() * (GRID_SIZE - SEA_ROWS));
-
-      const tileType = this.gridManager?.getTileAt(gridX, gridZ);
-      if (tileType === 'sand' && !gameState.getBuildingAt(gridX, gridZ)) {
-        return {
-          x: gridX * TILE_SIZE + TILE_SIZE / 2,
-          z: gridZ * TILE_SIZE + TILE_SIZE / 2
-        };
+  private refreshHabitat(): void {
+    this.habitatChanged = false;
+    this.occupied.fill(0);
+    const blockLot = (x: number, z: number) => {
+      // Leave room for the foundation and the animal's body on either side of its centre.
+      for (let row = Math.max(0, z - 1); row <= Math.min(GRID_SIZE - 1, z + 1); row++) {
+        for (let col = Math.max(0, x - 1); col <= Math.min(GRID_SIZE - 1, x + 1); col++) {
+          this.occupied[row * GRID_SIZE + col] = 1;
+        }
       }
+    };
+    for (const site of gameState.getBuildings()) blockLot(site.gridX, site.gridZ);
+    const civic = gameState.getCivicProject();
+    if (civic) blockLot(civic.gridX, civic.gridZ);
+
+    for (const range of this.ranges) {
+      const dormant = range.species === 'snake' && gameState.getSeason() === 'winter';
+      if (range.animal) {
+        const { x, z } = range.animal.root.position;
+        if (!dormant && this.canRoam(range, x, z)) continue;
+        range.animal.dispose();
+        range.animal = undefined;
+      }
+      if (dormant) continue;
+      const clear = (x: number, z: number) => this.canRoam(range, x, z);
+      const spot = findClearing(range, clear);
+      if (!spot) continue;
+      if (range.species === 'seal') range.animal = new CaspianSeal(this.scene, spot, clear);
+      else if (range.species === 'snake') range.animal = new SteppeSnake(this.scene, spot, clear);
+      else range.animal = new SteppeGrazer(this.scene, range.species, spot.x, spot.z, clear);
     }
-    return null;
   }
 
   private spawnTumbleweed(): void {
@@ -133,11 +163,8 @@ class AmbientManagerClass {
   }
 
   public update(deltaTime: number): void {
-    if (!this.initialized) return;
-
-    for (const camel of this.camels) {
-      camel.update(deltaTime);
-    }
+    if (this.habitatChanged) this.refreshHabitat();
+    for (const range of this.ranges) range.animal?.update(deltaTime);
 
     this.tumbleweedSpawnTimer += deltaTime;
     if (this.tumbleweedSpawnTimer >= this.nextSpawnInterval) {
@@ -160,23 +187,12 @@ class AmbientManagerClass {
   }
 
   public dispose(): void {
-    for (const camel of this.camels) {
-      camel.dispose();
-    }
-    this.camels = [];
-
-    for (const tumbleweed of this.tumbleweeds) {
-      tumbleweed.dispose();
-    }
-    this.tumbleweeds = [];
-
-    this.masterCamel?.dispose();
+    gameState.off('buildingPlaced', this.markHabitatChanged);
+    gameState.off('buildingRemoved', this.markHabitatChanged);
+    gameState.off('civicProjectChange', this.markHabitatChanged);
+    gameState.off('seasonChange', this.markHabitatChanged);
+    for (const range of this.ranges) range.animal?.dispose();
+    for (const tumbleweed of this.tumbleweeds) tumbleweed.dispose();
     this.masterTumbleweed?.dispose();
-    this.masterCamel = null;
-    this.masterTumbleweed = null;
-
-    this.initialized = false;
   }
 }
-
-export const ambientManager = new AmbientManagerClass();

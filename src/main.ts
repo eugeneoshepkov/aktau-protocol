@@ -28,7 +28,7 @@ import { FrostVignetteEffect } from './engine/PostProcess';
 import { ParticleManager } from './effects/ParticleManager';
 import { ICONS } from './ui/Icons';
 import { keyMatches } from './utils/keyboard';
-import { ambientManager } from './simulation/ambient';
+import { AmbientManager } from './simulation/ambient';
 import { STARTER_DISTRICT } from './simulation/DistrictPlan';
 import { t } from './i18n';
 import { getTileCenter } from './grid/GridCoords';
@@ -122,8 +122,6 @@ export async function initGame(resume: boolean, walk = false): Promise<void> {
 
   await decorManager.initialize(scene, (x, z) => gridManager.getTileAt(x, z));
 
-  await ambientManager.initialize(scene, gridManager);
-
   const buildingManager = new BuildingManager(scene, gridManager);
   const isPlacing = () =>
     buildingManager.getSelectedBuildingType() !== null &&
@@ -151,6 +149,8 @@ export async function initGame(resume: boolean, walk = false): Promise<void> {
       gameState.placeBuilding(type, x, z);
     }
   }
+  const ambientManager = new AmbientManager(scene);
+  await ambientManager.initialize();
   const models = CityModels.forScene(scene);
   let elapsedSeconds = 0;
   let dusk = 0;
@@ -175,9 +175,9 @@ export async function initGame(resume: boolean, walk = false): Promise<void> {
   scene.registerBeforeRender(() => {
     gridManager.setSurveyVisible(isPlacing());
     const delta = scene.getEngine().getDeltaTime() / 1000;
-    ambientManager.update(delta);
     if (document.hidden) return;
     const step = Math.min(delta, 0.25);
+    ambientManager.update(step);
     elapsedSeconds += step;
     const nextDusk = duskAtTime(elapsedSeconds);
     // Even at 4× a front has time to arrive. The dust settles after the pumps recover.

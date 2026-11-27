@@ -1,3 +1,2 @@
-export { ambientManager } from './AmbientManager';
-export { Camel } from './Camel';
+export { AmbientManager } from './AmbientManager';
 export { Tumbleweed } from './Tumbleweed';

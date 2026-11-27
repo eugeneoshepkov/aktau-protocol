@@ -1,6 +1,9 @@
 import { TILE_COLORS, GRID_SIZE, SEA_ROWS } from '../types';
 import type { TileType } from '../types';
 
+export const LAND_Y = 0.15;
+export const SEA_Y = -0.04;
+
 /**
  * Calculate the coastline Z position at a given X coordinate.
  * Creates a natural fractal shoreline using layered frequencies.

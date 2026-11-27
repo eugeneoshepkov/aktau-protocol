@@ -157,7 +157,7 @@ bun run dev    # http://localhost:5173
 - Separate water and heat overlays with live housing coverage
 - Four seasons with changing foliage, coastal light, winter snow and heat demand
 - Population growth/decline based on happiness
-- Roaming camels and tumbleweeds
+- Camels and horses graze beyond the last boulevard, snakes wind through the summer scrub, and a Caspian seal occasionally surfaces east of the breakwater
 - Six district orders, emergency supplies and a choice of two permanent civic projects
 - Historical facts about the real Aktau (20 discoverable entries)
 - Save from the city controls menu and resume from the title screen
