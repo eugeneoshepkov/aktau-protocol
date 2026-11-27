@@ -3,7 +3,7 @@ import { tickSystem } from '../simulation/TickSystem';
 import { musicManager } from '../managers/MusicManager';
 import { soundManager } from '../managers/SoundManager';
 import { ICONS, icon } from './Icons';
-import type { Resources } from '../types';
+import type { GameOverReason, Resources } from '../types';
 import { t, td } from '../i18n';
 
 // Tooltip content for each HUD resource
@@ -41,7 +41,7 @@ export class HUD {
     gameState.on('resourceTrend', (data) => this.updateTrends(data as ResourceTrend));
     gameState.on('dayAdvance', () => this.updateDay());
     gameState.on('seasonChange', () => this.updateSeason());
-    gameState.on('gameOver', (data) => this.showGameOver(data as { reason: string; day: number }));
+    gameState.on('gameOver', (data) => this.showGameOver(data as { reason: GameOverReason; day: number }));
     gameState.on('reactorWarning', () => this.flashWarning());
 
     this.updateResources();
@@ -406,50 +406,45 @@ export class HUD {
     }, 500);
   }
 
-  private showGameOver(data: { reason: string; day: number }): void {
-    const overlay = document.createElement('div');
-    overlay.className = 'game-over-overlay';
-
-    const icons: Record<string, string> = {
-      meltdown: ICONS.nuclear,
+  private showGameOver({ reason, day }: { reason: GameOverReason; day: number }): void {
+    const dialog = document.createElement('dialog');
+    dialog.className = 'game-over-overlay';
+    dialog.setAttribute('aria-labelledby', 'ending-title');
+    const symbols = {
       drought: ICONS.water,
       freeze: ICONS.winter,
+      meltdown: ICONS.nuclear,
       extinction: ICONS.population,
-      revolt: ICONS.happiness
+      revolt: ICONS.microrayon
     };
-
-    // Map reasons to image filenames
-    const images: Record<string, string> = {
-      meltdown: 'meltdown.png',
-      drought: 'drought.png',
-      freeze: 'freeze.png',
-      extinction: 'extinction.png',
-      revolt: 'revolt.png'
-    };
-
-    const icon = icons[data.reason] || ICONS.warning;
-    const reasonText = td(`gameover.${data.reason}`);
-    const storyText = td(`gameover.story.${data.reason}`);
-    const imagePath = `/pictures/game-over/${images[data.reason] || 'meltdown.png'}`;
-
-    overlay.innerHTML = `
-      <div class="game-over-content">
-        <div class="game-over-image-container">
-          <img src="${imagePath}" alt="${reasonText}" class="game-over-image" onerror="this.style.display='none'" />
-        </div>
-        <h1>${t('gameover.title')}</h1>
-        <h2><span class="icon-wrap go-icon">${icon}</span> ${reasonText}</h2>
-        <p class="game-over-survived">${t('gameover.survived', { days: data.day })}</p>
-        <p class="game-over-story">${storyText}</p>
-        <button id="restart-btn">${t('gameover.restart')}</button>
+    dialog.innerHTML = `
+      <div class="ending-postcard">
+        <figure class="ending-view">
+          <div class="ending-art"><img src="/pictures/game-over/${reason}.webp" alt="${t(`gameover.art.${reason}`)}"></div>
+          <figcaption><span aria-hidden="true">${ICONS.pin}</span>${t('gameover.location')}</figcaption>
+        </figure>
+        <section class="ending-letter">
+          <header class="ending-header">
+            <span class="ending-kicker">${t('gameover.title')}</span>
+            <span class="ending-postmark">${t('gameover.day', { day })}</span>
+          </header>
+          <h1 id="ending-title" tabindex="-1" autofocus>${t(`gameover.${reason}`)}</h1>
+          <p class="ending-story">${t(`gameover.story.${reason}`)}</p>
+          <aside class="ending-tip">
+            <span class="ending-symbol" aria-hidden="true">${symbols[reason]}</span>
+            <div><strong>${t('gameover.nextTime')}</strong><p>${t(`gameover.tip.${reason}`)}</p></div>
+          </aside>
+          <button type="button" id="restart-btn">${t('gameover.restart')}<span aria-hidden="true">→</span></button>
+        </section>
       </div>
     `;
-
-    document.body.appendChild(overlay);
-
-    overlay.querySelector('#restart-btn')?.addEventListener('click', () => {
-      window.location.reload();
-    });
+    const art = dialog.querySelector('img')!;
+    art.addEventListener('error', () => art.remove(), { once: true });
+    dialog.addEventListener('cancel', event => event.preventDefault());
+    dialog.addEventListener('keydown', event => event.stopPropagation());
+    dialog.querySelector('button')!.addEventListener('click', () => window.location.reload());
+    document.body.append(dialog);
+    dialog.showModal();
   }
 
   public updateActiveEvents(

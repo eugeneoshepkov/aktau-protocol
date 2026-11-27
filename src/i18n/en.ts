@@ -74,24 +74,36 @@ export const en = {
   'event.favorable_winds.desc': 'Good conditions boost pump efficiency by 20%',
 
   // Game Over
-  'gameover.title': 'GAME OVER',
-  'gameover.meltdown': 'NUCLEAR MELTDOWN',
-  'gameover.drought': 'CITY DROUGHT',
-  'gameover.freeze': 'CITY FROZEN',
-  'gameover.extinction': 'POPULATION EXTINCT',
-  'gameover.revolt': 'CITIZENS REVOLT',
-  'gameover.survived': 'SURVIVED {days} DAYS',
-  'gameover.restart': "Return to title",
+  'gameover.title': 'Game over',
+  'gameover.location': 'Shevchenko · Caspian Sea',
+  'gameover.day': 'Day {day}',
+  'gameover.nextTime': 'Next time',
+  'gameover.meltdown': 'The evacuation',
+  'gameover.drought': 'When the taps ran dry',
+  'gameover.freeze': 'The heating went out',
+  'gameover.extinction': 'The last train',
+  'gameover.revolt': 'The town takes to the square',
+  'gameover.restart': 'Return to title',
+  'gameover.art.drought': 'A woman with a blue pail stands at a dry fountain between the flats and the Caspian.',
+  'gameover.art.freeze': 'Through a frost-rimmed kitchen window, a few flats glow across a snowy street.',
+  'gameover.art.meltdown': 'Families board a cream and red shift bus at dusk, the power station on the horizon.',
+  'gameover.art.extinction': 'A lone traveller holds a suitcase on the platform beside a green passenger train.',
+  'gameover.art.revolt': 'Workers in blue overalls gather on the steps of the Palace of Culture to hear a woman speak.',
   'gameover.story.meltdown':
-    'The BN-350 reactor core exceeded critical temperature. A cloud of radioactive dust spread across the Mangyshlak Peninsula. Aktau was evacuated and became a ghost town, joining Pripyat in the annals of nuclear disasters.',
+    'When the BN-350 reactor overheated, the shift buses pulled up outside the school. Neighbours lifted bags onto their laps to make room for the children.',
   'gameover.story.drought':
-    'Without fresh water, the desert reclaimed what was never meant to be. The pipes ran dry, the fountains fell silent. One by one, the citizens left for Almaty, leaving behind empty microrayons and rusting infrastructure.',
+    'By noon the queue at the standpipe had gone. A woman stopped at the fountain with her blue enamel pail. There was only dust in the basin.',
   'gameover.story.freeze':
-    'The bitter Kazakh winter showed no mercy. When the heating failed, pipes burst and buildings cracked. By spring, Aktau was a frozen monument to Soviet ambition—beautiful, silent, and utterly lifeless.',
+    'By morning the mittens on the kitchen radiator were still damp. Frost had crept so far across the window that you could barely see the block opposite.',
   'gameover.story.extinction':
-    'The last train departed with the final residents. The great experiment of Aktau ended not with a bang, but with the quiet closing of apartment doors. The camels returned to wander streets that once held 150,000 dreams.',
+    'One passenger waited at Mangyshlak station, suitcase in hand. In his coat pocket he could still feel the key to his flat in the First Microrayon.',
   'gameover.story.revolt':
-    'The people had endured enough. Protests erupted in Lenin Square, and soon the Party officials fled. Without central control, the reactor was abandoned. Aktau became a lawless zone, its future uncertain.',
+    'The workers came straight from their shift to the square outside the Palace of Culture. They wanted to know when their homes would have water and heat again.',
+  'gameover.tip.meltdown': 'Connect a second desalination plant to a seawater intake and a heat source to bring reactor strain down.',
+  'gameover.tip.drought': 'Before adding more housing, check that your desalination plants have both seawater and heat.',
+  'gameover.tip.freeze': 'Build a thermal plant while you still have heat in reserve.',
+  'gameover.tip.extinction': 'Keep fresh water at 15 or more and morale at 40 or more to keep residents from leaving.',
+  'gameover.tip.revolt': 'Use the pipe map to find homes missing drinking water or heat and reconnect them.',
 
   // ============================================
   // Build Panel
