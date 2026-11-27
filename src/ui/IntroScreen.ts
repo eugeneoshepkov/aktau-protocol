@@ -1,11 +1,17 @@
 import { ICONS } from './Icons';
 import { t, i18n } from '../i18n';
 
+const menuFacts = ['iceCream', 'lighthouse', 'cinema', 'water', 'pier', 'abay'] as const;
+const factStorageKey = 'aktau-menu-next-fact';
+const factDuration = 12_000;
+
 export class IntroScreen {
   constructor(onStart: (resume: boolean, walk: boolean) => Promise<void>) {
     const screen = document.createElement('main');
     screen.id = 'intro-overlay';
     const hasSave = Boolean(localStorage.getItem('aktau-save'));
+    const savedFact = localStorage.getItem(factStorageKey);
+    let factIndex = Math.max(0, menuFacts.findIndex(fact => fact === savedFact));
     const audio = new Audio('/audio/title.mp3');
     audio.loop = true;
     audio.volume = 0.4;
@@ -25,6 +31,16 @@ export class IntroScreen {
           <div class="title-genre">${t('menu.genre')}</div>
           <h1 id="game-title"><span>AKTAU</span><span>PROTOCOL</span></h1>
           <p class="title-premise">${t('menu.premise')}</p>
+          <div class="title-facts">
+            <div class="title-fact-lines">
+              ${menuFacts.map((fact, index) => `<p class="title-fact" aria-hidden="${index !== factIndex}">${t(`menu.fact.${fact}`)}</p>`).join('')}
+            </div>
+            <div class="title-fact-controls">
+              <button type="button" class="fact-toggle"></button>
+              <button type="button" class="fact-next" aria-label="${t('menu.nextFact')}" title="${t('menu.nextFact')}">${ICONS.next}</button>
+            </div>
+            <span class="fact-announcement" role="status"></span>
+          </div>
           <div class="title-actions">
             <button class="start-city">${ICONS.play}${t(hasSave ? 'menu.continue' : 'menu.start')}</button>
             ${hasSave ? `<button class="new-city">${t('menu.new')}</button>` : ''}
@@ -50,15 +66,61 @@ export class IntroScreen {
     document.body.append(screen);
 
     const guide = screen.querySelector<HTMLDialogElement>('dialog')!;
-    screen.querySelector('.open-guide')!.addEventListener('click', () => guide.showModal());
+    const facts = screen.querySelectorAll<HTMLElement>('.title-fact');
+    const factToggle = screen.querySelector<HTMLButtonElement>('.fact-toggle')!;
+    const announcement = screen.querySelector<HTMLElement>('.fact-announcement')!;
+    const motion = matchMedia('(prefers-reduced-motion: reduce)');
+    let paused = motion.matches;
+    let starting = false;
+    let factTimer: number | undefined;
+    const nextIndex = () => (factIndex + 1) % facts.length;
+    const scheduleFact = () => {
+      window.clearTimeout(factTimer);
+      if (!paused && !starting && !guide.open && !document.hidden) {
+        factTimer = window.setTimeout(() => advanceFact(), factDuration);
+      }
+    };
+    const advanceFact = (announce = false) => {
+      facts[factIndex].setAttribute('aria-hidden', 'true');
+      factIndex = nextIndex();
+      facts[factIndex].setAttribute('aria-hidden', 'false');
+      announcement.textContent = announce ? facts[factIndex].textContent : '';
+      localStorage.setItem(factStorageKey, menuFacts[nextIndex()]);
+      scheduleFact();
+    };
+    const setPaused = (value: boolean) => {
+      paused = value;
+      const label = t(paused ? 'menu.resumeFacts' : 'menu.pauseFacts');
+      factToggle.title = label;
+      factToggle.setAttribute('aria-label', label);
+      factToggle.innerHTML = paused ? ICONS.play : ICONS.pause;
+      scheduleFact();
+    };
+    const onMotionChange = () => {
+      if (motion.matches) setPaused(true);
+    };
+    localStorage.setItem(factStorageKey, menuFacts[nextIndex()]);
+    factToggle.addEventListener('click', () => setPaused(!paused));
+    screen.querySelector('.fact-next')!.addEventListener('click', () => advanceFact(true));
+    document.addEventListener('visibilitychange', scheduleFact);
+    motion.addEventListener('change', onMotionChange);
+    setPaused(motion.matches);
+
+    screen.querySelector('.open-guide')!.addEventListener('click', () => {
+      guide.showModal();
+      scheduleFact();
+    });
+    guide.addEventListener('close', scheduleFact);
     screen.querySelector('.close-guide')!.addEventListener('click', () => guide.close());
     guide.addEventListener('click', (event) => {
       if (event.target === guide) guide.close();
     });
-    screen.querySelector('.intro-lang-btn')!.addEventListener('click', () => i18n.toggleLocale());
+    screen.querySelector('.intro-lang-btn')!.addEventListener('click', () => {
+      localStorage.setItem(factStorageKey, menuFacts[factIndex]);
+      i18n.toggleLocale();
+    });
 
     const mute = screen.querySelector<HTMLButtonElement>('.intro-mute-btn')!;
-    let starting = false;
     const showSound = () => {
       const playing = !audio.muted && !audio.paused;
       const label = t(audio.muted ? 'menu.soundOff' : playing ? 'menu.soundOn' : 'menu.playSound');
@@ -91,6 +153,9 @@ export class IntroScreen {
     const start = async (resume: boolean, walk = false) => {
       if (starting) return;
       starting = true;
+      window.clearTimeout(factTimer);
+      document.removeEventListener('visibilitychange', scheduleFact);
+      motion.removeEventListener('change', onMotionChange);
       document.removeEventListener('keydown', playOnKey);
       audio.pause();
       const primary = screen.querySelector<HTMLButtonElement>(walk ? '.walk-city' : '.start-city')!;

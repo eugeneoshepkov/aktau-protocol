@@ -144,6 +144,51 @@
   line-height: 1.53;
   text-wrap: pretty;
 }
+.title-facts {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+  max-width: 470px;
+  margin-top: 12px;
+}
+.title-fact-lines {
+  display: grid;
+  border-left: 2px solid #f5b794;
+  padding-left: 12px;
+  color: #eee5d2;
+  font-size: clamp(15px, 1.12vw, 18px);
+  line-height: 1.45;
+}
+.title-fact { grid-area: 1 / 1; }
+.title-fact[aria-hidden='true'] { visibility: hidden; }
+.fact-announcement {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.title-fact-controls {
+  display: flex;
+  gap: 3px;
+}
+.title-fact-controls button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #e3e7cf60;
+  border-radius: 3px;
+  color: var(--paper);
+  background: #10282dd9;
+  cursor: pointer;
+}
+.title-fact-controls button:hover { background: #284449; }
+.title-fact-controls svg { width: 16px; height: 16px; }
+@media (pointer: coarse) {
+  .title-fact-controls button { width: 44px; height: 44px; }
+}
 .title-actions {
   gap: 12px;
   flex-wrap: wrap;
@@ -331,6 +376,8 @@
     max-width: 36ch;
     line-height: 1.45;
   }
+  .title-facts { margin-top: 8px; }
+  .title-fact-controls { flex-direction: column; }
   .title-actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -377,6 +424,7 @@
   .title-stage {
     padding: 8px 0;
   }
+  .title-copy { width: 100%; }
   .title-genre,
   #game-title {
     margin-bottom: 10px;
@@ -388,6 +436,7 @@
     max-width: min(440px, 75vw);
     line-height: 1.35;
   }
+  .title-facts { margin-top: 6px; }
   .title-options button {
     min-height: 44px;
   }
@@ -404,6 +453,11 @@
   }
 }
 @media (max-height: 360px) and (orientation: landscape) {
+  .title-actions button, .title-actions .start-city {
+    gap: 7px;
+    padding-inline: 10px;
+    font-size: 14px;
+  }
   #game-title span {
     display: inline;
   }
