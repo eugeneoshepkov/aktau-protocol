@@ -46,6 +46,8 @@ export class HUD {
     gameState.on('resourceTrend', (data) => this.updateTrends(data as ResourceTrend));
     gameState.on('dayAdvance', () => this.updateDay());
     gameState.on('seasonChange', () => this.updateSeason());
+    gameState.on('waterShortage', () => this.pauseForWaterRepair());
+    gameState.on('cityLoaded', () => this.pauseForWaterRepair());
     gameState.on('gameOver', (data) => this.showGameOver(data as { reason: GameOverReason; day: number }));
 
     this.container.querySelector('#city-issues')!.addEventListener('click', event => {
@@ -58,6 +60,8 @@ export class HUD {
       showOnMap(issue.buildings);
     });
 
+    this.pauseForWaterRepair();
+    this.syncPlayback();
     this.updateResources();
     this.updateDay();
     this.updateSeason();
@@ -192,6 +196,14 @@ export class HUD {
           </div></details>
         </div>
       </div>
+      <aside id="water-shortage" aria-labelledby="water-repair-title" hidden>
+        <div class="water-repair-copy">
+          <strong id="water-repair-title" role="status"></strong>
+          <span id="water-repair-days"></span>
+          <p></p>
+        </div>
+        <button type="button" id="water-resume" class="hud-button"><span aria-hidden="true" class="icon-wrap">${ICONS.play}</span>${t('hud.waterResume')}</button>
+      </aside>
       <section id="city-status" popover="auto" aria-labelledby="city-status-heading">
         <header><h2 id="city-status-heading">${t('hud.status')}</h2>
           <button type="button" class="hud-button" aria-label="${t('menu.close')}" popovertarget="city-status" popovertargetaction="hide" autofocus>${icon('close')}</button>
@@ -244,6 +256,11 @@ export class HUD {
     });
 
     this.pauseButton?.addEventListener('click', () => this.togglePause());
+    container.querySelector('#water-resume')!.addEventListener('click', () => {
+      if (!tickSystem.isPausedState() || tickSystem.hasOpenModal()) return;
+      this.pauseButton?.focus({ preventScroll: true });
+      this.togglePause();
+    });
     const options = container.querySelector<HTMLDetailsElement>('.hud-options')!;
     document.addEventListener('pointerdown', (event) => {
       if (!options.contains(event.target as Node)) options.open = false;
@@ -257,8 +274,7 @@ export class HUD {
 
     saveBtn?.addEventListener('click', () => {
       tickSystem.pause();
-      const pauseIcon = this.pauseButton?.querySelector('.pause-icon');
-      if (pauseIcon) pauseIcon.innerHTML = ICONS.play;
+      this.syncPlayback();
       if (gameState.save()) {
         this.showNotification(t('hud.saved'));
       } else {
@@ -272,8 +288,7 @@ export class HUD {
         return;
       }
       tickSystem.pause();
-      const pauseIcon = this.pauseButton?.querySelector('.pause-icon');
-      if (pauseIcon) pauseIcon.innerHTML = ICONS.play;
+      this.syncPlayback();
       if (gameState.load()) {
         this.updateResources();
         this.updateDay();
@@ -321,9 +336,41 @@ export class HUD {
   }
 
   public togglePause(): void {
+    if (tickSystem.hasOpenModal() || gameState.isGameOver()) return;
     tickSystem.togglePause();
+    this.syncPlayback();
+  }
+
+  private pauseForWaterRepair(): void {
+    if (gameState.getWaterRepairDays() === null) return;
+    tickSystem.pause();
+    this.setSpeed(0);
+    this.syncPlayback();
+  }
+
+  private syncPlayback(): void {
+    const paused = tickSystem.isPausedState();
     const icon = this.pauseButton?.querySelector('.pause-icon');
-    if (icon) icon.innerHTML = tickSystem.isPausedState() ? ICONS.play : ICONS.pause;
+    if (icon) icon.innerHTML = paused ? ICONS.play : ICONS.pause;
+    this.pauseButton?.setAttribute('aria-pressed', String(paused));
+    this.updateWaterRepair();
+  }
+
+  private updateWaterRepair(): void {
+    const days = gameState.getWaterRepairDays();
+    const strip = this.container.querySelector<HTMLElement>('#water-shortage')!;
+    strip.hidden = days === null || gameState.isGameOver();
+    if (days === null || strip.hidden) return;
+    const paused = tickSystem.isPausedState();
+    const heading = strip.querySelector<HTMLElement>('#water-repair-title')!;
+    const title = t(paused ? 'hud.waterRepairPaused' : 'hud.waterRepair');
+    if (heading.textContent !== title) heading.textContent = title;
+    const hasIdlePlant = gameState.getBuildings().some(
+      (building) => building.type === 'distiller' && !this.pipes.isFullyOperational(building)
+    );
+    strip.querySelector('p')!.textContent = t(hasIdlePlant ? 'hud.waterRepairIdle' : 'hud.waterRepairExpand');
+    strip.querySelector('#water-repair-days')!.textContent = t('hud.waterRepairDays', { days });
+    strip.querySelector<HTMLButtonElement>('#water-resume')!.hidden = !paused;
   }
 
   private showNotification(message: string, isError = false): void {
@@ -374,6 +421,7 @@ export class HUD {
         this.tempElement.classList.remove('warning', 'critical');
       }
     }
+    this.updateWaterRepair();
     this.updateIssues();
   }
 
@@ -464,6 +512,7 @@ export class HUD {
   }
 
   private showGameOver({ reason, day }: { reason: GameOverReason; day: number }): void {
+    this.updateWaterRepair();
     const dialog = document.createElement('dialog');
     dialog.className = 'game-over-overlay';
     dialog.setAttribute('aria-labelledby', 'ending-title');

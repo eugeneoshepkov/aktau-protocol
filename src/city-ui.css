@@ -83,6 +83,44 @@ body {
   font: 800 11px/1 var(--sans);
 }
 #hud-status-toggle[data-issues="critical"] .status-indicator { background: #ff997d; }
+#water-shortage:not([hidden]) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 6px max(12px, env(safe-area-inset-right)) 6px max(12px, env(safe-area-inset-left));
+  background: #19383e;
+  border-bottom: 1px solid #547779;
+  color: var(--paper);
+  pointer-events: auto;
+}
+.water-repair-copy {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  column-gap: 12px;
+  font: 13px/1.35 var(--sans);
+}
+#water-repair-title { font-weight: 700; }
+#water-repair-days { color: #a5dfdf; font-variant-numeric: tabular-nums; }
+.water-repair-copy p { color: #d6e7e3; }
+#water-resume:not([hidden]) {
+  display: inline-flex;
+  flex: none;
+  gap: 4px;
+  border-color: #8bbaba;
+  background: #c4e5df;
+  color: #14383a;
+  font: 650 13px var(--sans);
+}
+#water-resume[hidden] { display: none; }
+#water-resume:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
+body:not(.compact-city):has(#water-shortage:not([hidden])) :is(.district-plan, .map-tools) {
+  top: calc(var(--hud-height) + 12px);
+}
+body:not(.compact-city):has(#water-shortage:not([hidden])) #hud-events {
+  top: calc(var(--hud-height) + var(--water-weather-gap, 58px));
+}
 #city-status {
   position: fixed;
   inset: auto;
@@ -622,7 +660,7 @@ body {
 }
 #season-calendar span { display: block; color: #c3d5d1; }
 @media (min-width: 701px) {
-  body:has(.map-tools .network-control[open]) #hud-events { top: 228px; }
+  body:has(.map-tools .network-control[open]) #hud-events { top: 228px; --water-weather-gap: 170px; }
 }
 
 .hud-speeds { display: flex; gap: inherit; }
@@ -663,6 +701,15 @@ body {
     border-color: transparent;
   }
   .hud-controls { gap: 0; }
+  #water-shortage:not([hidden]) {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 2px 8px;
+  }
+  .water-repair-copy { display: contents; }
+  #water-repair-title, #water-repair-days { grid-column: 1; }
+  .water-repair-copy p { grid-column: 1 / -1; }
+  #water-resume:not([hidden]) { grid-area: 1 / 2 / 3 / 3; min-height: 44px; }
   .hud-options { margin: 0; padding: 0; border: 0; }
   .hud-options-menu {
     top: calc(100% + 4px);

@@ -60,6 +60,7 @@ export type GameEventType =
   | 'buildingPlaced'
   | 'buildingRemoved'
   | 'gameOver'
+  | 'waterShortage'
   | 'dayAdvance'
   | 'reactorWarning'
   | 'reactorTempChange'
@@ -106,6 +107,7 @@ export interface EventModifiers {
 
 export const RESERVE_POWER_COST = 60;
 export const RESERVE_CREW_DAYS = 10;
+export const WATER_REPAIR_DAYS = 7;
 export const RESERVE_SUPPLIES = { freshWater: 50, heat: 75 };
 export type ReserveSupply = keyof typeof RESERVE_SUPPLIES;
 
@@ -122,6 +124,7 @@ interface CitySave {
   buildingIdCounter?: number;
   completedOrders?: number;
   nextDispatchDay?: number;
+  waterRepairDays?: number | null;
   weather?: unknown;
   civicProject?: CivicProject | null;
   districtEstablished?: boolean;
@@ -140,7 +143,8 @@ function isCitySave(value: unknown): value is CitySave {
     day,
     completedOrders,
     buildingIdCounter,
-    nextDispatchDay
+    nextDispatchDay,
+    waterRepairDays
   } = value;
   if (
     !whole(day) ||
@@ -158,6 +162,11 @@ function isCitySave(value: unknown): value is CitySave {
     return false;
   if (buildingIdCounter !== undefined && !whole(buildingIdCounter)) return false;
   if (nextDispatchDay !== undefined && !whole(nextDispatchDay)) return false;
+  if (
+    waterRepairDays != null &&
+    (!whole(waterRepairDays) || waterRepairDays < 1 || waterRepairDays > WATER_REPAIR_DAYS)
+  )
+    return false;
   if (!Array.isArray(buildings) || buildings.length > GRID_SIZE * GRID_SIZE) return false;
   const ids = new Set<string>();
   const lots = new Set<number>();
@@ -221,6 +230,7 @@ export class GameState {
   private day: number = 1;
   private completedOrders = 0;
   private nextDispatchDay = 0;
+  private waterRepairDays: number | null = null;
   private civicProject: CivicProject | null = null;
   private districtEstablished = false;
   private fieldSeason: FieldSeason | null = null;
@@ -334,6 +344,10 @@ export class GameState {
 
   public getNextDispatchDay(): number {
     return this.nextDispatchDay;
+  }
+
+  public getWaterRepairDays(): number | null {
+    return this.waterRepairDays;
   }
 
   public dispatchSupply(resource: ReserveSupply): boolean {
@@ -757,6 +771,7 @@ export class GameState {
       this.emit('dayAdvance', this.day);
       this.emit('resourceChange', this.resources);
       this.emit('resourceTrend', this.resourceTrend);
+      if (this.waterRepairDays === WATER_REPAIR_DAYS) this.emit('waterShortage');
     }
   }
 
@@ -950,8 +965,14 @@ export class GameState {
 
     if (this.resources.freshWater < 0) {
       this.resources.freshWater = 0;
-      this.triggerGameOver('drought');
-      return;
+      this.waterRepairDays =
+        this.waterRepairDays === null ? WATER_REPAIR_DAYS : this.waterRepairDays - 1;
+      if (this.waterRepairDays === 0) {
+        this.triggerGameOver('drought');
+        return;
+      }
+    } else {
+      this.waterRepairDays = null;
     }
 
     if (this.resources.heat < 0 && this.resources.population > 0) {
@@ -1000,6 +1021,7 @@ export class GameState {
     this.day = 1;
     this.completedOrders = 0;
     this.nextDispatchDay = 0;
+    this.waterRepairDays = null;
     this.civicProject = null;
     this.districtEstablished = false;
     this.fieldSeason = null;
@@ -1014,6 +1036,7 @@ export class GameState {
   }
 
   public save(): boolean {
+    if (this.waterRepairDays === 0) return false;
     try {
       const saveData = {
         resources: this.resources,
@@ -1027,6 +1050,7 @@ export class GameState {
         day: this.day,
         completedOrders: this.completedOrders,
         nextDispatchDay: this.nextDispatchDay,
+        waterRepairDays: this.waterRepairDays,
         civicProject: this.civicProject,
         districtEstablished: this.districtEstablished,
         fieldSeason: this.fieldSeason,
@@ -1057,6 +1081,7 @@ export class GameState {
       for (const building of previousBuildings) this.emit('buildingRemoved', building);
       this.completedOrders = data.completedOrders ?? 0;
       this.nextDispatchDay = data.nextDispatchDay ?? 0;
+      this.waterRepairDays = data.waterRepairDays ?? null;
       this.civicProject = data.civicProject ?? null;
       this.districtEstablished = data.districtEstablished ?? false;
       this.fieldSeason = data.fieldSeason ?? null;

@@ -204,7 +204,7 @@ This affects all microrayon resource consumption (water and heat).
 | Condition | Result |
 |-----------|--------|
 | Reactor Temp ≥ 100°C | ☢️ NUCLEAR MELTDOWN |
-| Fresh Water < 0 | 🏜️ CITY DROUGHT |
+| Unmet fresh-water demand | The first missed delivery pauses the clock. Seven more consecutive days of unmet demand end the game in drought. |
 | Heat < 0 (with population) | ❄️ CITY FROZEN |
 | Population = 0 (with housing) | 💀 POPULATION EXTINCT |
 | Happiness = 0 (with population) | ✊ CITIZENS REVOLT |

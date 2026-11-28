@@ -57,7 +57,7 @@ Open the pipe network to check water and heat coverage independently. Select the
 | Challenge | Consequence |
 |-----------|-------------|
 | Reactor strain reaches 100% | ☢️ **Meltdown** — Game Over |
-| Fresh water depleted | 🏜️ **Drought** — Game Over |
+| Homes run short of fresh water | The clock pauses so you can build. After you resume, restore supply within seven game days to avoid drought. |
 | Heat runs out in winter | ❄️ **Frozen City** — Game Over |
 | Citizens unhappy | 👥 **Exodus** — Population flees |
 
