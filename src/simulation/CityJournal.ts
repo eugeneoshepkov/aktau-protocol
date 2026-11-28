@@ -7,6 +7,7 @@ const ACTIONS = [
   'buildRejected',
   'demolished',
   'reserveShift',
+  'passengerRoute',
   'civicProject',
   'fieldSeason',
   'shortage',

@@ -20,6 +20,7 @@ import { RESOURCE_CAPS, type BuildingType } from '../types';
 import { compactCityScreen, type BuildPanel } from './BuildPanel';
 import { feedbackManager } from './FeedbackManager';
 import { FieldSeasonPanel } from './FieldSeasonPanel';
+import { PassengerRoutePanel } from './PassengerRoutePanel';
 import type { SightId } from './CitySights';
 import { t, td } from '../i18n';
 import './district-plan.css';
@@ -35,6 +36,7 @@ export class TutorialManager {
   private readonly positionMarker: () => void;
   private siteDirty = true;
   private readonly fieldPanel: FieldSeasonPanel;
+  private readonly passengerPanel: PassengerRoutePanel;
 
   constructor(
     buildPanel: BuildPanel,
@@ -56,11 +58,15 @@ export class TutorialManager {
         <strong id="plan-title" class="plan-title" aria-live="polite"></strong>
         <button type="button" class="plan-locate" aria-describedby="plan-title" hidden>${t('plan.showLot')}</button>
       </div>
+      <button type="button" id="passenger-route-open" aria-haspopup="dialog" aria-controls="passenger-route-dialog" hidden>
+        <span class="passenger-number" aria-hidden="true">1</span><strong></strong><span aria-hidden="true">›</span>
+      </button>
       <p class="plan-inland-earned" hidden><span aria-hidden="true">✓</span> ${t('plan.inland.earned')}</p>
       <div id="plan-details">
         <p class="plan-description"></p>
         <div class="plan-track" aria-hidden="true"><span></span></div>
         <div class="plan-stats"><span class="plan-count"></span><span class="plan-grant"></span></div>
+        <p class="passenger-unlock">${t('bus.unlock')}</p>
         <div class="field-actions" hidden></div>
         <div class="plan-projects" hidden></div>
         <div class="plan-landmark" hidden></div>
@@ -79,6 +85,16 @@ export class TutorialManager {
     });
 
     if (compactCityScreen.matches) this.panelButton.click();
+
+    this.passengerPanel = new PassengerRoutePanel(
+      this.panel.querySelector('#passenger-route-open')!, this.panel.querySelector('.passenger-unlock')!,
+      () => {
+        this.buildPanel.cancelSelection();
+        if (compactCityScreen.matches && this.panelButton.getAttribute('aria-expanded') === 'true') {
+          this.panelButton.click();
+        }
+      }
+    );
 
     const focusLot = () => {
       const site = this.site;
@@ -190,6 +206,7 @@ export class TutorialManager {
       if (!gameState.getBuildings().some((b) => b.type === 'distiller')) waterHistory.hidden = true;
     });
     gameState.on('resourceChange', () => this.update());
+    gameState.on('passengerRouteChange', () => this.update());
     gameState.on('gameOver', () => {
       this.site = null;
       this.marker.hidden = this.locateButton.hidden = true;
@@ -230,6 +247,7 @@ export class TutorialManager {
 
   private update(): void {
     const completed = gameState.getCompletedOrders();
+    this.passengerPanel.update();
     const inland = gameState.hasConnectedInlandHome();
     this.panel.querySelector<HTMLElement>('.plan-inland-goal')!.hidden = completed < 1 || inland;
     this.panel.querySelector<HTMLElement>('.plan-inland-earned')!.hidden = !inland;
@@ -303,7 +321,7 @@ export class TutorialManager {
         button.textContent =
           t(resource === 'heat' ? 'hud.heat' : 'hud.water') + ' +' + Math.floor(amount);
         button.disabled = !gameState.canDispatchSupply(resource);
-        button.title = t('plan.dispatchHelp');
+        button.title = t('plan.dispatchHelp', { days: gameState.getReserveCrewDays() });
       }
     }
 

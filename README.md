@@ -30,6 +30,8 @@ The **BN-350 fast breeder reactor** wasn't just generating power. It was *desali
 
 You take charge of a working waterfront with 50 residents. Click **Build housing** on the map to connect a second block to water and heat, or choose your own site from the construction menu. **Show lot** in the district plan brings the suggested site back into view. When the new residents move in, their first postcard appears in the Chronicle.
 
+Two supplied homes also unlock the **first bus route** in the district plan. Choose a stop by the flats or the ice-cream kiosk. A bus to the Abay Palace of Culture adds one morale point per day. Service to MAEK brings an emergency shift home in seven days instead of ten. Once a crew takes the MAEK bus, it keeps that destination until the crew returns. Open the route in the plan to visit the terminus or change the service.
+
 The top bar shows the day, residents and drinking water. Open **City status** for seawater, heat, power, core strain and morale. Urgent warnings appear on the map while you play.
 
 Choose **Walk through Shevchenko** on the title screen to step into the ice-cream queue. Summer opens the wooden bathing pier in the First Microrayon, autumn brings a day trip to the stone balls at Torysh, and winter brings a backwards film screening at the Chaika courtyard club. Each outing leaves something for your album. Turn a keepsake over to write your own memory. The album stays in this browser when you start a new city.

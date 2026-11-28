@@ -166,6 +166,7 @@ test('the suggested district can earn its charter and host the Melovoye field se
         expect(gameState.load()).toBe(true);
         expect(gameState.getFieldSeason()).toEqual({ phase: 'housing' });
         const day = gameState.getDay();
+        expect(gameState.setPassengerRoute('flats', 'maek')).toBe(true);
         if (!send) {
           expect(gameState.dispatchSupply('freshWater')).toBe(true);
           expect(gameState.chooseFieldCrew(true)).toBe(false);
@@ -174,6 +175,7 @@ test('the suggested district can earn its charter and host the Melovoye field se
         const power = gameState.getResources().electricity;
         const completionDay = day + (send ? 10 : 20);
         expect(gameState.chooseFieldCrew(send)).toBe(true);
+        if (send) expect(gameState.setPassengerRoute('flats', 'abay')).toBe(true);
         expect(gameState.chooseFieldCrew(!send)).toBe(false);
         expect(gameState.getNextDispatchDay()).toBe(send ? day + 10 : nextDispatch);
         expect(gameState.getResources().electricity).toBe(power);

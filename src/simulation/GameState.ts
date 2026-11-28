@@ -35,6 +35,10 @@ import {
   type CivicProjectKind
 } from './DistrictPlan';
 import { CityJournal, type ActionDetails, type CityAction } from './CityJournal';
+import {
+  ABAY_MORALE_BONUS, MAEK_CREW_DAYS, isPassengerRoute,
+  type PassengerRoute, type PassengerStop, type PassengerDestination
+} from './PassengerRoute';
 import { getCoastlineZ, getTileTypeAt } from '../grid/TileTypes';
 import { MAX_PIPE_DISTANCE } from '../config/ConnectionRules';
 import { isProducer } from '../config/ResourceFlow';
@@ -73,6 +77,7 @@ export type GameEventType =
   | 'orderComplete'
   | 'civicProjectChange'
   | 'districtEstablished'
+  | 'passengerRouteChange'
   | 'fieldSeasonChange';
 
 export type GameEventCallback = (data: unknown) => void;
@@ -143,6 +148,8 @@ interface CitySave {
   buildingIdCounter?: number;
   completedOrders?: number;
   nextDispatchDay?: number;
+  passengerRoute?: PassengerRoute | null;
+  passengerDestinationLockedUntil?: number | null;
   waterRepairDays?: number | null;
   heatRepairDays?: number | null;
   weather?: unknown;
@@ -185,6 +192,12 @@ function isCitySave(value: unknown): value is CitySave {
     return false;
   if (buildingIdCounter !== undefined && !whole(buildingIdCounter)) return false;
   if (nextDispatchDay !== undefined && !whole(nextDispatchDay)) return false;
+  if (value.passengerRoute != null &&
+    (!completedOrders || !isPassengerRoute(value.passengerRoute))) return false;
+  const lockedUntil = value.passengerDestinationLockedUntil;
+  if (lockedUntil != null &&
+    (!whole(lockedUntil) || lockedUntil <= day || lockedUntil !== nextDispatchDay ||
+      value.passengerRoute?.destination !== 'maek')) return false;
   if (
     waterRepairDays != null &&
     (!whole(waterRepairDays) || waterRepairDays < 1 || waterRepairDays > WATER_REPAIR_DAYS)
@@ -263,6 +276,8 @@ export class GameState {
   private day: number = 1;
   private completedOrders = 0;
   private nextDispatchDay = 0;
+  private passengerRoute: PassengerRoute | null = null;
+  private passengerDestinationLockedUntil: number | null = null;
   private waterRepairDays: number | null = null;
   private heatRepairDays: number | null = null;
   private civicProject: CivicProject | null = null;
@@ -382,6 +397,34 @@ export class GameState {
     return this.nextDispatchDay;
   }
 
+  public getReserveCrewDays(): number {
+    return this.passengerRoute?.destination === 'maek' ? MAEK_CREW_DAYS : RESERVE_CREW_DAYS;
+  }
+
+  public getPassengerRoute(): PassengerRoute | null {
+    return this.passengerRoute;
+  }
+
+  public canOpenPassengerRoute(): boolean {
+    return this.completedOrders >= 1 && !this.gameOver;
+  }
+
+  public getPassengerDestinationLockedUntil(): number | null {
+    const until = this.passengerDestinationLockedUntil;
+    return until !== null && this.day < until ? until : null;
+  }
+
+  public setPassengerRoute(stop: PassengerStop, destination: PassengerDestination): boolean {
+    const route = { stop, destination };
+    if (!this.canOpenPassengerRoute() || !isPassengerRoute(route)) return false;
+    if (this.passengerRoute?.stop === stop && this.passengerRoute.destination === destination) return false;
+    if (destination !== 'maek' && this.getPassengerDestinationLockedUntil() !== null) return false;
+    this.passengerRoute = route;
+    this.recordAction('passengerRoute', `${stop} → ${destination}`);
+    this.emit('passengerRouteChange', route);
+    return true;
+  }
+
   public getWaterRepairDays(): number | null {
     return this.waterRepairDays;
   }
@@ -419,7 +462,8 @@ export class GameState {
     );
     this.resources.electricity -= RESERVE_POWER_COST;
     this.resources[resource] += amount;
-    this.nextDispatchDay = this.day + RESERVE_CREW_DAYS;
+    this.nextDispatchDay = this.day + this.getReserveCrewDays();
+    if (this.passengerRoute?.destination === 'maek') this.passengerDestinationLockedUntil = this.nextDispatchDay;
     this.recordAction('reserveShift', resource);
     this.emit('resourceChange', this.resources);
     return true;
@@ -1014,7 +1058,8 @@ export class GameState {
     // Connected microrayons produce happiness, disconnected ones deduct it
     const happinessGain = connectedMicrorayons * 1;
     const happinessLoss = disconnectedMicrorayons * 2;
-    this.resources.happiness += happinessGain - happinessLoss + eventModifiers.happinessBonus;
+    const eveningBus = this.passengerRoute?.destination === 'abay' ? ABAY_MORALE_BONUS : 0;
+    this.resources.happiness += happinessGain - happinessLoss + eventModifiers.happinessBonus + eveningBus;
 
     // Clamp happiness to 0-100 range
     this.resources.happiness = Math.max(0, Math.min(100, this.resources.happiness));
@@ -1110,6 +1155,8 @@ export class GameState {
     this.journal.restore(undefined, this.day);
     this.completedOrders = 0;
     this.nextDispatchDay = 0;
+    this.passengerRoute = null;
+    this.passengerDestinationLockedUntil = null;
     this.waterRepairDays = null;
     this.heatRepairDays = null;
     this.civicProject = null;
@@ -1117,6 +1164,7 @@ export class GameState {
     this.inlandHomeConnected = false;
     this.fieldSeason = null;
     this.emit('fieldSeasonChange', null);
+    this.emit('passengerRouteChange', null);
     this.emit('civicProjectChange', null);
     this.weatherPersistence?.restore(undefined);
     this.gameOver = false;
@@ -1142,6 +1190,8 @@ export class GameState {
       day: this.day,
       completedOrders: this.completedOrders,
       nextDispatchDay: this.nextDispatchDay,
+      passengerRoute: this.passengerRoute && { ...this.passengerRoute },
+      passengerDestinationLockedUntil: this.getPassengerDestinationLockedUntil(),
       waterRepairDays: this.waterRepairDays,
       heatRepairDays: this.heatRepairDays,
       civicProject: this.civicProject && { ...this.civicProject },
@@ -1204,6 +1254,8 @@ export class GameState {
       for (const building of previousBuildings) this.emit('buildingRemoved', building);
       this.completedOrders = data.completedOrders ?? 0;
       this.nextDispatchDay = data.nextDispatchDay ?? 0;
+      this.passengerRoute = data.passengerRoute ?? null;
+      this.passengerDestinationLockedUntil = data.passengerDestinationLockedUntil ?? null;
       this.waterRepairDays = data.waterRepairDays ?? null;
       this.heatRepairDays = data.heatRepairDays ?? null;
       this.civicProject = data.civicProject ?? null;
@@ -1244,6 +1296,7 @@ export class GameState {
       this.advanceOrders(data.completedOrders !== undefined);
       this.emit('civicProjectChange', this.civicProject);
       this.emit('fieldSeasonChange', this.fieldSeason);
+      this.emit('passengerRouteChange', this.passengerRoute);
       this.checkDistrictGoal();
       this.emit('resourceChange', this.resources);
       this.emit('seasonChange', {

@@ -11,6 +11,8 @@ import {
 import { normalizeKey } from '../utils/keyboard';
 
 let cameraInstance: IsometricCamera | null = null;
+// The historic waterfront continues east beyond the playable lots.
+const waterfrontLimitX = GRID_SIZE * TILE_SIZE + 10;
 
 export class MapPointers extends ArcRotateCameraPointersInput {
   private readonly ground = Plane.FromPositionAndNormal(Vector3.Zero(), Vector3.Up());
@@ -240,8 +242,7 @@ export class IsometricCamera {
   private clampCameraTarget(): void {
     const limit = GRID_SIZE * TILE_SIZE;
     const target = this.camera.target;
-    // The historic waterfront continues ten units beyond the playable lots.
-    const x = Math.max(0, Math.min(limit + 10, target.x));
+    const x = Math.max(0, Math.min(waterfrontLimitX, target.x));
     const z = Math.max(0, Math.min(limit, target.z));
     if (x !== target.x || z !== target.z) this.camera.setTarget(new Vector3(x, target.y, z));
   }
@@ -382,39 +383,29 @@ export class IsometricCamera {
     this.focusOn(center, 260);
   }
 
-  public focusOn(target: Vector3, duration: number = 500): void {
+  public focusOn(target: Vector3, duration = 500, view?: { alpha: number; radius: number }): void {
     this.stopMotion();
-    const startTarget = this.camera.target.clone();
+    const camera = this.camera;
+    const endX = Math.max(0, Math.min(waterfrontLimitX, target.x));
+    const endZ = Math.max(0, Math.min(GRID_SIZE * TILE_SIZE, target.z));
     const frameRate = 60;
-    const totalFrames = Math.round((duration / 1000) * frameRate);
-
-    // Clamp target to valid bounds
-    const worldSize = GRID_SIZE * TILE_SIZE;
-    const clampedX = Math.max(0, Math.min(worldSize, target.x));
-    const clampedZ = Math.max(0, Math.min(worldSize, target.z));
-
-    // Animate X
-    const animX = new Animation('focusX', 'target.x', frameRate, Animation.ANIMATIONTYPE_FLOAT, Animation.ANIMATIONLOOPMODE_CONSTANT);
-    animX.setKeys([
-      { frame: 0, value: startTarget.x },
-      { frame: totalFrames, value: clampedX }
-    ]);
-
-    // Animate Z
-    const animZ = new Animation('focusZ', 'target.z', frameRate, Animation.ANIMATIONTYPE_FLOAT, Animation.ANIMATIONLOOPMODE_CONSTANT);
-    animZ.setKeys([
-      { frame: 0, value: startTarget.z },
-      { frame: totalFrames, value: clampedZ }
-    ]);
-
-    // Add easing
+    const frames = Math.max(1, Math.round(duration * frameRate / 1000));
     const ease = new CubicEase();
     ease.setEasingMode(EasingFunction.EASINGMODE_EASEOUT);
-    animX.setEasingFunction(ease);
-    animZ.setEasingFunction(ease);
-
-    this.camera.animations = [animX, animZ];
-    this.scene.beginAnimation(this.camera, 0, totalFrames, false);
+    const move = (property: string, start: number, end: number) => {
+      const animation = new Animation('focus-' + property, property, frameRate, Animation.ANIMATIONTYPE_FLOAT, Animation.ANIMATIONLOOPMODE_CONSTANT);
+      animation.setKeys([{ frame: 0, value: start }, { frame: frames, value: end }]);
+      animation.setEasingFunction(ease);
+      return animation;
+    };
+    camera.animations = [move('target.x', camera.target.x, endX), move('target.z', camera.target.z, endZ)];
+    if (view) {
+      const delta = view.alpha - camera.alpha;
+      const turn = Math.atan2(Math.sin(delta), Math.cos(delta));
+      camera.animations.push(move('alpha', camera.alpha, camera.alpha + turn));
+      camera.animations.push(move('radius', camera.radius, Math.min(camera.radius, view.radius)));
+    }
+    this.scene.beginAnimation(camera, 0, frames, false);
   }
 }
 

@@ -10,6 +10,7 @@ import {
 import { CityModels, ModelParts } from '../models/CityModels';
 import { melovoyLighthouse, mountLighthouseBeacon, shevchenkoMonument } from '../models/ShevchenkoLandmarks';
 import { abayPalace } from '../models/AbayPalace';
+import { mountPassengerBus } from '../models/PassengerBus';
 import { fertiliserWorks } from '../models/ShevchenkoFactory';
 import { melovoyeTower, melovoyeTrace } from '../models/MelovoyeField';
 import { createLimestoneShore } from '../models/LimestoneShore';
@@ -402,34 +403,7 @@ class DecorManagerClass {
       gameState.off('civicProjectChange', parkInTown);
     });
 
-    // The route is one circuit of the existing streets. The bus disappears
-    // behind any construction that extends into its lane.
-    let travelled = 2;
-    const route = [
-      [32.98, 14.08],
-      [41.92, 14.08],
-      [41.92, 17.92],
-      [32.98, 17.92],
-      [32.98, 14.08]
-    ];
-    const lengths = route.slice(1).map(([x, z], i) => Math.hypot(x - route[i][0], z - route[i][1]));
-    const circuit = lengths.reduce((total, value) => total + value, 0);
-    const drive = scene.onBeforeRenderObservable.add(() => {
-      travelled = (travelled + Math.min(100, scene.getEngine().getDeltaTime()) * 0.00085) % circuit;
-      let distance = travelled,
-        i = 0;
-      while (distance > lengths[i] && i < lengths.length - 1) distance -= lengths[i++];
-      const [ax, az] = route[i],
-        [bx, bz] = route[i + 1];
-      const dx = bx - ax,
-        dz = bz - az;
-      const x = ax + (dx * distance) / lengths[i],
-        z = az + (dz * distance) / lengths[i];
-      bus.position.set(x, 0.192, z);
-      bus.rotation.y = Math.atan2(dx, dz);
-      bus.isVisible = !gameState.getBuildingAt(Math.floor(x), Math.floor(z));
-    });
-    bus.onDisposeObservable.addOnce(() => scene.onBeforeRenderObservable.remove(drive));
+    mountPassengerBus(bus, finish);
 
     const pole = new ModelParts();
     pole.cylinder(0, 0, 0, 0.05, 0.029, 0.67, '#667674', 6);

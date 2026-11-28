@@ -33,7 +33,7 @@ function oval(
   p.add(shape, x, y, z, tint);
 }
 
-function neighbour(
+export function neighbour(
   p: ModelParts,
   x: number,
   z: number,
