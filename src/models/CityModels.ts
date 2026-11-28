@@ -233,7 +233,7 @@ function distiller(p: ModelParts) {
 }
 
 function waterTank(p: ModelParts) {
-  foundation(p, 1.23, 1.08);
+  foundation(p, 1.64, 1.22);
   p.cylinder(-0.09, -0.04, 0.11, 0.64, 0.53, 0.16, shadow);
   p.cylinder(-0.09, -0.04, 0.27, 0.46, 0.33, 0.71, limestone);
   p.cylinder(-0.09, -0.04, 0.98, 0.35, 0.91, 0.27, teal);
@@ -243,8 +243,17 @@ function waterTank(p: ModelParts) {
   p.cylinder(-0.09, -0.04, 1.615, 0.99, 0.37, 0.14, white);
   p.cylinder(-0.09, -0.04, 1.755, 0.19, 0.18, 0.07, teal);
   p.tube([0.16, 0.17, 0.06], [0.16, 1.08, 0.06], 0.075, orange);
-  p.box(0.34, 0.29, 0.105, 0.37, 0.29, 0.27, concrete);
-  p.box(0.34, 0.29, 0.37, 0.41, 0.34, 0.055, teal);
+  // A low brick heat substation sits beside the original tower. Twin insulated
+  // supply and return pipes turn down into the mains at the edge of the apron.
+  p.box(0.48, -0.06, 0.105, 0.58, 0.70, 0.44, rust);
+  p.box(0.48, -0.06, 0.545, 0.64, 0.76, 0.06, white);
+  p.box(0.62, 0.296, 0.11, 0.17, 0.022, 0.28, teal);
+  p.box(0.34, 0.296, 0.34, 0.16, 0.026, 0.12, glass);
+  for (const x of [0.31, 0.47]) {
+    p.tube([x, 0.24, 0.29], [x, 0.24, 0.53], 0.10, steel);
+    p.tube([x, 0.25, 0.53], [x, 0.105, 0.53], 0.10, steel);
+    p.tube([x, 0.24, 0.40], [x, 0.24, 0.46], 0.112, orange);
+  }
 }
 
 function thermalPlant(p: ModelParts) {

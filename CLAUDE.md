@@ -50,7 +50,7 @@ bun run build  # Production build
 | **BN-350 Reactor** | Rock tiles | ⚡50 | — | 🔥70 heat, ⚡20 | +1°C/tick to reactor temp |
 | **Desalination Plant** | Sand/Rock | ⚡30 | 🌊12, 🔥8 × season | 💧12 freshwater | Cools reactor by 0.8°C on days it runs |
 | **Microrayon Housing** | Sand tiles | 💧20, 🔥10 | 💧5, 🔥5× season | 😊±1-2 happiness | Soviet housing blocks |
-| **Water Tank** | Sand/Rock | ⚡15 | — | — | Relays water, adds 💧10 capacity |
+| **Utility main** (`water_tank`) | Sand/Rock | ⚡15 | — | — | Relays water and heat, adds 💧10 distribution capacity when supplied by a working distiller |
 | **Thermal Plant** | Sand/Rock | ⚡40 | ⚡10 | 🔥30 heat, ⚡25 | One additional station per four microrayons |
 
 ### Building Limits
@@ -69,7 +69,7 @@ Building costs increase by **15% for each building of the same type** already pl
 | **Water Pump** | ⚡20 | ⚡32 | ⚡47 |
 | **Desalination Plant** | ⚡30 | ⚡48 | ⚡70 |
 | **Microrayon** | 💧20, 🔥10 | 💧32, 🔥16 | 💧47, 🔥23 |
-| **Water Tank** | ⚡15 | ⚡24 | ⚡35 |
+| **Utility main** | ⚡15 | ⚡24 | ⚡35 |
 | **Thermal Plant** | ⚡40 | ⚡64 | ⚡94 |
 
 Formula: `baseCost × (1 + count × 0.15)`
@@ -84,7 +84,7 @@ Active buildings consume electricity for upkeep each tick:
 | **Desalination Plant** | ⚡1/tick |
 | **Thermal Plant** | ⚡2/tick |
 | **Microrayon** | Free (housing) |
-| **Water Tank** | Free (passive) |
+| **Utility main** | Free (passive) |
 | **Reactor** | Free (produces power) |
 
 Maintenance is intentionally light to avoid death spirals.
@@ -211,12 +211,11 @@ This affects all microrayon resource consumption (water and heat).
 
 ### Pipe Connections
 
-Buildings auto-connect with visual pipes when within 5 tiles:
-- **Pump → Distiller/Water Tank:** Blue water pipe
-- **Reactor → Distiller/Microrayon:** Orange heat pipe
-- **Thermal Plant → Distiller/Microrayon:** Orange heat pipe
-- **Distiller → Microrayon/Water Tank:** Blue water pipe
-- **Water Tank → Microrayon:** Blue water pipe
+Buildings auto-connect across gaps of up to five tiles. Utility mains can relay each of these lines through multiple sites.
+
+- **Seawater** runs from shoreline pumps to distillers.
+- **Drinking water** runs from working distillers to microrayons.
+- **Heat** runs from the reactor and thermal plants to distillers and microrayons. Heat substations extend the supplying plant’s reach, with all consumers sharing that plant’s capacity.
 
 ### Capacity System
 
@@ -224,11 +223,11 @@ Each producer building has limited capacity based on production/consumption rati
 
 | Producer | Capacity | Can Supply |
 |----------|----------|------------|
-| **Pump** | 10 seawater | 1 distiller |
+| **Pump** | 12 seawater | 1 distiller |
 | **Distiller** | 10 freshWater | 2 microrayons |
-| **Water Tank** | 10 freshWater | 2 microrayons (requires distiller chain) |
+| **Utility main** | 10 freshWater | 2 microrayons (requires distiller chain) |
 | **Reactor** | 70 heat | 8 distillers OR 14 microrayons |
-| **Thermal Plant** | 20 heat | 2 distillers OR 4 microrayons |
+| **Thermal Plant** | 30 heat | 3 distillers OR 6 microrayons |
 
 **Water Distribution Network:** Water tanks act as capacity relays. They provide 10 freshWater capacity each, but only if connected to a distiller (directly or via other tanks). This allows building extensive housing networks with minimal distillers:
 - 1 distiller = 2 microrayons

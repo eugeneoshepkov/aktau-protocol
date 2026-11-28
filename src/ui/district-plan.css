@@ -211,6 +211,16 @@
 .plan-landmark {
   margin-top: 8px;
 }
+.plan-inland-goal, .plan-inland-earned {
+  margin: 8px 0;
+  font: 13px/1.35 var(--sans);
+}
+.plan-inland-goal {
+  padding-top: 8px;
+  border-top: 1px solid #435154;
+  color: #bfd1cb;
+}
+.plan-inland-earned { color: #b1e2c7; }
 .district-plan [hidden] {
   display: none;
 }

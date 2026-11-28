@@ -4,6 +4,7 @@ import { musicManager } from '../managers/MusicManager';
 import { soundManager } from '../managers/SoundManager';
 import type { PipeManager } from '../managers/PipeManager';
 import { getCityIssues, type CityIssue } from './cityIssues';
+import { currentCityReport, downloadCityReport, rememberCityReport } from './cityReport';
 import { ICONS, icon } from './Icons';
 import type { Building, GameOverReason, Resources } from '../types';
 import { t, td, type TranslationKey } from '../i18n';
@@ -50,6 +51,11 @@ export class HUD {
     gameState.on('heatShortage', () => this.pauseForRepair());
     gameState.on('cityLoaded', () => this.pauseForRepair());
     gameState.on('gameOver', (data) => this.showGameOver(data as { reason: GameOverReason; day: number }));
+    const archiveReport = () => rememberCityReport(gameState, this.pipes);
+    window.addEventListener('pagehide', archiveReport);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') archiveReport();
+    });
 
     this.container.querySelector('#city-issues')!.addEventListener('click', event => {
       const button = (event.target as Element).closest<HTMLButtonElement>('.issue-locate');
@@ -190,6 +196,7 @@ export class HUD {
           <details class="hud-options"><summary title="${t('hud.options')}" aria-label="${t('hud.options')}">•••</summary><div class="hud-options-menu">
           <button id="hud-save" class="hud-button" title="${t('hud.save')}"><span class="icon-wrap">${ICONS.save}</span>${t('hud.save')}</button>
           <button id="hud-load" class="hud-button" title="${t('hud.load')}"><span class="icon-wrap">${ICONS.load}</span>${t('hud.load')}</button>
+          <button type="button" id="hud-export-report" class="hud-button"><span class="icon-wrap">${ICONS.book}</span>${t('report.download')}</button>
           <span class="hud-volume-control" title="${t('hud.volume')}">
             <button class="volume-icon icon-wrap" title="${t('intro.mute')}">${ICONS.volumeOn}</button>
             <input type="range" id="hud-volume" min="0" max="100" value="30" class="volume-slider" title="${t('hud.volume')}">
@@ -271,12 +278,15 @@ export class HUD {
     document.addEventListener('pointerdown', (event) => {
       if (!options.contains(event.target as Node)) options.open = false;
     });
-    container.querySelectorAll('#hud-save, #hud-load').forEach((button) => {
+    container.querySelectorAll('#hud-save, #hud-load, #hud-export-report').forEach((button) => {
       button.addEventListener('click', () => { options.open = false; });
     });
 
     const saveBtn = container.querySelector('#hud-save') as HTMLButtonElement;
     const loadBtn = container.querySelector('#hud-load') as HTMLButtonElement;
+    container.querySelector('#hud-export-report')!.addEventListener('click', () => {
+      downloadCityReport(currentCityReport(gameState, this.pipes));
+    });
 
     saveBtn?.addEventListener('click', () => {
       tickSystem.pause();
@@ -544,6 +554,7 @@ export class HUD {
   }
 
   private showGameOver({ reason, day }: { reason: GameOverReason; day: number }): void {
+    rememberCityReport(gameState, this.pipes);
     this.updateRepairStrip();
     const dialog = document.createElement('dialog');
     dialog.className = 'game-over-overlay';
@@ -573,6 +584,7 @@ export class HUD {
             <div><strong>${t('gameover.nextTime')}</strong><p>${t(`gameover.tip.${reason}`)}</p></div>
           </aside>
           <button type="button" id="restart-btn">${t('gameover.restart')}<span aria-hidden="true">→</span></button>
+          <button type="button" id="ending-export-report" class="report-link">${t('report.download')}</button>
         </section>
       </div>
     `;
@@ -580,7 +592,10 @@ export class HUD {
     art.addEventListener('error', () => art.remove(), { once: true });
     dialog.addEventListener('cancel', event => event.preventDefault());
     dialog.addEventListener('keydown', event => event.stopPropagation());
-    dialog.querySelector('button')!.addEventListener('click', () => window.location.reload());
+    dialog.querySelector('#restart-btn')!.addEventListener('click', () => window.location.reload());
+    dialog.querySelector('#ending-export-report')!.addEventListener('click', () => {
+      downloadCityReport(currentCityReport(gameState, this.pipes));
+    });
     document.body.append(dialog);
     dialog.showModal();
   }

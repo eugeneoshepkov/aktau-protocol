@@ -56,6 +56,7 @@ export class TutorialManager {
         <strong id="plan-title" class="plan-title" aria-live="polite"></strong>
         <button type="button" class="plan-locate" aria-describedby="plan-title" hidden>${t('plan.showLot')}</button>
       </div>
+      <p class="plan-inland-earned" hidden><span aria-hidden="true">✓</span> ${t('plan.inland.earned')}</p>
       <div id="plan-details">
         <p class="plan-description"></p>
         <div class="plan-track" aria-hidden="true"><span></span></div>
@@ -63,6 +64,7 @@ export class TutorialManager {
         <div class="field-actions" hidden></div>
         <div class="plan-projects" hidden></div>
         <div class="plan-landmark" hidden></div>
+        <p class="plan-inland-goal" hidden>${t('plan.inland.goal')}</p>
         <div class="plan-reserves" hidden>
           <div class="plan-reserve-status"></div>
           <div class="plan-reserve-actions"><button type="button" data-supply="freshWater"></button><button type="button" data-supply="heat"></button></div>
@@ -228,6 +230,9 @@ export class TutorialManager {
 
   private update(): void {
     const completed = gameState.getCompletedOrders();
+    const inland = gameState.hasConnectedInlandHome();
+    this.panel.querySelector<HTMLElement>('.plan-inland-goal')!.hidden = completed < 1 || inland;
+    this.panel.querySelector<HTMLElement>('.plan-inland-earned')!.hidden = !inland;
     const project = gameState.getCivicProject();
     const established = gameState.isDistrictEstablished();
     const chartered = completed === DISTRICT_ORDERS.length;

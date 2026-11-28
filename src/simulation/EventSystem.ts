@@ -268,6 +268,7 @@ class EventSystemClass {
           remainingDays: event.duration
         });
         event.effect();
+        gameState.recordAction('weather', event.id);
         this.daysSinceLastEvent = 0; // Reset counter on successful trigger
         this.notifyListeners();
         return true;
@@ -296,6 +297,7 @@ class EventSystemClass {
       remainingDays: event.duration
     });
     event.effect();
+    gameState.recordAction('weather', event.id);
     this.daysSinceLastEvent = 0; // Reset counter
     this.notifyListeners();
   }

@@ -15,6 +15,11 @@ export const CONNECTION_RULES: ConnectionRule[] = [
   { source: 'thermal_plant', target: 'distiller', resourceType: 'heat' },
   { source: 'reactor', target: 'microrayon', resourceType: 'heat' },
   { source: 'thermal_plant', target: 'microrayon', resourceType: 'heat' },
+  { source: 'reactor', target: 'water_tank', resourceType: 'heat' },
+  { source: 'thermal_plant', target: 'water_tank', resourceType: 'heat' },
+  { source: 'water_tank', target: 'water_tank', resourceType: 'heat' },
+  { source: 'water_tank', target: 'distiller', resourceType: 'heat' },
+  { source: 'water_tank', target: 'microrayon', resourceType: 'heat' },
   // Water distribution
   { source: 'distiller', target: 'microrayon', resourceType: 'water' },
   { source: 'distiller', target: 'water_tank', resourceType: 'water' },
@@ -51,7 +56,8 @@ export const BUILDING_REQUIREMENTS: Record<BuildingType, BuildingRequirements> =
       { type: 'pump', resourceType: 'water' },
       { type: 'water_tank', resourceType: 'water' }, // Can receive water via tank relay
       { type: 'reactor', resourceType: 'heat' },
-      { type: 'thermal_plant', resourceType: 'heat' }
+      { type: 'thermal_plant', resourceType: 'heat' },
+      { type: 'water_tank', resourceType: 'heat' }
     ],
     canCoolReactor: true,
     canProduce: true
@@ -61,7 +67,8 @@ export const BUILDING_REQUIREMENTS: Record<BuildingType, BuildingRequirements> =
       { type: 'distiller', resourceType: 'water' },
       { type: 'water_tank', resourceType: 'water' }, // Can receive water via tank relay
       { type: 'reactor', resourceType: 'heat' },
-      { type: 'thermal_plant', resourceType: 'heat' }
+      { type: 'thermal_plant', resourceType: 'heat' },
+      { type: 'water_tank', resourceType: 'heat' }
     ],
     canCoolReactor: false,
     canProduce: true
@@ -83,7 +90,7 @@ export const PIPE_VISUAL_CONFIG: Record<
   { targets: BuildingType[]; color: string; type: 'water' | 'heat' }[]
 > = {
   pump: [{ targets: ['distiller', 'water_tank'], color: '#2F8D8D', type: 'water' }],
-  reactor: [{ targets: ['distiller', 'microrayon'], color: '#FF6B35', type: 'heat' }],
+  reactor: [{ targets: ['distiller', 'microrayon', 'water_tank'], color: '#FF6B35', type: 'heat' }],
   distiller: [{ targets: ['microrayon', 'water_tank'], color: '#4A90A4', type: 'water' }],
   microrayon: [],
   water_tank: [
@@ -91,9 +98,10 @@ export const PIPE_VISUAL_CONFIG: Record<
       targets: ['microrayon', 'distiller', 'water_tank'],
       color: '#5599CC',
       type: 'water'
-    }
+    },
+    { targets: ['microrayon', 'distiller', 'water_tank'], color: '#FF6B35', type: 'heat' }
   ],
-  thermal_plant: [{ targets: ['distiller', 'microrayon'], color: '#D97706', type: 'heat' }]
+  thermal_plant: [{ targets: ['distiller', 'microrayon', 'water_tank'], color: '#D97706', type: 'heat' }]
 };;
 
 export const MAX_PIPE_DISTANCE = 5;

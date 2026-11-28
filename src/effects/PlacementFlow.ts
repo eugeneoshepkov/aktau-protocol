@@ -9,7 +9,7 @@ import {
 import { RESOURCE_FLOWS, type ResourceType } from '../config/ResourceFlow';
 import { getTileCenter } from '../grid/GridCoords';
 import { LAND_Y, SEA_Y } from '../grid/TileTypes';
-import type { PlacementFlowSummary } from '../managers/PipeManager';
+import { heatLaneOffset, type PlacementFlowSummary } from '../managers/PipeManager';
 import type { Building } from '../types';
 import { PlacementCaption } from '../ui/PlacementCaption';
 
@@ -156,8 +156,9 @@ export class PlacementFlow {
       // Lift the ribbon just above the optional pipe overlay. Buildings still occlude it.
       const nx = (-0.14 * (b.z - a.z)) / length,
         nz = (0.14 * (b.x - a.x)) / length;
+      const lane = style === pipeStyle.heat ? heatLaneOffset(a, b) : { x: 0, z: 0 };
       const vertex = (p: Vector3, side: number) =>
-        positions.push(p.x + side * nx, p.y + 0.052, p.z + side * nz);
+        positions.push(p.x + lane.x + side * nx, p.y + 0.052, p.z + lane.z + side * nz);
       vertex(a, -1);
       vertex(a, 1);
       vertex(b, 1);

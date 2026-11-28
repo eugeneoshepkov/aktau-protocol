@@ -1,3 +1,4 @@
+import { downloadCityReport, lastCityReport } from './cityReport';
 import { ICONS } from './Icons';
 import { t, i18n } from '../i18n';
 
@@ -62,10 +63,15 @@ export class IntroScreen {
           <dt>${t('guide.winter')}</dt><dd>${t('guide.winter.info')}</dd>
         </dl>
         <p>${t(matchMedia('(pointer: coarse)').matches ? 'guide.touchControls' : 'guide.controls')}</p>
+        ${lastCityReport() ? `<button type="button" id="last-city-report" class="report-link">${t('report.last')}</button>` : ''}
       </dialog>`;
     document.body.append(screen);
 
     const guide = screen.querySelector<HTMLDialogElement>('dialog')!;
+    guide.querySelector('#last-city-report')?.addEventListener('click', () => {
+      const report = lastCityReport();
+      if (report) downloadCityReport(report);
+    });
     const facts = screen.querySelectorAll<HTMLElement>('.title-fact');
     const factToggle = screen.querySelector<HTMLButtonElement>('.fact-toggle')!;
     const announcement = screen.querySelector<HTMLElement>('.fact-announcement')!;

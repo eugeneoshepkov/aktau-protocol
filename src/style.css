@@ -618,7 +618,7 @@ body {
 
 .build-button.max-reached {
   opacity: 0.6;
-  pointer-events: none;
+  cursor: not-allowed;
 }
 
 .build-button.max-reached .build-cost {
@@ -881,6 +881,17 @@ body.demolish-cursor #gameCanvas {
 }
 #restart-btn span { font-size: 22px; font-weight: 400; }
 #restart-btn:hover { background: #133b3e; }
+#ending-export-report {
+  display: block;
+  min-height: 40px;
+  margin-top: 4px;
+  border: 0;
+  background: transparent;
+  color: var(--ending-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
 #restart-btn:focus-visible { outline: 2px solid var(--ending-rust); outline-offset: 3px; }
 
 @media (max-width: 730px) {

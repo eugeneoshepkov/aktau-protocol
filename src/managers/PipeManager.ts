@@ -65,6 +65,14 @@ function pipeEndpoint(building: Building, type: PipeType): Vector3 {
   return point;
 }
 
+// Keep hot and cold pipes visible side by side, even when their flows run in opposite directions.
+export function heatLaneOffset(a: { x: number; z: number }, b: { x: number; z: number }) {
+  const dx = b.x - a.x, dz = b.z - a.z;
+  const length = Math.hypot(dx, dz);
+  const scale = (dx < 0 || (dx === 0 && dz < 0) ? -0.24 : 0.24) / (length || 1);
+  return { x: -dz * scale, z: dx * scale };
+}
+
 // Track which consumer is supplied by which producer for a resource
 interface SupplyAllocation {
   consumer: Building;
@@ -90,7 +98,7 @@ export class PipeManager {
   private suppliedBuildings: Map<string, Set<string>> = new Map();
   // Detailed allocation info for pipe visualization
   private supplyAllocations: SupplyAllocation[] = [];
-  // A tank can be primed by separate seawater and drinking-water networks.
+  // Each substation has independent seawater, drinking-water and heat feeds.
   private relayFeeds = new Map<ResourceType, Map<string, { upstream: Building; relay: Building }>>();
 
   constructor(scene: Scene) {
@@ -192,12 +200,22 @@ export class PipeManager {
       if (drawn.has(key)) return;
       drawn.add(key);
       const start = getTileCenter(a.gridX, a.gridZ);
-      positions.push(start, getTileCenter(b.gridX, b.gridZ));
+      // A mobile suggestion should frame this neighborhood, even if its pipes reach the coast.
+      if (a.id === lot.id || b.id === lot.id) positions.push(start, getTileCenter(b.gridX, b.gridZ));
       start.y = 0.31;
       this.createPreviewPipe(start, b, pipe);
     };
 
-    const operational = this.wouldBeOperational(type, x, z);
+    this.forEachPlacementPipe(lot, draw);
+    return positions;
+  }
+
+  private forEachPlacementPipe(
+    lot: Building,
+    draw: (source: Building, target: Building, type: PipeType) => void
+  ): void {
+    const { type, gridX, gridZ } = lot;
+    const operational = this.wouldBeOperational(type, gridX, gridZ);
     for (const { flow, endpoints, input } of this.placementRoutes(type)) {
       if (!operational && flow.producers.includes(type)) continue;
       const near = endpoints.filter((b) => this.getDistance(lot, b) <= MAX_PIPE_DISTANCE);
@@ -209,7 +227,9 @@ export class PipeManager {
           .sort((a, b) => a.length - b.length ||
             this.getDistance(lot, a[a.length - 1]) - this.getDistance(lot, b[b.length - 1]));
         const path = paths[0];
-        if (path) for (let i = 1; i < path.length; i++) draw(path[i - 1], path[i], flow.pipeType);
+        if (!path) continue;
+        const fullPath = this.relayInlet(flow.resource, path[path.length - 1]).concat(path.slice(0, -1).reverse());
+        for (let i = 1; i < fullPath.length; i++) draw(fullPath[i - 1], fullPath[i], flow.pipeType);
       } else {
         near.sort((a, b) => this.getDistance(lot, a) - this.getDistance(lot, b));
         if (flow.producers.includes(type)) {
@@ -221,11 +241,11 @@ export class PipeManager {
             draw(lot, target, flow.pipeType);
           }
         } else {
-          draw(near[0], lot, flow.pipeType);
+          const path = this.relayInlet(flow.resource, near[0]).concat(lot);
+          for (let i = 1; i < path.length; i++) draw(path[i - 1], path[i], flow.pipeType);
         }
       }
     }
-    return positions;
   }
 
   public hideConnectionPreview(): void {
@@ -252,6 +272,7 @@ export class PipeManager {
       endPos.z - startPos.z
     );
     const length = direction.length();
+    const lane = type === 'heat' ? heatLaneOffset(startPos, endPos) : { x: 0, z: 0 };
 
     const segmentLength = 0.36;
     const gapLength = 0.14;
@@ -261,9 +282,9 @@ export class PipeManager {
     for (let i = 0; i < numSegments; i++) {
       const t = (i * totalSegmentLength + segmentLength / 2) / length;
       const segmentCenter = new Vector3(
-        startPos.x + direction.x * t,
+        startPos.x + direction.x * t + lane.x,
         startPos.y + direction.y * t,
-        startPos.z + direction.z * t
+        startPos.z + direction.z * t + lane.z
       );
 
       const pipe = MeshBuilder.CreateCylinder(
@@ -572,8 +593,8 @@ export class PipeManager {
    * Check if a building is supplied with a specific resource
    */
   public isSuppliedWith(building: Building, resource: ResourceType): boolean {
-    const suppliedSet = this.suppliedBuildings.get(resource);
-    return suppliedSet?.has(building.id) ?? false;
+    return !!(this.suppliedBuildings.get(resource)?.has(building.id) ||
+      this.relayFeeds.get(resource)?.has(building.id));
   }
 
   /**
@@ -581,6 +602,7 @@ export class PipeManager {
    */
   public isSupplied(building: Building): boolean {
     // Get resources this building receives via pipes (from centralized config)
+    if (building.type === 'water_tank') return this.hasTankFeed(building);
     const resourcesViaPipes = getResourcesReceivedViaPipes(building.type);
 
     if (resourcesViaPipes.length === 0) {
@@ -625,11 +647,14 @@ export class PipeManager {
       this.scene
     );
 
+    if (type === 'heat') {
+      const lane = heatLaneOffset(startPos, endPos);
+      center.x += lane.x;
+      center.z += lane.z;
+    }
     pipe.position = center;
 
-    const angle = Math.atan2(direction.x, direction.z);
-    pipe.rotation.x = Math.PI / 2;
-    pipe.rotation.z = -angle;
+    pipe.rotation.set(Math.PI / 2, Math.atan2(direction.x, direction.z), 0);
 
     pipe.material = this.materials.get(type) ?? null;
     pipe.isPickable = false;
@@ -640,9 +665,22 @@ export class PipeManager {
 
   private receivedResources(building: Building): ResourceType[] {
     return RESOURCE_FLOWS.filter(
-      ({ resource }) =>
-        this.isSuppliedWith(building, resource) || this.relayFeeds.get(resource)?.has(building.id)
+      ({ resource }) => this.isSuppliedWith(building, resource)
     ).map(({ resource }) => resource);
+  }
+
+  public getNetworkSnapshot() {
+    const allocations = this.supplyAllocations.map(({ resource, producer, consumer, amount, path }) => ({
+      resource, from: producer.id, to: consumer.id, amount,
+      path: path.map((building) => building.id).reverse()
+    }));
+    const relayFeeds = [];
+    for (const [resource, feeds] of this.relayFeeds) {
+      for (const { upstream, relay } of feeds.values()) {
+        relayFeeds.push({ resource, from: upstream.id, to: relay.id });
+      }
+    }
+    return { allocations, relayFeeds };
   }
 
   public captureSupply(): SupplySnapshot {
@@ -650,11 +688,27 @@ export class PipeManager {
   }
 
   private missingInputs(building: Building): PipeType[] {
-    const missing = getResourcesReceivedViaPipes(building.type)
-      .filter((resource) => !this.isSuppliedWith(building, resource))
+    const preview = building.id === 'virtual_preview'
+      ? this.getLotConnections(building.type, building.gridX, building.gridZ)
+      : undefined;
+    if (building.type === 'water_tank') {
+      const connected = preview ? preview.water || preview.heat : this.hasTankFeed(building);
+      return connected ? [] : ['water', 'heat'];
+    }
+    return getResourcesReceivedViaPipes(building.type)
+      .filter((resource) => preview ? !preview[getPipeType(resource)] : !this.isSuppliedWith(building, resource))
       .map(getPipeType);
-    if (building.type === 'water_tank' && !this.hasTankFeed(building)) missing.push('water');
-    return missing;
+  }
+
+  private relayInlet(resource: ResourceType, target: Building): Building[] {
+    const feeds = this.relayFeeds.get(resource);
+    const path = [target];
+    let feed = feeds?.get(target.id);
+    while (feed) {
+      path.push(feed.upstream);
+      feed = feeds?.get(feed.upstream.id);
+    }
+    return path.reverse();
   }
 
   public getPlacementFlow(building: Building, before?: SupplySnapshot): PlacementFlowSummary {
@@ -681,33 +735,20 @@ export class PipeManager {
     };
     for (const { resource } of RESOURCE_FLOWS) {
       const feeds = this.relayFeeds.get(resource);
-      const inletTo = (target: Building) => {
-        const inlet = [target];
-        let feed = feeds?.get(target.id);
-        while (feed) {
-          inlet.push(feed.upstream);
-          feed = feeds?.get(feed.upstream.id);
-        }
-        return inlet.reverse();
-      };
-      const inlet = inletTo(building);
+      const inlet = this.relayInlet(resource, building);
       for (const allocation of this.supplyAllocations) {
         if (allocation.resource !== resource) continue;
         const gained = restored.get(allocation.consumer.id)?.resources.includes(resource);
         if (!gained && !allocation.path.some((b) => b.id === building.id)) continue;
         const path = [...allocation.path].reverse();
-        // A tank allocates its own capacity, but the pulse originates at its water source.
-        const includeInlet = gained || allocation.producer.id === building.id;
-        addRoute(
-          resource,
-          includeInlet ? inletTo(allocation.producer).concat(path.slice(1)) : path
-        );
+        // Distribution capacity can come from a reservoir. Trace the pulse back to its water source.
+        addRoute(resource, this.relayInlet(resource, allocation.producer).concat(path.slice(1)));
       }
       if (!feeds) continue;
       if (inlet.length > 1) addRoute(resource, inlet);
       for (const { upstream, relay } of feeds.values()) {
         if (restored.get(relay.id)?.resources.includes(resource))
-          addRoute(resource, inletTo(relay));
+          addRoute(resource, this.relayInlet(resource, relay));
         else if (upstream.id === building.id) addRoute(resource, [...inlet, relay]);
       }
     }
@@ -721,240 +762,58 @@ export class PipeManager {
 
   public getConnectionsForBuilding(building: Building): BuildingConnection[] {
     const connections: BuildingConnection[] = [];
-    const buildings = gameState.getBuildings();
-
-    // Check outgoing connections based on supply allocations
-    const outgoingAllocations = this.supplyAllocations.filter((a) => a.producer.id === building.id);
-    for (const allocation of outgoingAllocations) {
-      const pipeType = allocation.resource === 'heat' ? 'heat' : 'water';
-      connections.push({
-        building: allocation.consumer,
-        type: pipeType,
-        direction: 'outgoing'
-      });
-    }
-
-    // Check incoming connections based on supply allocations
-    const incomingAllocations = this.supplyAllocations.filter((a) => a.consumer.id === building.id);
-    for (const allocation of incomingAllocations) {
-      const pipeType = allocation.resource === 'heat' ? 'heat' : 'water';
-      connections.push({
-        building: allocation.producer,
-        type: pipeType,
-        direction: 'incoming'
-      });
-    }
-
-    for (const [resource, feeds] of this.relayFeeds) {
-      for (const { upstream, relay } of feeds.values()) {
-        if (upstream.id !== building.id && relay.id !== building.id) continue;
-        const incoming = relay.id === building.id;
-        const other = incoming ? upstream : relay;
-        const direction = incoming ? 'incoming' : 'outgoing';
-        const type = getPipeType(resource);
-        if (!connections.some(c => c.building.id === other.id && c.direction === direction && c.type === type)) {
-          connections.push({ building: other, type, direction });
-        }
+    const addSegment = (source: Building, target: Building, type: PipeType) => {
+      if (source.id !== building.id && target.id !== building.id) return;
+      const direction = target.id === building.id ? 'incoming' : 'outgoing';
+      const other = direction === 'incoming' ? source : target;
+      if (!connections.some((c) => c.building.id === other.id && c.direction === direction && c.type === type)) {
+        connections.push({ building: other, type, direction });
       }
-    }
+    };
 
-    // For virtual buildings (preview), use proximity-based logic
     if (building.id === 'virtual_preview') {
-      const outgoingRules = PIPE_CONNECTIONS[building.type];
-      if (outgoingRules) {
-        for (const rule of outgoingRules) {
-          const targets = buildings.filter((b) => {
-            if (!rule.targets.includes(b.type)) return false;
-            const dist = this.getDistance(building, b);
-            return dist > 0 && dist <= MAX_PIPE_DISTANCE;
-          });
-          for (const target of targets) {
-            connections.push({
-              building: target,
-              type: rule.type,
-              direction: 'outgoing'
-            });
-          }
-        }
+      this.forEachPlacementPipe(building, addSegment);
+    } else {
+      for (const { resource, path } of this.supplyAllocations) {
+        for (let i = 1; i < path.length; i++) addSegment(path[i], path[i - 1], getPipeType(resource));
       }
-
-      for (const [sourceType, rules] of Object.entries(PIPE_CONNECTIONS)) {
-        for (const rule of rules) {
-          if (!rule.targets.includes(building.type)) continue;
-
-          const sources = buildings.filter((b) => {
-            if (b.type !== sourceType) return false;
-            const dist = this.getDistance(building, b);
-            return dist > 0 && dist <= MAX_PIPE_DISTANCE;
-          });
-
-          for (const source of sources) {
-            connections.push({
-              building: source,
-              type: rule.type,
-              direction: 'incoming'
-            });
-          }
-        }
+      for (const [resource, feeds] of this.relayFeeds) {
+        for (const { upstream, relay } of feeds.values()) addSegment(upstream, relay, getPipeType(resource));
       }
     }
-
     return connections;
   }
 
   public isConnectedToReactor(building: Building): boolean {
-    const connections = this.getConnectionsForBuilding(building);
-    return connections.some((c) => c.building.type === 'reactor' && c.direction === 'incoming');
-  }
-
-  /**
-   * Check if a water_tank has a valid supply chain back to a primary water source
-   * (pump for seawater, distiller for freshwater)
-   */
-  private hasWaterSupplyChain(tank: Building, visited: Set<string> = new Set()): boolean {
-    if (visited.has(tank.id)) return false; // Prevent infinite loops
-    visited.add(tank.id);
-
-    const connections = this.getConnectionsForBuilding(tank);
-    const incomingWater = connections.filter(
-      (c) => c.direction === 'incoming' && c.type === 'water'
-    );
-
-    for (const conn of incomingWater) {
-      // Primary sources - direct supply
-      if (conn.building.type === 'pump' || conn.building.type === 'distiller') {
-        return true;
-      }
-      // Relay through another tank - recursive check
-      if (conn.building.type === 'water_tank') {
-        if (this.hasWaterSupplyChain(conn.building, visited)) {
-          return true;
-        }
-      }
+    if (building.id === 'virtual_preview') {
+      return this.getConnectionsForBuilding(building).some((c) => c.direction === 'incoming' &&
+        (c.building.type === 'reactor' || (c.type === 'heat' && this.isConnectedToReactor(c.building))));
     }
-
-    return false;
+    if (building.type === 'water_tank') return this.relayInlet('heat', building)[0].type === 'reactor';
+    return this.supplyAllocations.some((a) =>
+      a.consumer.id === building.id && a.resource === 'heat' && a.producer.type === 'reactor'
+    );
   }
 
   public isFullyOperational(building: Building): boolean {
-    if (building.type === 'water_tank' && building.id !== 'virtual_preview') {
-      return this.hasTankFeed(building);
+    if (building.id === 'virtual_preview') {
+      return this.wouldBeOperational(building.type, building.gridX, building.gridZ);
     }
-    // First check capacity-based supply for buildings that consume resources
-    const consumptionConfigs = BUILDING_CONSUMPTION[building.type];
-    if (consumptionConfigs && consumptionConfigs.length > 0) {
-      // Use capacity-based supply tracking
-      return this.isSupplied(building);
+    return this.isSupplied(building);
+  }
+
+  public wouldBeOperational(buildingType: BuildingType, gridX: number, gridZ: number): boolean {
+    if (buildingType === 'water_tank' || BUILDING_CONSUMPTION[buildingType]) {
+      return this.isSuitableLot(buildingType, gridX, gridZ);
     }
-
-    // For buildings without consumption configs (pumps, reactors, etc.)
-    // use the original connection-based logic
-    const requirements = BUILDING_REQUIREMENTS[building.type];
-    if (!requirements || requirements.requiredInputs.length === 0) {
-      return true;
-    }
-
-    const connections = this.getConnectionsForBuilding(building);
-    const incomingConnections = connections.filter((c) => c.direction === 'incoming');
-
-    // Group requirements by resourceType - need at least ONE provider for each resourceType
-    const resourceTypes = new Set(requirements.requiredInputs.map((r) => r.resourceType));
-
-    for (const resourceType of resourceTypes) {
-      // Get all building types that can provide this resource
-      const providers = requirements.requiredInputs
-        .filter((r) => r.resourceType === resourceType)
-        .map((r) => r.type);
-
-      let hasProvider = false;
-
-      // Check direct connections
-      for (const conn of incomingConnections) {
-        if (conn.type !== resourceType) continue;
-
-        // Direct connection from a primary source
-        if (providers.includes(conn.building.type) && conn.building.type !== 'water_tank') {
-          hasProvider = true;
-          break;
-        }
-
-        // Water tank relay - check if tank has valid supply chain
-        if (conn.building.type === 'water_tank' && resourceType === 'water') {
-          if (this.hasWaterSupplyChain(conn.building)) {
-            hasProvider = true;
-            break;
-          }
-        }
-      }
-
-      if (!hasProvider) {
-        return false;
-      }
-    }
-
     return true;
   }
 
-  /**
-   * Check if a hypothetical building at the given position would be operational
-   * (have all required connections) without actually placing it.
-   */
-  public wouldBeOperational(buildingType: BuildingType, gridX: number, gridZ: number): boolean {
-    return !BUILDING_CONSUMPTION[buildingType] || this.isSuitableLot(buildingType, gridX, gridZ);
-  }
-
-  public getMissingConnections(
-    building: Building
-  ): { type: BuildingType; resourceType: 'water' | 'heat' }[] {
-    if (building.type === 'water_tank' && building.id !== 'virtual_preview') {
-      return this.hasTankFeed(building) ? [] : [{ type: 'pump', resourceType: 'water' }];
-    }
-    const requirements = BUILDING_REQUIREMENTS[building.type];
-    if (!requirements || requirements.requiredInputs.length === 0) {
-      return [];
-    }
-
-    const connections = this.getConnectionsForBuilding(building);
-    const incomingConnections = connections.filter((c) => c.direction === 'incoming');
-    const missing: { type: BuildingType; resourceType: 'water' | 'heat' }[] = [];
-
-    // Group requirements by resourceType
-    const resourceTypes = new Set(requirements.requiredInputs.map((r) => r.resourceType));
-
-    for (const resourceType of resourceTypes) {
-      // Get all building types that can provide this resource
-      const providers = requirements.requiredInputs
-        .filter((r) => r.resourceType === resourceType)
-        .map((r) => r.type);
-
-      let hasProvider = false;
-
-      // Check direct connections and relay chains
-      for (const conn of incomingConnections) {
-        if (conn.type !== resourceType) continue;
-
-        // Direct connection from a primary source
-        if (providers.includes(conn.building.type) && conn.building.type !== 'water_tank') {
-          hasProvider = true;
-          break;
-        }
-
-        // Water tank relay - check if tank has valid supply chain
-        if (conn.building.type === 'water_tank' && resourceType === 'water') {
-          if (this.hasWaterSupplyChain(conn.building)) {
-            hasProvider = true;
-            break;
-          }
-        }
-      }
-
-      if (!hasProvider) {
-        // Return the first provider type as the missing one (for display purposes)
-        missing.push({ type: providers[0], resourceType });
-      }
-    }
-
-    return missing;
+  public getMissingConnections(building: Building): { type: BuildingType; resourceType: PipeType }[] {
+    return this.missingInputs(building).map((resourceType) => {
+      const primary = BUILDING_REQUIREMENTS[building.type].requiredInputs.find((r) => r.resourceType === resourceType);
+      return primary ?? { type: resourceType === 'heat' ? 'reactor' : 'pump', resourceType };
+    });
   }
 
   public dispose(): void {

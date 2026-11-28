@@ -146,6 +146,7 @@ export class BuildingManager {
     const check = this.checkPlacement(gridX, gridZ);
 
     if (!check.canPlace) {
+      gameState.recordBuildRejected(this.selectedBuildingType, check.reason ?? 'Invalid lot', { x: gridX, z: gridZ });
       console.log(`Cannot place building: ${check.reason}`);
       feedbackManager.showPlacementError(
         check.reason ?? 'Cannot place here',
@@ -158,6 +159,7 @@ export class BuildingManager {
     const supplyBefore = this.pipes.captureSupply();
     const building = gameState.placeBuilding(this.selectedBuildingType, gridX, gridZ);
     if (!building) {
+      gameState.recordBuildRejected(this.selectedBuildingType, 'Placement unavailable', { x: gridX, z: gridZ });
       console.log('Failed to place building');
       return false;
     }
@@ -172,6 +174,9 @@ export class BuildingManager {
       this.playSquashStretchAnimation(mesh);
     }
     const supply = this.pipes.getPlacementFlow(building, supplyBefore);
+    gameState.recordAction('built', building.type, {
+      gridX, gridZ, buildingId: building.id, missing: supply.missing
+    });
     this.placementFlow.play(building, supply);
     const sound = building.type === 'thermal_plant' ? 'reactor' : building.type;
     soundManager.play(supply.missing.length ? 'build' : sound);
@@ -211,6 +216,7 @@ export class BuildingManager {
     // Remove the building
     const success = gameState.removeBuilding(building.id);
     if (success) {
+      gameState.recordAction('demolished', building.type, { gridX, gridZ, buildingId: building.id });
       const buildingName = td(`building.${building.type}.name`);
       feedbackManager.showToast(t('build.demolish.confirm', { building: buildingName }), 'success');
       soundManager.play('success');

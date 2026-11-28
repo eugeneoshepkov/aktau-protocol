@@ -34,7 +34,10 @@ import {
   type CivicProject,
   type CivicProjectKind
 } from './DistrictPlan';
+import { CityJournal, type ActionDetails, type CityAction } from './CityJournal';
 import { getCoastlineZ, getTileTypeAt } from '../grid/TileTypes';
+import { MAX_PIPE_DISTANCE } from '../config/ConnectionRules';
+import { isProducer } from '../config/ResourceFlow';
 
 // Maximum tiles from coastline where pumps can be placed
 const MAX_PUMP_DISTANCE_FROM_COAST = 2;
@@ -143,8 +146,10 @@ interface CitySave {
   waterRepairDays?: number | null;
   heatRepairDays?: number | null;
   weather?: unknown;
+  actions?: unknown;
   civicProject?: CivicProject | null;
   districtEstablished?: boolean;
+  inlandHomeConnected?: boolean;
   fieldSeason?: FieldSeason | null;
 }
 
@@ -225,6 +230,8 @@ function isCitySave(value: unknown): value is CitySave {
   }
   if (value.districtEstablished !== undefined && typeof value.districtEstablished !== 'boolean')
     return false;
+  if (value.inlandHomeConnected !== undefined && typeof value.inlandHomeConnected !== 'boolean')
+    return false;
   if (value.districtEstablished && !project) return false;
   const field = value.fieldSeason;
   if (field != null) {
@@ -260,8 +267,10 @@ export class GameState {
   private heatRepairDays: number | null = null;
   private civicProject: CivicProject | null = null;
   private districtEstablished = false;
+  private inlandHomeConnected = false;
   private fieldSeason: FieldSeason | null = null;
   private weatherPersistence?: WeatherPersistence;
+  private readonly journal = new CityJournal();
   private gameOver: boolean = false;
   private gameOverReason?: GameOverReason;
   private buildingIdCounter: number = 0;
@@ -411,6 +420,7 @@ export class GameState {
     this.resources.electricity -= RESERVE_POWER_COST;
     this.resources[resource] += amount;
     this.nextDispatchDay = this.day + RESERVE_CREW_DAYS;
+    this.recordAction('reserveShift', resource);
     this.emit('resourceChange', this.resources);
     return true;
   }
@@ -423,6 +433,24 @@ export class GameState {
     return this.districtEstablished;
   }
 
+  public hasConnectedInlandHome(): boolean {
+    return this.inlandHomeConnected;
+  }
+
+  private checkInlandHome(): void {
+    const check = this.connectionChecker;
+    if (this.inlandHomeConnected || !check || !this.buildings.some(b => b.type === 'water_tank')) return;
+    const sources = this.buildings.filter(b => isProducer(b.type, 'heat'));
+    if (!sources.length) return;
+    // Beyond every source's reach, a served home can only have received heat through a main.
+    this.inlandHomeConnected = this.buildings.some(home =>
+      home.type === 'microrayon' &&
+      home.gridZ - getCoastlineZ(home.gridX) > MAX_PIPE_DISTANCE &&
+      sources.every(b => Math.hypot(b.gridX - home.gridX, b.gridZ - home.gridZ) > MAX_PIPE_DISTANCE) &&
+      check(home).isFullyOperational
+    );
+  }
+
   public getFieldSeason(): Readonly<FieldSeason> | null {
     return this.fieldSeason;
   }
@@ -432,6 +460,7 @@ export class GameState {
       return false;
     }
     this.fieldSeason = { phase: 'housing' };
+    this.recordAction('fieldSeason', 'started');
     this.emit('fieldSeasonChange', this.fieldSeason);
     return true;
   }
@@ -444,6 +473,7 @@ export class GameState {
     const completionDay = this.day + (send ? RESERVE_CREW_DAYS : 2 * RESERVE_CREW_DAYS);
     if (send) this.nextDispatchDay = completionDay;
     this.fieldSeason = { phase: 'trial', sentCrew: send, completionDay };
+    this.recordAction('fieldSeason', send ? 'sent crew' : 'kept crew');
     this.emit('fieldSeasonChange', this.fieldSeason);
     return true;
   }
@@ -489,6 +519,7 @@ export class GameState {
     this.resources.electricity -= CIVIC_POWER_COST;
     this.resources[project.resource] -= CIVIC_MATERIAL_COST;
     this.civicProject = site;
+    this.recordAction('civicProject', kind, { gridX: site.gridX, gridZ: site.gridZ });
     this.emit('civicProjectChange', site);
     this.checkDistrictGoal();
     this.emit('resourceChange', this.resources);
@@ -757,6 +788,7 @@ export class GameState {
 
     this.buildings.push(building);
     this.emit('buildingPlaced', building);
+    this.checkInlandHome();
     this.advanceOrders();
     this.checkDistrictGoal();
     this.emit('resourceChange', this.resources);
@@ -770,6 +802,7 @@ export class GameState {
 
     const [removed] = this.buildings.splice(index, 1);
     this.emit('buildingRemoved', removed);
+    this.checkInlandHome();
     this.emit('resourceChange', this.resources);
     return true;
   }
@@ -822,8 +855,14 @@ export class GameState {
       this.emit('dayAdvance', this.day);
       this.emit('resourceChange', this.resources);
       this.emit('resourceTrend', this.resourceTrend);
-      if (this.waterRepairDays === WATER_REPAIR_DAYS) this.emit('waterShortage');
-      if (this.heatRepairDays === HEAT_REPAIR_DAYS) this.emit('heatShortage');
+      if (this.waterRepairDays === WATER_REPAIR_DAYS) {
+        this.recordAction('shortage', 'freshWater');
+        this.emit('waterShortage');
+      }
+      if (this.heatRepairDays === HEAT_REPAIR_DAYS) {
+        this.recordAction('shortage', 'heat');
+        this.emit('heatShortage');
+      }
     }
   }
 
@@ -1044,6 +1083,8 @@ export class GameState {
   private triggerGameOver(reason: GameOverReason): void {
     this.gameOver = true;
     this.gameOverReason = reason;
+    this.calculateTrend();
+    this.recordAction('gameOver', reason);
     this.emit('gameOver', { reason, day: this.day });
     console.log(`GAME OVER - ${reason.toUpperCase()} on Day ${this.day}`);
   }
@@ -1066,12 +1107,14 @@ export class GameState {
     this.reactor = { temperature: 0, coolingActive: false };
     this.buildings = [];
     this.day = 1;
+    this.journal.restore(undefined, this.day);
     this.completedOrders = 0;
     this.nextDispatchDay = 0;
     this.waterRepairDays = null;
     this.heatRepairDays = null;
     this.civicProject = null;
     this.districtEstablished = false;
+    this.inlandHomeConnected = false;
     this.fieldSeason = null;
     this.emit('fieldSeasonChange', null);
     this.emit('civicProjectChange', null);
@@ -1083,29 +1126,60 @@ export class GameState {
     this.emit('resourceTrend', this.resourceTrend);
   }
 
+  public recordAction(action: CityAction, subject: string, details: ActionDetails = {}): void {
+    this.journal.record(this.day, this.resources, action, subject, details);
+  }
+
+  public recordBuildRejected(type: BuildingType, reason: string, lot?: { x: number; z: number }): void {
+    this.recordAction('buildRejected', type, { reason, gridX: lot?.x, gridZ: lot?.z });
+  }
+
+  private citySnapshot(): CitySave {
+    return {
+      resources: { ...this.resources },
+      reactor: { ...this.reactor },
+      buildings: this.buildings.map(({ id, type, gridX, gridZ }) => ({ id, type, gridX, gridZ })),
+      day: this.day,
+      completedOrders: this.completedOrders,
+      nextDispatchDay: this.nextDispatchDay,
+      waterRepairDays: this.waterRepairDays,
+      heatRepairDays: this.heatRepairDays,
+      civicProject: this.civicProject && { ...this.civicProject },
+      districtEstablished: this.districtEstablished,
+      inlandHomeConnected: this.inlandHomeConnected,
+      fieldSeason: this.fieldSeason && { ...this.fieldSeason },
+      weather: this.weatherPersistence?.save(),
+      buildingIdCounter: this.buildingIdCounter
+    };
+  }
+
+  public getDiagnosticReport(describeBuilding?: (building: Building) => {
+    operational: boolean;
+    missing: readonly string[];
+  }) {
+    return {
+      formatVersion: 1,
+      city: this.citySnapshot(),
+      actions: this.journal.snapshot(),
+      gameOver: this.gameOver,
+      gameOverReason: this.gameOverReason,
+      resourceTrend: { ...this.resourceTrend },
+      buildingStatus: this.buildings.map(building => {
+        if (describeBuilding) return { id: building.id, ...describeBuilding(building) };
+        const status = this.connectionChecker?.(building);
+        return {
+          id: building.id,
+          operational: status?.isFullyOperational,
+          hasHeat: building.type === 'distiller' || building.type === 'microrayon' ? status?.hasHeat : undefined
+        };
+      })
+    };
+  }
+
   public save(): boolean {
     if (this.waterRepairDays === 0 || this.heatRepairDays === 0) return false;
     try {
-      const saveData = {
-        resources: this.resources,
-        reactor: this.reactor,
-        buildings: this.buildings.map((b) => ({
-          id: b.id,
-          type: b.type,
-          gridX: b.gridX,
-          gridZ: b.gridZ
-        })),
-        day: this.day,
-        completedOrders: this.completedOrders,
-        nextDispatchDay: this.nextDispatchDay,
-        waterRepairDays: this.waterRepairDays,
-        heatRepairDays: this.heatRepairDays,
-        civicProject: this.civicProject,
-        districtEstablished: this.districtEstablished,
-        fieldSeason: this.fieldSeason,
-        weather: this.weatherPersistence?.save(),
-        buildingIdCounter: this.buildingIdCounter
-      };
+      const saveData = { ...this.citySnapshot(), actions: this.journal.snapshot() };
       localStorage.setItem('aktau-save', JSON.stringify(saveData));
       return true;
     } catch {
@@ -1134,8 +1208,10 @@ export class GameState {
       this.heatRepairDays = data.heatRepairDays ?? null;
       this.civicProject = data.civicProject ?? null;
       this.districtEstablished = data.districtEstablished ?? false;
+      this.inlandHomeConnected = data.inlandHomeConnected ?? false;
       this.fieldSeason = data.fieldSeason ?? null;
       this.day = data.day;
+      this.journal.restore(data.actions, this.day);
       this.buildingIdCounter = data.buildingIdCounter ?? 0;
       for (const { id } of data.buildings) {
         const suffix = /^building_(\d+)$/.exec(id)?.[1];
@@ -1164,6 +1240,7 @@ export class GameState {
       }
 
       // Legacy cities keep their saved balances while receiving credit for existing infrastructure.
+      this.checkInlandHome();
       this.advanceOrders(data.completedOrders !== undefined);
       this.emit('civicProjectChange', this.civicProject);
       this.emit('fieldSeasonChange', this.fieldSeason);
@@ -1174,6 +1251,9 @@ export class GameState {
         multiplier: this.getSeasonMultiplier()
       });
       this.emit('resourceTrend', this.resourceTrend);
+      this.recordAction('loaded', 'city', {
+        reason: Array.isArray(data.actions) ? 'Saved city' : 'Earlier actions were not recorded'
+      });
       this.emit('cityLoaded');
       return true;
     } catch {

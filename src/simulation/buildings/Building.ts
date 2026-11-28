@@ -51,8 +51,8 @@ export const BUILDING_META: Record<BuildingType, BuildingMeta> = {
   },
   water_tank: {
     type: 'water_tank',
-    name: 'Water Tank',
-    description: 'Stores up to 50 freshwater. Buffers supply/demand fluctuations.',
+    name: 'Reservoir and heat substation',
+    description: 'Carries connected water and heating lines up to five tiles farther inland.',
     allowedTiles: BUILDING_PLACEMENT.water_tank,
     costs: BUILDING_COSTS.water_tank,
     production: BUILDING_PRODUCTION.water_tank

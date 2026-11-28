@@ -25,19 +25,16 @@ export class PlacementCaption {
     this.label.className = 'placement-caption';
     this.label.setAttribute('role', 'status');
     document.body.append(this.label);
-    if (missing.includes('heat') && missing.includes('water')) {
+    if (building.type === 'water_tank') {
+      this.label.textContent = t('build.needsMain');
+    } else if (missing.includes('heat') && missing.includes('water')) {
       this.label.textContent = t(
         building.type === 'distiller' ? 'build.needsSeawaterHeat' : 'build.needsFreshWaterHeat'
       );
     } else if (missing.includes('heat')) {
       this.label.textContent = t('build.preview.noHeat');
     } else {
-      const key =
-        building.type === 'water_tank'
-          ? 'build.needsWaterLine'
-          : building.type === 'distiller'
-            ? 'build.preview.noSeawater'
-            : 'build.preview.noFreshWater';
+      const key = building.type === 'distiller' ? 'build.preview.noSeawater' : 'build.preview.noFreshWater';
       this.label.textContent = t(key);
     }
     this.insetX = this.label.offsetWidth / 2 + 4;

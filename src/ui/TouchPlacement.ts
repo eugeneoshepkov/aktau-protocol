@@ -38,6 +38,7 @@ export function mountTouchPlacement(
       type, pipes, worldToGrid(camera.getCamera().target), guide ? [[guide.x, guide.z]] : []
     );
     suggested = !!lot;
+    if (!lot) gameState.recordBuildRejected(type, 'Site suggestion: no connected lot');
     draw(true);
   });
 
@@ -66,6 +67,8 @@ export function mountTouchPlacement(
     lot = { x, z };
     suggested = false;
     draw();
+    const type = buildings.getSelectedBuildingType();
+    if (type && validationReason) gameState.recordBuildRejected(type, 'Site preview: ' + validationReason, lot);
   };
 
   function draw(frame = false): void {

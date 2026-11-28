@@ -3,6 +3,7 @@ import { getAllBuildingTypes } from '../simulation/buildings/Building';
 import { ICONS } from './Icons';
 import { soundManager } from '../managers/SoundManager';
 import { gameState } from '../simulation/GameState';
+import { tickSystem } from '../simulation/TickSystem';
 import { BUILDING_SCALING_LIMITS, type BuildingType } from '../types';
 import type { GridPosition } from '../grid/GridCoords';
 import { t, td } from '../i18n';
@@ -29,7 +30,8 @@ function connectionLabels(type: BuildingType, { water, heat }: { water: boolean;
     case 'thermal_plant':
       return label('heat', heat, t(heat ? 'build.preview.heatReach' : 'build.preview.heatIsolated'));
     case 'water_tank':
-      return label('water', water, t(water ? 'build.preview.tankLinked' : 'build.preview.tankIsolated'));
+      return label('water', water, t(water ? 'build.preview.tankLinked' : 'build.preview.tankIsolated')) +
+        ' ' + label('heat', heat, t(heat ? 'build.preview.heat' : 'build.preview.noHeat'));
     case 'distiller':
     case 'microrayon': {
       const waterStatus = type === 'distiller'
@@ -112,7 +114,7 @@ export class BuildPanel {
       const open = !this.container.classList.contains('palette-open');
       this.openPalette(open);
       if (open && this.launcher.matches(':focus-visible')) {
-        this.container.querySelector<HTMLButtonElement>('.build-button:not(:disabled)')?.focus();
+        this.container.querySelector<HTMLButtonElement>('.build-button:not([aria-disabled="true"])')?.focus();
       }
     };
     dock.prepend(this.launcher);
@@ -157,13 +159,13 @@ export class BuildPanel {
 
   private setupKeyboardShortcuts(): void {
     window.addEventListener('keydown', (e) => {
+      if (tickSystem.hasOpenModal() || gameState.isGameOver()) return;
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
       const type = BUILDING_HOTKEYS[e.key];
-      if (type && !this.buttons.get(type)?.disabled) {
+      if (type && !e.repeat) {
         e.preventDefault();
         this.toggleBuilding(type);
-        soundManager.play('click');
       }
 
       // X key (or Ч on Russian keyboard) toggles demolish mode
@@ -242,7 +244,6 @@ export class BuildPanel {
 
       button.addEventListener('click', () => {
         this.toggleBuilding(type);
-        soundManager.play('click');
       });
 
       buttonContainer.appendChild(button);
@@ -311,7 +312,7 @@ export class BuildPanel {
       const costEl = button.querySelector('.build-cost');
 
       button.classList.toggle('max-reached', cost === null);
-      button.disabled = cost === null;
+      button.setAttribute('aria-disabled', String(cost === null));
       if (costEl) costEl.innerHTML = this.formatCost(type, cost);
     }
   }
@@ -329,6 +330,12 @@ export class BuildPanel {
   }
 
   private toggleBuilding(type: BuildingType): void {
+    if (this.getDisplayCost(type) === null) {
+      const requirement = this.buttons.get(type)?.querySelector('.build-cost')?.textContent;
+      gameState.recordBuildRejected(type, requirement || 'Construction limit reached');
+      return;
+    }
+    soundManager.play('click');
     // Exit demolish mode when selecting a building
     if (this.buildingManager.isDemolishMode()) {
       this.buildingManager.setDemolishMode(false);

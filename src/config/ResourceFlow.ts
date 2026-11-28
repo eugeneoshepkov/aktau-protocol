@@ -60,7 +60,7 @@ export const RESOURCE_FLOWS: ResourceFlowConfig[] = [
     pipeType: 'heat',
     pipeColor: '#FF6B35',
     producers: ['reactor', 'thermal_plant'],
-    relays: [], // heat doesn't relay through pipes
+    relays: [{ type: 'water_tank', addsCapacity: false }], // Insulated mains extend the heat source's reach.
     consumers: ['distiller', 'microrayon'],
     consumerPriority: { distiller: 1, microrayon: 2 }
   },

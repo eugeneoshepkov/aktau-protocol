@@ -50,8 +50,8 @@ test('the suggested district can earn its charter and host the Melovoye field se
     expect(pipes.getLotConnections(type, lot.x, lot.z).water).toBe(true);
   }
   expect(pipes.getLotConnections('water_tank', 3, 28).water).toBe(false);
-  // Here the connected tank relays fresh water beyond the distiller’s direct range.
-  expect(pipes.getLotConnections('microrayon', 35, 19)).toEqual({ water: true, heat: false });
+  // The starter reservoir and substation carry both utilities beyond the shore plants.
+  expect(pipes.getLotConnections('microrayon', 35, 19)).toEqual({ water: true, heat: true });
   expect(pipes.getLotConnections('microrayon', 47, 16)).toEqual({ water: false, heat: true });
   // The existing distiller takes the pump's entire capacity. The tap readout and dashed
   // pipes must agree, even though the candidate is right beside a pump and a house.

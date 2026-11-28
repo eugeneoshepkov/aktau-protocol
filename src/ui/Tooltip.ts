@@ -185,8 +185,14 @@ export class Tooltip {
     const missing = this.pipeManager.getMissingConnections(building);
     const isOperational = this.pipeManager.isFullyOperational(building);
 
+    if (building.type === 'water_tank' && !isOperational) {
+      return `<div class="tooltip-connections tooltip-disconnected">${coloredIcon('warning')} ${t('build.needsMain')}</div>`;
+    }
     if (connections.length === 0 && missing.length === 0) {
-      const canOutput = ['pump', 'reactor', 'water_tank'].includes(building.type);
+      if (building.type === 'pump') {
+        return `<div class="tooltip-connections">${coloredIcon('water')} ${t('tooltip.pumpOutlet')}</div>`;
+      }
+      const canOutput = building.type === 'reactor';
       if (canOutput) {
         return `<div class="tooltip-connections tooltip-disconnected">${coloredIcon('warning')} ${t('tooltip.disconnected')}</div>`;
       }

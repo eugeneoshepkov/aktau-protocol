@@ -91,12 +91,12 @@ test('placement reports real pipe hops in flow order and identifies missing inpu
     expect(report(secondDistiller).missing).toEqual(['water']);
     expect(report(isolatedHouse).routes).toEqual([]);
     expect(report(isolatedHouse).missing.toSorted()).toEqual(['heat', 'water']);
-    expect(report(isolatedTank)).toEqual({ routes: [], missing: ['water'], restored: [] });
-    expect(pipes.getMissingConnections(isolatedTank).map((c) => c.resourceType)).toEqual(['water']);
+    expect(report(isolatedTank)).toEqual({ routes: [], missing: ['water', 'heat'], restored: [] });
+    expect(pipes.getMissingConnections(isolatedTank).map((c) => c.resourceType)).toEqual(['water', 'heat']);
     expect(pipes.isFullyOperational(isolatedTank)).toBe(false);
     const preview = { ...isolatedTank, id: 'virtual_preview' };
-    expect(pipes.getMissingConnections(preview)).toEqual([]);
-    expect(pipes.isFullyOperational(preview)).toBe(true);
+    expect(pipes.getMissingConnections(preview)).toEqual(pipes.getMissingConnections(isolatedTank));
+    expect(pipes.isFullyOperational(preview)).toBe(false);
     expect(report(isolatedPump)).toEqual({ routes: [], missing: [], restored: [] });
   } finally {
     pipes.dispose();
@@ -137,7 +137,7 @@ test('a newly placed distiller restores three homes, including a distant home st
   const report = afterPlacing(
     [
       lot('pump', 10, 8),
-      lot('reactor', 10, 12),
+      lot('reactor', 9, 13),
       tank,
       left,
       right,
@@ -201,4 +201,106 @@ test('capacity freed at an old provider restores only the house that lacked that
   ]);
   expectRoute(report, 'freshWater', oldProvider, newlyServed);
   expectRoute(report, 'freshWater', newProvider, switchesProvider);
+});
+
+test('an inland distiller and its homes receive independent water and heat mains', () => {
+  const pump = lot('pump', 2, 8);
+  const plant = lot('thermal_plant', 2, 12);
+  const bridge = lot('water_tank', 6, 10);
+  const inlandStation = lot('water_tank', 11, 10);
+  const distiller = lot('distiller', 15, 10);
+  const house = lot('microrayon', 14, 13);
+  const buildings = [pump, plant, inlandStation, distiller, house];
+  using lots = spyOn(gameState, 'getBuildings').mockReturnValue(buildings);
+  using subscribe = spyOn(gameState, 'on').mockImplementation(() => {});
+  const engine = new NullEngine();
+  const pipes = new PipeManager(new Scene(engine));
+  try {
+    pipes.rebuildPipes();
+    expect(pipes.getLotConnections('water_tank', 1, 4)).toEqual({ heat: false, water: true });
+    expect(pipes.isSuitableLot('water_tank', 1, 4)).toBe(true);
+    expect(pipes.getLotConnections('water_tank', 1, 16)).toEqual({ heat: true, water: false });
+    expect(pipes.isSuitableLot('water_tank', 1, 16)).toBe(true);
+    expect(pipes.getLotConnections('water_tank', bridge.gridX, bridge.gridZ)).toEqual({ heat: true, water: true });
+    expect(pipes.getLotConnections('water_tank', 25, 10)).toEqual({ heat: false, water: false });
+    expect(pipes.isFullyOperational(distiller)).toBe(false);
+    const before = pipes.captureSupply();
+    buildings.push(bridge);
+    pipes.rebuildPipes();
+
+    const report = pipes.getPlacementFlow(bridge, before);
+    expectRoute(report, 'heat', plant, bridge, inlandStation, distiller);
+    expectRoute(report, 'seawater', pump, bridge, inlandStation, distiller);
+    expectRoute(report, 'heat', plant, bridge, inlandStation, house);
+    expectRoute(report, 'freshWater', distiller, house);
+    expect(report.restored).toContainEqual({ building: house, resources: ['heat', 'freshWater'], missing: [] });
+    expect(pipes.isFullyOperational(distiller)).toBe(true);
+    expect(pipes.isFullyOperational(house)).toBe(true);
+    const frame = pipes.showConnectionPreview('microrayon', 14, 12);
+    expect(frame.every((point) => Math.hypot(point.x - 14.5, point.z - 12.5) <= 5)).toBe(true);
+    expect(pipes.getConnectionsForBuilding(house)).toContainEqual({
+      building: inlandStation, direction: 'incoming', type: 'heat'
+    });
+    const network = pipes.getNetworkSnapshot();
+    expect(network.allocations).toContainEqual({
+      resource: 'heat', from: plant.id, to: house.id, amount: 5,
+      path: [plant.id, bridge.id, inlandStation.id, house.id]
+    });
+    expect(network.relayFeeds).toContainEqual({ resource: 'seawater', from: bridge.id, to: inlandStation.id });
+
+    // Disconnecting the sea intake leaves a live heat-only district, with no phantom water.
+    buildings.splice(buildings.indexOf(pump), 1);
+    pipes.rebuildPipes();
+    expect(pipes.getLotConnections('water_tank', 15, 11)).toEqual({ heat: true, water: false });
+    expect(pipes.getLotConnections('distiller', 15, 11)).toEqual({ heat: true, water: false });
+    expect(pipes.isFullyOperational(bridge)).toBe(true);
+    expect(pipes.isSuppliedWith(inlandStation, 'seawater')).toBe(false);
+    expect(pipes.isSuppliedWith(inlandStation, 'freshWater')).toBe(false);
+    expect(pipes.getMissingConnections(house).map((c) => c.resourceType)).toEqual(['water']);
+
+    // Losing the heat source instead keeps the seawater relay alive, but it cannot distill.
+    buildings.push(pump);
+    buildings.splice(buildings.indexOf(plant), 1);
+    pipes.rebuildPipes();
+    expect(pipes.isFullyOperational(inlandStation)).toBe(true);
+    expect(pipes.isSuppliedWith(inlandStation, 'seawater')).toBe(true);
+    expect(pipes.isSuppliedWith(inlandStation, 'heat')).toBe(false);
+    expect(pipes.isSuppliedWith(house, 'freshWater')).toBe(false);
+    expect(pipes.getMissingConnections(distiller).map((c) => c.resourceType)).toEqual(['heat']);
+  } finally {
+    pipes.dispose();
+    engine.dispose();
+  }
+});
+
+test('heated mains extend the reach of one plant without increasing its heat capacity', () => {
+  const plant = lot('thermal_plant', 5, 10);
+  const main = lot('water_tank', 10, 10);
+  const terminal = lot('water_tank', 15, 10);
+  const served = [lot('microrayon', 12, 10), lot('microrayon', 13, 10), lot('microrayon', 14, 11),
+    lot('microrayon', 14, 9), lot('microrayon', 15, 11), lot('microrayon', 16, 10)];
+  const extra = lot('microrayon', 19, 10);
+  const buildings = [plant, main, terminal, ...served];
+  using lots = spyOn(gameState, 'getBuildings').mockReturnValue(buildings);
+  using subscribe = spyOn(gameState, 'on').mockImplementation(() => {});
+  const engine = new NullEngine();
+  const pipes = new PipeManager(new Scene(engine));
+  try {
+    pipes.rebuildPipes();
+    expect(served.every((home) => pipes.isSuppliedWith(home, 'heat'))).toBe(true);
+    expect(pipes.getLotConnections('microrayon', extra.gridX, extra.gridZ).heat).toBe(false);
+    buildings.push(extra);
+    pipes.rebuildPipes();
+    expect(pipes.isSuppliedWith(extra, 'heat')).toBe(false);
+    const used = pipes.getNetworkSnapshot().allocations.filter((flow) => flow.resource === 'heat');
+    expect(used.every((a) => a.from === plant.id)).toBe(true);
+    expect(used.reduce((total, a) => total + a.amount, 0)).toBe(30);
+    buildings.splice(buildings.indexOf(main), 1);
+    pipes.rebuildPipes();
+    expect(pipes.isFullyOperational(terminal)).toBe(false);
+    expect(served.every((home) => !pipes.isSuppliedWith(home, 'heat'))).toBe(true);
+  } finally {
+    pipes.dispose();
+    engine.dispose();
+  }
 });

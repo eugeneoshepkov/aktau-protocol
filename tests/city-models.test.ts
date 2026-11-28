@@ -1,10 +1,27 @@
 import { expect, test } from 'bun:test';
 import { NullEngine, Scene } from '@babylonjs/core';
+import { CityModels } from '../src/models/CityModels';
 import { melovoyeTower, melovoyeTrace } from '../src/models/MelovoyeField';
 import { glidingGull } from '../src/models/Harbor';
 import { apartmentCourtyard, firstMicrorayonPier } from '../src/models/NeighbourhoodScenes';
 import { duskAtTime } from '../src/engine/Seasons';
 import { melovoyLighthouse } from '../src/models/ShevchenkoLandmarks';
+
+test('the reservoir and its heating substation share one mesh inside the lot', () => {
+  const engine = new NullEngine();
+  try {
+    const models = CityModels.forScene(new Scene(engine));
+    const mesh = models.create('water_tank', 'reservoir with heat substation');
+    expect(mesh.subMeshes).toHaveLength(1);
+    const { minimum, maximum } = mesh.getBoundingInfo().boundingBox;
+    for (const axis of ['x', 'z'] as const) {
+      expect(minimum[axis]).toBeGreaterThan(-1);
+      expect(maximum[axis]).toBeLessThan(1);
+    }
+  } finally {
+    engine.dispose();
+  }
+});
 
 test('the waterfront fades to evening, holds, then returns to daylight on each walk cycle', () => {
   for (const start of [0, 160]) {

@@ -54,6 +54,8 @@ At the desalination works, open the press clippings to read about the town’s w
 
 Open the pipe network to check water and heat coverage independently. Select the day in the top bar to see current heat demand and the next season’s arrival.
 
+To expand inland, build a **Utility main** within five tiles of the starter reservoir, then place another up to five tiles farther on. The preview shows which services reach each site. A main can carry seawater to an inland distiller, drinking water to homes, and heat from a plant to either. The district plan marks the first inland home that receives both services beyond the reach of a plant.
+
 | Challenge | Consequence |
 |-----------|-------------|
 | Reactor strain reaches 100% | ☢️ **Meltdown** — Game Over |
@@ -84,8 +86,8 @@ Open the pipe network to check water and heat coverage independently. Select the
 | **Water Pump** | Extracts seawater from the Caspian |
 | **BN-350 Reactor** | The heart of the city. Generates heat & power. Working desalination plants relieve core strain. |
 | **Desalination Plant** | Converts seawater into drinking water and cools the reactor on days it runs. When supplies are tight, plants with enough inputs can keep working. |
-| **Microrayon Housing** | Soviet housing blocks. Needs water connection or citizens get angry. |
-| **Water Tank** | Extends water distribution network. Each tank supplies 2 more housing blocks. |
+| **Microrayon Housing** | Housing blocks that need drinking water and heat. |
+| **Utility main** | A reservoir and heat substation. Each site extends connected lines by five tiles. Reservoirs fed by a working distiller have distribution capacity for two more housing blocks. Heat still comes from the plants. |
 | **Thermal Plant** | Supplies heat and power. Each four housing blocks unlock another station. |
 
 ### Seasons
@@ -161,6 +163,7 @@ bun run dev    # http://localhost:5173
 - Six district orders, emergency supplies and a choice of two permanent civic projects
 - Historical facts about the real Aktau (20 discoverable entries)
 - Save from the city controls menu and resume from the title screen
+- To investigate a stuck city, open **••• → Download city report**. The local JSON file includes the current layout, pipe routes, resource balances and the last 160 actions and events, including rejected builds. The field guide on the title screen also links to the last archived city report. Older saves start their history when loaded.
 - Time controls (pause, 1×, 2×, 4×)
 - **Russian & English languages** (auto-detected from browser)
 - Russian keyboard layout support (WASD works as ЦФЫВ)
