@@ -61,6 +61,7 @@ export type GameEventType =
   | 'buildingRemoved'
   | 'gameOver'
   | 'waterShortage'
+  | 'heatShortage'
   | 'dayAdvance'
   | 'reactorWarning'
   | 'reactorTempChange'
@@ -84,6 +85,19 @@ export const SEASON_HEAT_MULTIPLIER: Record<Season, number> = {
 };
 export const SEASON_LENGTH = 30;
 
+function seasonOn(day: number): Season {
+  return SEASONS[Math.floor((day - 1) / SEASON_LENGTH) % SEASONS.length];
+}
+
+function remainingRepairDays(
+  missed: boolean,
+  remaining: number | null,
+  grace: number
+): number | null {
+  if (!missed) return null;
+  return remaining === null ? grace : remaining - 1;
+}
+
 export interface ResourceTrend {
   seawater: number;
   freshWater: number;
@@ -95,6 +109,7 @@ export interface ResourceTrend {
 
 export type ConnectionChecker = (building: Building) => {
   isFullyOperational: boolean;
+  hasHeat?: boolean;
 };
 
 export interface EventModifiers {
@@ -108,6 +123,7 @@ export interface EventModifiers {
 export const RESERVE_POWER_COST = 60;
 export const RESERVE_CREW_DAYS = 10;
 export const WATER_REPAIR_DAYS = 7;
+export const HEAT_REPAIR_DAYS = 5;
 export const RESERVE_SUPPLIES = { freshWater: 50, heat: 75 };
 export type ReserveSupply = keyof typeof RESERVE_SUPPLIES;
 
@@ -125,6 +141,7 @@ interface CitySave {
   completedOrders?: number;
   nextDispatchDay?: number;
   waterRepairDays?: number | null;
+  heatRepairDays?: number | null;
   weather?: unknown;
   civicProject?: CivicProject | null;
   districtEstablished?: boolean;
@@ -144,7 +161,8 @@ function isCitySave(value: unknown): value is CitySave {
     completedOrders,
     buildingIdCounter,
     nextDispatchDay,
-    waterRepairDays
+    waterRepairDays,
+    heatRepairDays
   } = value;
   if (
     !whole(day) ||
@@ -165,6 +183,14 @@ function isCitySave(value: unknown): value is CitySave {
   if (
     waterRepairDays != null &&
     (!whole(waterRepairDays) || waterRepairDays < 1 || waterRepairDays > WATER_REPAIR_DAYS)
+  )
+    return false;
+  if (
+    heatRepairDays != null &&
+    (!whole(heatRepairDays) ||
+      heatRepairDays < 1 ||
+      heatRepairDays > HEAT_REPAIR_DAYS ||
+      seasonOn(day) !== 'winter')
   )
     return false;
   if (!Array.isArray(buildings) || buildings.length > GRID_SIZE * GRID_SIZE) return false;
@@ -231,6 +257,7 @@ export class GameState {
   private completedOrders = 0;
   private nextDispatchDay = 0;
   private waterRepairDays: number | null = null;
+  private heatRepairDays: number | null = null;
   private civicProject: CivicProject | null = null;
   private districtEstablished = false;
   private fieldSeason: FieldSeason | null = null;
@@ -350,13 +377,37 @@ export class GameState {
     return this.waterRepairDays;
   }
 
+  public getHeatRepairDays(): number | null {
+    return this.heatRepairDays;
+  }
+
+  public hasUnheatedResidents(): boolean {
+    // Residents can share heated flats. An empty block off the network can wait.
+    const homes = this.buildings.filter((building) => building.type === 'microrayon');
+    const heatedHomes = homes.filter((home) => this.connectionChecker?.(home).hasHeat !== false);
+    const occupiedHomes = Math.min(
+      homes.length,
+      Math.ceil(this.resources.population / HOUSING_CAPACITY_PER_MICRORAYON)
+    );
+    return heatedHomes.length < occupiedHomes;
+  }
+
+  public canDispatchSupply(resource: ReserveSupply): boolean {
+    return (
+      !this.gameOver &&
+      this.completedOrders >= 4 &&
+      this.day >= this.nextDispatchDay &&
+      this.resources.electricity >= RESERVE_POWER_COST &&
+      this.resources[resource] < RESOURCE_CAPS[resource]!
+    );
+  }
+
   public dispatchSupply(resource: ReserveSupply): boolean {
-    if (this.gameOver || this.completedOrders < 4 || this.day < this.nextDispatchDay) return false;
+    if (!this.canDispatchSupply(resource)) return false;
     const amount = Math.min(
       RESERVE_SUPPLIES[resource],
       RESOURCE_CAPS[resource]! - this.resources[resource]
     );
-    if (amount <= 0 || this.resources.electricity < RESERVE_POWER_COST) return false;
     this.resources.electricity -= RESERVE_POWER_COST;
     this.resources[resource] += amount;
     this.nextDispatchDay = this.day + RESERVE_CREW_DAYS;
@@ -516,8 +567,7 @@ export class GameState {
   }
 
   public getSeason(): Season {
-    const seasonIndex = Math.floor(((this.day - 1) % (SEASON_LENGTH * 4)) / SEASON_LENGTH);
-    return SEASONS[seasonIndex];
+    return seasonOn(this.day);
   }
 
   public getSeasonMultiplier(): number {
@@ -738,10 +788,10 @@ export class GameState {
     this.previousResources = { ...this.resources };
     const prevSeason = this.getSeason();
 
-    this.processBuildings();
+    const runningDistillers = this.processBuildings();
     this.processMaintenanceCosts();
     this.processPopulation();
-    this.processReactor();
+    this.processReactor(runningDistillers);
 
     // Apply resource caps to prevent unbounded accumulation
     for (const [resource, cap] of Object.entries(RESOURCE_CAPS)) {
@@ -755,12 +805,13 @@ export class GameState {
 
     if (!this.gameOver) {
       this.day++;
+      const newSeason = this.getSeason();
+      if (prevSeason === 'winter' && newSeason === 'spring') this.heatRepairDays = null;
       this.advanceOrders();
       this.checkDistrictGoal();
       this.advanceFieldSeason();
       this.calculateTrend();
 
-      const newSeason = this.getSeason();
       if (newSeason !== prevSeason) {
         this.emit('seasonChange', {
           season: newSeason,
@@ -772,6 +823,7 @@ export class GameState {
       this.emit('resourceChange', this.resources);
       this.emit('resourceTrend', this.resourceTrend);
       if (this.waterRepairDays === WATER_REPAIR_DAYS) this.emit('waterShortage');
+      if (this.heatRepairDays === HEAT_REPAIR_DAYS) this.emit('heatShortage');
     }
   }
 
@@ -826,14 +878,15 @@ export class GameState {
     }
   }
 
-  private processBuildings(): void {
+  private processBuildings(): number {
+    // Supply power and heat before the pumps, desalination plants and homes draw on them.
     const buildingCounts: Record<BuildingType, number> = {
-      pump: 0,
       reactor: 0,
+      thermal_plant: 0,
+      pump: 0,
       distiller: 0,
       microrayon: 0,
-      water_tank: 0,
-      thermal_plant: 0
+      water_tank: 0
     };
 
     let connectedMicrorayons = 0;
@@ -870,16 +923,27 @@ export class GameState {
     // Population-based consumption penalty for microrayons
     const populationPenalty = this.getPopulationEfficiencyPenalty();
 
+    let runningDistillers = 0;
     for (const [type, count] of Object.entries(buildingCounts)) {
       if (count === 0) continue;
 
       const production = BUILDING_PRODUCTION[type as BuildingType];
+      const inputs = Object.entries(production.consumes) as [keyof Resources, number][];
+      let running = count;
+      // Plants share the available inputs. Homes still draw their full daily demand.
+      if (type !== 'microrayon') {
+        for (const [resource, baseAmount] of inputs) {
+          const perPlant = resource === 'heat' ? baseAmount * totalHeatMultiplier : baseAmount;
+          if (perPlant === 0) continue;
+          const available = Math.max(0, Math.floor(this.resources[resource]));
+          running = Math.min(running, Math.floor(available / perPlant));
+        }
+      }
+      if (running === 0) continue;
+      if (type === 'distiller') runningDistillers = running;
 
-      const demand: Partial<Resources> = {};
-      let canProduce = true;
-      for (const [name, baseAmount] of Object.entries(production.consumes)) {
-        const resource = name as keyof Resources;
-        let amount = baseAmount * count;
+      for (const [resource, baseAmount] of inputs) {
+        let amount = baseAmount * running;
         if (resource === 'heat') amount = Math.ceil(amount * totalHeatMultiplier);
         if (type === 'microrayon') {
           if (resource === 'freshWater' && this.civicProject?.kind === 'public_garden') {
@@ -887,36 +951,23 @@ export class GameState {
           }
           amount = Math.ceil(amount * populationPenalty);
         }
-        demand[resource] = amount;
-        if (this.resources[resource] < amount) canProduce = false;
+        this.resources[resource] -= amount;
       }
 
-      // Homes still draw on reserves during a shortage.
-      if (canProduce || type === 'microrayon') {
-        for (const [resource, amount] of Object.entries(demand)) {
-          this.resources[resource as keyof Resources] -= amount;
+      for (const [resource, amount] of Object.entries(production.produces)) {
+        if (type === 'microrayon' && resource === 'happiness') continue;
+
+        let produced = amount * running;
+        if (type === 'pump' && resource === 'seawater') {
+          produced = Math.floor(produced * eventModifiers.pumpEfficiency);
         }
-
-        for (const [resource, amount] of Object.entries(production.produces)) {
-          // Skip happiness for microrayons - handled separately below
-          if (type === 'microrayon' && resource === 'happiness') continue;
-
-          let produced = (amount ?? 0) * count;
-
-          // Apply event modifiers to production
-          if (type === 'pump' && resource === 'seawater') {
-            produced = Math.floor(produced * eventModifiers.pumpEfficiency);
-          }
-          if (resource === 'electricity' && (type === 'reactor' || type === 'thermal_plant')) {
-            produced = Math.floor(produced * eventModifiers.electricityMultiplier);
-          }
-          if (type === 'distiller' && resource === 'freshWater') {
-            const waterMult = eventModifiers.waterMultiplier ?? 1;
-            produced = Math.floor(produced * waterMult);
-          }
-
-          this.resources[resource as keyof Resources] += produced;
+        if (resource === 'electricity' && (type === 'reactor' || type === 'thermal_plant')) {
+          produced = Math.floor(produced * eventModifiers.electricityMultiplier);
         }
+        if (type === 'distiller' && resource === 'freshWater') {
+          produced = Math.floor(produced * (eventModifiers.waterMultiplier ?? 1));
+        }
+        this.resources[resource as keyof Resources] += produced;
       }
     }
 
@@ -928,28 +979,20 @@ export class GameState {
 
     // Clamp happiness to 0-100 range
     this.resources.happiness = Math.max(0, Math.min(100, this.resources.happiness));
+    return runningDistillers;
   }
 
-  private processReactor(): void {
+  private processReactor(runningDistillers: number): void {
     const reactorCount = this.buildings.filter((b) => b.type === 'reactor').length;
-    const distillers = this.buildings.filter((b) => b.type === 'distiller');
-
-    let connectedDistillerCount = 0;
-    if (this.connectionChecker) {
-      connectedDistillerCount = distillers.filter(
-        (d) => this.connectionChecker!(d).isFullyOperational
-      ).length;
-    }
-
     if (reactorCount > 0) {
       const heatGenerated = reactorCount * 1;
-      const coolingCapacity = connectedDistillerCount * 0.8;
+      const coolingCapacity = runningDistillers * 0.8;
 
       this.reactor.temperature = Math.max(
         0,
         this.reactor.temperature + heatGenerated - coolingCapacity
       );
-      this.reactor.coolingActive = connectedDistillerCount > 0;
+      this.reactor.coolingActive = runningDistillers > 0;
 
       if (this.reactor.temperature >= 80 && this.reactor.temperature < 100) {
         this.emit('reactorWarning', this.reactor.temperature);
@@ -963,20 +1006,24 @@ export class GameState {
       return;
     }
 
-    if (this.resources.freshWater < 0) {
-      this.resources.freshWater = 0;
-      this.waterRepairDays =
-        this.waterRepairDays === null ? WATER_REPAIR_DAYS : this.waterRepairDays - 1;
-      if (this.waterRepairDays === 0) {
-        this.triggerGameOver('drought');
-        return;
-      }
-    } else {
-      this.waterRepairDays = null;
+    const missedHeating =
+      this.getSeason() === 'winter' &&
+      this.resources.population > 0 &&
+      ((this.resources.heat < 0 && this.buildings.some((b) => b.type === 'microrayon')) ||
+        this.hasUnheatedResidents());
+    this.waterRepairDays = remainingRepairDays(
+      this.resources.freshWater < 0,
+      this.waterRepairDays,
+      WATER_REPAIR_DAYS
+    );
+    this.heatRepairDays = remainingRepairDays(missedHeating, this.heatRepairDays, HEAT_REPAIR_DAYS);
+    this.resources.freshWater = Math.max(0, this.resources.freshWater);
+    this.resources.heat = Math.max(0, this.resources.heat);
+    if (this.waterRepairDays === 0) {
+      this.triggerGameOver('drought');
+      return;
     }
-
-    if (this.resources.heat < 0 && this.resources.population > 0) {
-      this.resources.heat = 0;
+    if (this.heatRepairDays === 0) {
       this.triggerGameOver('freeze');
       return;
     }
@@ -1022,6 +1069,7 @@ export class GameState {
     this.completedOrders = 0;
     this.nextDispatchDay = 0;
     this.waterRepairDays = null;
+    this.heatRepairDays = null;
     this.civicProject = null;
     this.districtEstablished = false;
     this.fieldSeason = null;
@@ -1036,7 +1084,7 @@ export class GameState {
   }
 
   public save(): boolean {
-    if (this.waterRepairDays === 0) return false;
+    if (this.waterRepairDays === 0 || this.heatRepairDays === 0) return false;
     try {
       const saveData = {
         resources: this.resources,
@@ -1051,6 +1099,7 @@ export class GameState {
         completedOrders: this.completedOrders,
         nextDispatchDay: this.nextDispatchDay,
         waterRepairDays: this.waterRepairDays,
+        heatRepairDays: this.heatRepairDays,
         civicProject: this.civicProject,
         districtEstablished: this.districtEstablished,
         fieldSeason: this.fieldSeason,
@@ -1082,6 +1131,7 @@ export class GameState {
       this.completedOrders = data.completedOrders ?? 0;
       this.nextDispatchDay = data.nextDispatchDay ?? 0;
       this.waterRepairDays = data.waterRepairDays ?? null;
+      this.heatRepairDays = data.heatRepairDays ?? null;
       this.civicProject = data.civicProject ?? null;
       this.districtEstablished = data.districtEstablished ?? false;
       this.fieldSeason = data.fieldSeason ?? null;

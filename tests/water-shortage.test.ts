@@ -59,9 +59,9 @@ test('another fatal condition still ends a run during a water shortage', () => {
   const city = districtWithDeficit();
   const onShortage = mock();
   city.on('waterShortage', onShortage);
-  city.addResources({ heat: -1000 });
+  city.adjustReactorTemp(100);
   city.tick();
-  expect(city.getGameOverReason()).toBe('freeze');
+  expect(city.getGameOverReason()).toBe('meltdown');
   expect(onShortage).not.toHaveBeenCalled();
 });
 

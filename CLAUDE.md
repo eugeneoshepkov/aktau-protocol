@@ -46,19 +46,19 @@ bun run build  # Production build
 
 | Building | Placement | Cost | Consumes/tick | Produces/tick | Special |
 |----------|-----------|------|---------------|---------------|---------|
-| **Water Pump** | Sea tiles | ⚡20 | ⚡5 | 🌊10 seawater | Extracts from Caspian |
+| **Water Pump** | Sea tiles | ⚡20 | ⚡5 | 🌊12 seawater | Extracts from Caspian |
 | **BN-350 Reactor** | Rock tiles | ⚡50 | — | 🔥70 heat, ⚡20 | +1°C/tick to reactor temp |
-| **Desalination Plant** | Sand/Rock | ⚡30 | 🌊10, 🔥8 | 💧10 freshwater | Cools reactor by 0.8°C/tick |
+| **Desalination Plant** | Sand/Rock | ⚡30 | 🌊12, 🔥8 × season | 💧12 freshwater | Cools reactor by 0.8°C on days it runs |
 | **Microrayon Housing** | Sand tiles | 💧20, 🔥10 | 💧5, 🔥5× season | 😊±1-2 happiness | Soviet housing blocks |
 | **Water Tank** | Sand/Rock | ⚡15 | — | — | Relays water, adds 💧10 capacity |
-| **Thermal Plant** | Sand/Rock | ⚡40 | ⚡10 | 🔥20 heat, ⚡25 | Requires 5 microrayons per plant |
+| **Thermal Plant** | Sand/Rock | ⚡40 | ⚡10 | 🔥30 heat, ⚡25 | One additional station per four microrayons |
 
 ### Building Limits
 
 | Building | Limit |
 |----------|-------|
 | **Reactor** | 1 (unique) |
-| **Thermal Plant** | 1 free + 1 per 5 microrayons |
+| **Thermal Plant** | 1 starter allowance + 1 per 4 microrayons |
 
 ### Cost Scaling
 
@@ -170,8 +170,8 @@ This ensures at least one event triggers every 20 days maximum.
 ### Reactor Temperature
 
 - Each reactor adds **+1°C per tick**
-- Each distiller provides **-0.8°C cooling per tick**
-- Net change = `reactors - (distillers × 0.8)`
+- Each distiller with enough seawater and heat to run provides **-0.8°C cooling per tick**
+- Net change = `reactors - (running distillers × 0.8)`
 - **Warning** at 80°C (visual + sound alert)
 - **Meltdown** at 100°C (game over)
 
@@ -205,7 +205,7 @@ This affects all microrayon resource consumption (water and heat).
 |-----------|--------|
 | Reactor Temp ≥ 100°C | ☢️ NUCLEAR MELTDOWN |
 | Unmet fresh-water demand | The first missed delivery pauses the clock. Seven more consecutive days of unmet demand end the game in drought. |
-| Heat < 0 (with population) | ❄️ CITY FROZEN |
+| Occupied homes lack heating in winter | The first missed delivery pauses the clock. Five more consecutive unheated winter days end the game in a freeze. Heating recovery or the spring thaw clears the countdown. |
 | Population = 0 (with housing) | 💀 POPULATION EXTINCT |
 | Happiness = 0 (with population) | ✊ CITIZENS REVOLT |
 

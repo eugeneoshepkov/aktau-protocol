@@ -297,7 +297,7 @@ export class TutorialManager {
         );
         button.textContent =
           t(resource === 'heat' ? 'hud.heat' : 'hud.water') + ' +' + Math.floor(amount);
-        button.disabled = !ready || resources.electricity < RESERVE_POWER_COST || amount <= 0;
+        button.disabled = !gameState.canDispatchSupply(resource);
         button.title = t('plan.dispatchHelp');
       }
     }

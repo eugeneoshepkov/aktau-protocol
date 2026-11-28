@@ -58,7 +58,7 @@ Open the pipe network to check water and heat coverage independently. Select the
 |-----------|-------------|
 | Reactor strain reaches 100% | ☢️ **Meltdown** — Game Over |
 | Homes run short of fresh water | The clock pauses so you can build. After you resume, restore supply within seven game days to avoid drought. |
-| Heat runs out in winter | ❄️ **Frozen City** — Game Over |
+| Occupied homes lose heating in winter | The clock pauses for repairs. Restore the heating within five more winter days to avoid a freeze. |
 | Citizens unhappy | 👥 **Exodus** — Population flees |
 
 ### The Production Chain
@@ -83,10 +83,10 @@ Open the pipe network to check water and heat coverage independently. Select the
 |----------|--------------|
 | **Water Pump** | Extracts seawater from the Caspian |
 | **BN-350 Reactor** | The heart of the city. Generates heat & power. Working desalination plants relieve core strain. |
-| **Desalination Plant** | Converts seawater → freshwater. Also cools the reactor. |
+| **Desalination Plant** | Converts seawater into drinking water and cools the reactor on days it runs. When supplies are tight, plants with enough inputs can keep working. |
 | **Microrayon Housing** | Soviet housing blocks. Needs water connection or citizens get angry. |
 | **Water Tank** | Extends water distribution network. Each tank supplies 2 more housing blocks. |
-| **Thermal Plant** | Supplemental heat & power. Build more as your city grows (1 per 5 housing blocks). |
+| **Thermal Plant** | Supplies heat and power. Each four housing blocks unlock another station. |
 
 ### Seasons
 

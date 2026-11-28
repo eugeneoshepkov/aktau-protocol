@@ -3,7 +3,7 @@ import { getAllBuildingTypes } from '../simulation/buildings/Building';
 import { ICONS } from './Icons';
 import { soundManager } from '../managers/SoundManager';
 import { gameState } from '../simulation/GameState';
-import type { BuildingType } from '../types';
+import { BUILDING_SCALING_LIMITS, type BuildingType } from '../types';
 import type { GridPosition } from '../grid/GridCoords';
 import { t, td } from '../i18n';
 
@@ -226,7 +226,7 @@ export class BuildPanel {
       button.dataset.type = type;
       button.setAttribute('aria-pressed', 'false');
 
-      const costText = this.formatCost(this.getDisplayCost(type));
+      const costText = this.formatCost(type, this.getDisplayCost(type));
       const hotkey = index + 1;
       const name = td(`build.${type}`);
       const desc = td(`building.${type}.desc`);
@@ -277,9 +277,16 @@ export class BuildPanel {
     return container;
   }
 
-  private formatCost(costs: Partial<Record<string, number>> | null): string {
-    // null means max limit reached
+  private formatCost(type: BuildingType, costs: Partial<Record<string, number>> | null): string {
     if (costs === null) {
+      const limit = BUILDING_SCALING_LIMITS[type];
+      if (limit?.requiredBuilding === 'microrayon') {
+        const lots = gameState.getBuildings();
+        const homes = lots.filter((b) => b.type === 'microrayon').length;
+        const plants = lots.filter((b) => b.type === type).length;
+        const target = (plants + 1 - limit.freeCount) * limit.countPerAllowed;
+        return `<span class="cost-maxed">${t('build.housingUnlock', { homes, target })}</span>`;
+      }
       return `<span class="cost-maxed">${t('build.maxed')}</span>`;
     }
     const parts: string[] = [];
@@ -303,16 +310,9 @@ export class BuildPanel {
       const cost = this.getDisplayCost(type);
       const costEl = button.querySelector('.build-cost');
 
-      if (cost === null) {
-        // Max limit reached - disable button
-        button.classList.add('max-reached');
-        button.disabled = true;
-        if (costEl) costEl.innerHTML = this.formatCost(null);
-      } else {
-        button.classList.remove('max-reached');
-        button.disabled = false;
-        if (costEl) costEl.innerHTML = this.formatCost(cost);
-      }
+      button.classList.toggle('max-reached', cost === null);
+      button.disabled = cost === null;
+      if (costEl) costEl.innerHTML = this.formatCost(type, cost);
     }
   }
 

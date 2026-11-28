@@ -6,7 +6,7 @@ import type { PipeManager } from '../managers/PipeManager';
 import { getCityIssues, type CityIssue } from './cityIssues';
 import { ICONS, icon } from './Icons';
 import type { Building, GameOverReason, Resources } from '../types';
-import { t, td } from '../i18n';
+import { t, td, type TranslationKey } from '../i18n';
 
 // Tooltip content for each HUD resource
 type HudTooltipKey = 'population' | 'freshWater';
@@ -46,8 +46,9 @@ export class HUD {
     gameState.on('resourceTrend', (data) => this.updateTrends(data as ResourceTrend));
     gameState.on('dayAdvance', () => this.updateDay());
     gameState.on('seasonChange', () => this.updateSeason());
-    gameState.on('waterShortage', () => this.pauseForWaterRepair());
-    gameState.on('cityLoaded', () => this.pauseForWaterRepair());
+    gameState.on('waterShortage', () => this.pauseForRepair());
+    gameState.on('heatShortage', () => this.pauseForRepair());
+    gameState.on('cityLoaded', () => this.pauseForRepair());
     gameState.on('gameOver', (data) => this.showGameOver(data as { reason: GameOverReason; day: number }));
 
     this.container.querySelector('#city-issues')!.addEventListener('click', event => {
@@ -60,7 +61,7 @@ export class HUD {
       showOnMap(issue.buildings);
     });
 
-    this.pauseForWaterRepair();
+    this.pauseForRepair();
     this.syncPlayback();
     this.updateResources();
     this.updateDay();
@@ -196,13 +197,18 @@ export class HUD {
           </div></details>
         </div>
       </div>
-      <aside id="water-shortage" aria-labelledby="water-repair-title" hidden>
-        <div class="water-repair-copy">
-          <strong id="water-repair-title" role="status"></strong>
-          <span id="water-repair-days"></span>
-          <p></p>
+      <aside id="utility-shortage" aria-labelledby="repair-title" hidden>
+        <div class="repair-copy">
+          <strong id="repair-title" role="status"></strong>
+          <div class="repair-days">
+            <span>${t('hud.repairDays')}</span>
+            <span id="water-repair-days"></span>
+            <span id="heat-repair-days"></span>
+          </div>
+          <p id="heat-repair-hint"></p>
+          <p id="water-repair-hint"></p>
         </div>
-        <button type="button" id="water-resume" class="hud-button"><span aria-hidden="true" class="icon-wrap">${ICONS.play}</span>${t('hud.waterResume')}</button>
+        <button type="button" id="repair-resume" class="hud-button"><span aria-hidden="true" class="icon-wrap">${ICONS.play}</span>${t('hud.repairResume')}</button>
       </aside>
       <section id="city-status" popover="auto" aria-labelledby="city-status-heading">
         <header><h2 id="city-status-heading">${t('hud.status')}</h2>
@@ -256,7 +262,7 @@ export class HUD {
     });
 
     this.pauseButton?.addEventListener('click', () => this.togglePause());
-    container.querySelector('#water-resume')!.addEventListener('click', () => {
+    container.querySelector('#repair-resume')!.addEventListener('click', () => {
       if (!tickSystem.isPausedState() || tickSystem.hasOpenModal()) return;
       this.pauseButton?.focus({ preventScroll: true });
       this.togglePause();
@@ -341,10 +347,10 @@ export class HUD {
     this.syncPlayback();
   }
 
-  private pauseForWaterRepair(): void {
-    if (gameState.getWaterRepairDays() === null) return;
+  private pauseForRepair(): void {
+    if (gameState.getWaterRepairDays() === null && gameState.getHeatRepairDays() === null) return;
     tickSystem.pause();
-    this.setSpeed(0);
+    if (tickSystem.getTickRate() !== this.speeds[0]) this.setSpeed(0);
     this.syncPlayback();
   }
 
@@ -353,24 +359,50 @@ export class HUD {
     const icon = this.pauseButton?.querySelector('.pause-icon');
     if (icon) icon.innerHTML = paused ? ICONS.play : ICONS.pause;
     this.pauseButton?.setAttribute('aria-pressed', String(paused));
-    this.updateWaterRepair();
+    this.updateRepairStrip();
   }
 
-  private updateWaterRepair(): void {
-    const days = gameState.getWaterRepairDays();
-    const strip = this.container.querySelector<HTMLElement>('#water-shortage')!;
-    strip.hidden = days === null || gameState.isGameOver();
-    if (days === null || strip.hidden) return;
+  private updateRepairStrip(): void {
+    const water = gameState.getWaterRepairDays();
+    const heat = gameState.getHeatRepairDays();
+    const strip = this.container.querySelector<HTMLElement>('#utility-shortage')!;
+    strip.hidden = (water === null && heat === null) || gameState.isGameOver();
+    if (strip.hidden) return;
+
+    const both = water !== null && heat !== null;
+    const issue = both ? 'waterAndHeatRepair' : heat !== null ? 'heatRepair' : 'waterRepair';
     const paused = tickSystem.isPausedState();
-    const heading = strip.querySelector<HTMLElement>('#water-repair-title')!;
-    const title = t(paused ? 'hud.waterRepairPaused' : 'hud.waterRepair');
+    const title = t(`hud.${issue}${paused ? 'Paused' : ''}`);
+    const heading = strip.querySelector<HTMLElement>('#repair-title')!;
     if (heading.textContent !== title) heading.textContent = title;
-    const hasIdlePlant = gameState.getBuildings().some(
-      (building) => building.type === 'distiller' && !this.pipes.isFullyOperational(building)
-    );
-    strip.querySelector('p')!.textContent = t(hasIdlePlant ? 'hud.waterRepairIdle' : 'hud.waterRepairExpand');
-    strip.querySelector('#water-repair-days')!.textContent = t('hud.waterRepairDays', { days });
-    strip.querySelector<HTMLButtonElement>('#water-resume')!.hidden = !paused;
+
+    for (const [resource, days] of [['water', water], ['heat', heat]] as const) {
+      const counter = strip.querySelector<HTMLElement>(`#${resource}-repair-days`)!;
+      const hint = strip.querySelector<HTMLElement>(`#${resource}-repair-hint`)!;
+      counter.hidden = hint.hidden = days === null;
+      if (days === null) continue;
+      counter.textContent = both ? `${t(`hud.${resource}`)} ${days}` : String(days);
+      if (resource === 'heat') {
+        hint.textContent = t(this.heatRepairHint());
+      } else {
+        const idle = gameState.getBuildings().some(
+          (building) => building.type === 'distiller' && !this.pipes.isFullyOperational(building)
+        );
+        hint.textContent = t(idle ? 'hud.waterRepairIdle' : 'hud.waterRepairExpand');
+      }
+    }
+    strip.querySelector<HTMLButtonElement>('#repair-resume')!.hidden = !paused;
+  }
+
+  private heatRepairHint(): TranslationKey {
+    if (gameState.hasUnheatedResidents()) return 'hud.heatRepairPipes';
+    if (gameState.getResources().heat > 0) return 'hud.heatRepairCheck';
+    if (gameState.canDispatchSupply('heat')) return 'hud.heatRepairShift';
+    const cost = gameState.getEffectiveCost('thermal_plant');
+    if (cost && gameState.getResources().electricity >= (cost.electricity ?? 0)) {
+      return 'hud.heatRepairPlant';
+    }
+    return 'hud.heatRepairDemand';
   }
 
   private showNotification(message: string, isError = false): void {
@@ -421,7 +453,7 @@ export class HUD {
         this.tempElement.classList.remove('warning', 'critical');
       }
     }
-    this.updateWaterRepair();
+    this.updateRepairStrip();
     this.updateIssues();
   }
 
@@ -512,7 +544,7 @@ export class HUD {
   }
 
   private showGameOver({ reason, day }: { reason: GameOverReason; day: number }): void {
-    this.updateWaterRepair();
+    this.updateRepairStrip();
     const dialog = document.createElement('dialog');
     dialog.className = 'game-over-overlay';
     dialog.setAttribute('aria-labelledby', 'ending-title');

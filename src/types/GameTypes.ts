@@ -120,7 +120,6 @@ export const BUILDING_MAX_ALLOWED: Partial<Record<BuildingType, number>> = {
 };
 
 // Building limits based on count of other buildings
-// E.g., thermal_plant requires 5 microrayons per plant (first one free)
 export interface BuildingScalingLimit {
   requiredBuilding: BuildingType;
   countPerAllowed: number; // How many of requiredBuilding needed per one of this building
@@ -130,8 +129,8 @@ export interface BuildingScalingLimit {
 export const BUILDING_SCALING_LIMITS: Partial<Record<BuildingType, BuildingScalingLimit>> = {
   thermal_plant: {
     requiredBuilding: 'microrayon',
-    countPerAllowed: 5, // Need 5 microrayons per thermal plant (after free ones)
-    freeCount: 1 // First thermal plant is free
+    countPerAllowed: 4,
+    freeCount: 1 // One station can be built before any housing is required.
   }
 };
 

@@ -133,9 +133,10 @@ export async function initGame(resume: boolean, walk = false): Promise<void> {
 
   mountNetworkInspector(pipeManager);
 
-  // Wire up connection checker for reactor cooling logic
+  // Use the allocated pipe network for production and residential heating.
   gameState.setConnectionChecker((building) => ({
-    isFullyOperational: pipeManager.isFullyOperational(building)
+    isFullyOperational: pipeManager.isFullyOperational(building),
+    hasHeat: pipeManager.isSuppliedWith(building, 'heat')
   }));
 
   // Wire up event system modifiers for weather effects
